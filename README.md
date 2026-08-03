@@ -1,13 +1,11 @@
-# <img src="images/icon.png" width="40"> Heading goes here
+# <img src="images/icon.png" width="40"> Syno Toolbox
 
-<a href="https://github.com/007revad/REPO_NAME/releases"><img src="https://img.shields.io/github/release/007revad/REPO_NAME.svg"></a>
-[![Github Releases](https://img.shields.io/github/downloads/007revad/REPO_NAME/total.svg)](https://github.com/007revad/REPO_NAME/releases)
-![Badge](https://hitscounter.dev/api/hit?url=https%3A%2F%2Fgithub.com%2F007revad%2FREPO_NAME&label=Visitors&icon=github&color=%23198754&message=&style=flat&tz=Australia%2FSydney)
+<a href="https://github.com/007revad/Syno_Toolbox/releases"><img src="https://img.shields.io/github/release/007revad/Syno_Toolbox.svg"></a>
+[![Github Releases](https://img.shields.io/github/downloads/007revad/Syno_Toolbox/total.svg)](https://github.com/007revad/Syno_Toolbox/releases)
+![Badge](https://hitscounter.dev/api/hit?url=https%3A%2F%2Fgithub.com%2F007revad%2FSyno_Toolbox&label=Visitors&icon=github&color=%23198754&message=&style=flat&tz=Australia%2FSydney)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/paypalme/007revad)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/007revad)
 <!--- [![committers.top badge](https://user-badge.committers.top/australia/007revad.svg)](https://user-badge.committers.top/australia/007revad) --->
-
-## Enable "Settings > General > Sponsorship" in the new repo
 
 ## Change TEMPLATE.sh in .github/workflows/build_n_release.yml to script's name
 If the repo has multiple files that need to be included in the zip file add them as well, e.g. <br>
@@ -24,13 +22,13 @@ Description goes here
 
 ### Download the script
 
-1. Download the latest version _Source code (zip)_ from https://github.com/007revad/REPO_NAME/releases
+1. Download the latest version _Source code (zip)_ from https://github.com/007revad/Syno_Toolbox/releases
 2. Save the download zip file to a folder on the Synology.
 3. Unzip the zip file.
 
 ### To run the script via task scheduler
 
-See [How to run from task scheduler](https://github.com/007revad/REPO_NAME/blob/main/how_to_run_from_scheduler.md)
+See [How to run from task scheduler](https://github.com/007revad/Syno_Toolbox/blob/main/how_to_run_from_scheduler.md)
 
 ### To run the script via SSH
 
