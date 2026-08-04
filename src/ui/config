@@ -1,0 +1,19 @@
+{
+  "main.js": {
+    "SYNO.SDS._ThirdParty.App.Syno_Toolbox": {
+      "type": "app",
+      "title": "Syno Toolbox",
+      "desc": "Toggle small utility scripts and scheduled tasks",
+      "icon": "images/icon_{0}.png",
+      "appWindow": "SYNO.SDS.Syno_Toolbox.MainWindow",
+      "allowMultiInstance": false,
+      "allowStandalone": true,
+      "allUsers": true
+    },
+    "SYNO.SDS.Syno_Toolbox.MainWindow": {
+      "type": "lib",
+      "title": "Syno Toolbox",
+      "icon": "images/icon_{0}.png"
+    }
+  }
+}
