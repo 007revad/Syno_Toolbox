@@ -25,7 +25,7 @@ There are 2 ways to install the package:
 <p align="center"><kbd><img src="/images/pkg_center.png"></kbd></p>
 
 **Or download the package and install it manually**
-1. Download the latest version .spk file from https://github.com/007revad/Syno_CPU_Temperature/releases and save it to your Synology.
+1. Download the latest version .spk file from https://github.com/007revad/Syno_Toolbox/releases and save it to your Synology.
 2. In Package Center click on Manual Install.
 3. Browse to where you downloaded the .spk file.
 4. Select the .spk file and click Next.
