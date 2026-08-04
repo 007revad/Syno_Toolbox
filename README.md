@@ -9,42 +9,26 @@
 
 ### Description
 
-Description goes here
+Synology package to log CPU temperature to help troubleshooting Synology randomly shutting down due to overheating.
 
-### Download the script
+Available for DSM 7 and DSM 6.
 
-1. Download the latest version _Source code (zip)_ from https://github.com/007revad/Syno_Toolbox/releases
-2. Save the download zip file to a folder on the Synology.
-3. Unzip the zip file.
+### How to install the package
 
-### To run the script via task scheduler
+There are 2 ways to install the package:
 
-See [How to run from task scheduler](https://github.com/007revad/Syno_Toolbox/blob/main/how_to_run_from_scheduler.md)
+**Directly from Package Center**
 
-### To run the script via SSH
+1. Add [007revad Synology Package Source](https://github.com/007revad/Synology_package_source) to package Center.
+2. Click on the Community section in Package Center and install the package.
 
-[How to enable SSH and login to DSM via SSH](https://kb.synology.com/en-global/DSM/tutorial/How_to_login_to_DSM_with_root_permission_via_SSH_Telnet)
+<p align="center"><kbd><img src="/images/pkg_center.png"></kbd></p>
 
-```YAML
-sudo -s /volume1/scripts/SCRIPT_NAME.sh
-```
-
-**Note:** Replace /volume1/scripts/ with the path to where the script is located.
-
-### Troubleshooting
-
-If the script won't run check the following:
-
-1. Make sure you download the zip file and unzipped it to a folder on your Synology (not on your computer).
-2. If the path to the script contains any spaces you need to enclose the path/scriptname in double quotes:
-   ```YAML
-   sudo -s "/volume1/my scripts/SCRIPT_NAME.sh"
-   ```
-3. Make sure you unpacked the zip or rar file that you downloaded and are trying to run the SCRIPT_NAME.sh file.
-4. Set the script file as executable:
-   ```YAML
-   sudo chmod +x "/volume1/scripts/SCRIPT_NAME.sh"
-   ```
+**Or download the package and install it manually**
+1. Download the latest version .spk file from https://github.com/007revad/Syno_CPU_Temperature/releases and save it to your Synology.
+2. In Package Center click on Manual Install.
+3. Browse to where you downloaded the .spk file.
+4. Select the .spk file and click Next.
 
 ### Screenshots
 
