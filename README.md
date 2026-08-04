@@ -9,7 +9,7 @@
 
 ### Description
 
-Synology package to log CPU temperature to help troubleshooting Synology randomly shutting down due to overheating.
+Synology package containing many of 007revad's scripts that are too small to have their own package.
 
 Available for DSM 7 and DSM 6.
 
