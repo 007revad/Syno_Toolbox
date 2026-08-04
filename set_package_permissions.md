@@ -1,6 +1,6 @@
 ## How to set the package permissions
 
-There are 2 ways you can set the required permissions for the package.
+There are 2 ways you can set the required permissions for the package. 
 
 ### Set package permissions via SSH
 
