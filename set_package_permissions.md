@@ -6,11 +6,13 @@ There are 2 ways you can set the required permissions for the package.
 
 ```
 sudo -i
-pkg=CPUTemp
-file=/etc/sudoers.d/CPUTemp
-script=/var/packages/CPUTemp/target/bin/cpu_temp_api.sh
-echo "$pkg ALL=(root) NOPASSWD: $script setsettings *" > "$file"
-for action in run getlog clearlog getsettings; do
+pkg=Syno_Toolbox
+file=/etc/sudoers.d/Syno_Toolbox
+script=/var/packages/Syno_Toolbox/target/bin/synotoolbox_api.sh
+echo "$pkg ALL=(root) NOPASSWD: $script run *" > "$file"
+echo "$pkg ALL=(root) NOPASSWD: $script save *" >> "$file"
+echo "$pkg ALL=(root) NOPASSWD: $script listshares *" >> "$file"
+for action in getstate listvolumes discovernas; do
     echo "$pkg ALL=(root) NOPASSWD: $script $action" >> "$file"
 done
 chmod 0440 "$file"
@@ -27,11 +29,13 @@ cat "$file"
 6. Click **Task Settings**.
 7. In the box under **User-defined script** copy and paste the following. 
     ```
-    pkg=CPUTemp
-    file=/etc/sudoers.d/CPUTemp
-    script=/var/packages/CPUTemp/target/bin/cpu_temp_api.sh
-    echo "$pkg ALL=(root) NOPASSWD: $script setsettings *" > "$file"
-    for action in run getlog clearlog getsettings; do
+    pkg=Syno_Toolbox
+    file=/etc/sudoers.d/Syno_Toolbox
+    script=/var/packages/Syno_Toolbox/target/bin/synotoolbox_api.sh
+    echo "$pkg ALL=(root) NOPASSWD: $script run *" > "$file"
+    echo "$pkg ALL=(root) NOPASSWD: $script save *" >> "$file"
+    echo "$pkg ALL=(root) NOPASSWD: $script listshares *" >> "$file"
+    for action in getstate listvolumes discovernas; do
         echo "$pkg ALL=(root) NOPASSWD: $script $action" >> "$file"
     done
     chmod 0440 "$file"
