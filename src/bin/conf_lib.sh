@@ -2,7 +2,7 @@
 # conf_lib.sh
 # Shared conf read/write wrapper functions for Syno_Toolbox.
 # Source this from any module script or from synotoolbox_api.sh:
-#   source /var/packages/Syno_Toolbox/target/scripts/conf_lib.sh
+#   source /var/packages/Syno_Toolbox/target/bin/conf_lib.sh
 #
 # Verified 2026-08-04 on DS925+:
 #   synosetkeyvalue file key value

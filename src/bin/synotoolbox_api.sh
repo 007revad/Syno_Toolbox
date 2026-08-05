@@ -17,7 +17,7 @@ PKG_NAME="Syno_Toolbox"
 PKG_DEST="/var/packages/${PKG_NAME}/target"
 MANIFEST="${PKG_DEST}/conf/modules.json"
 
-source "${PKG_DEST}/scripts/conf_lib.sh"
+source "${PKG_DEST}/bin/conf_lib.sh"
 tb_init || exit 1
 
 if ! command -v jq >/dev/null 2>&1; then
@@ -116,7 +116,6 @@ getstate)
 
 listvolumes)
     # Mounted volumes only, ignoring /volumeUSB* and /volume0.
-    # Pattern verified by Dave (used elsewhere in his scripts).
     volumes=()
     for volume in /volume*; do
         if [[ "$volume" =~ ^/volume[1-9][0-9]?$ ]]; then
@@ -130,7 +129,6 @@ listvolumes)
 
 listshares)
     # Shared folder -> /volumeN/share path map, via synoshare.
-    # Pattern verified by Dave (used elsewhere in his scripts).
     # Optional exclude regex as $1 (pipe-separated share names).
     EXCLUDE="${1:-}"
     if [[ -n "$EXCLUDE" ]]; then
@@ -154,7 +152,7 @@ discovernas)
     # syno_discover.py is bundled inside Syno_Toolbox itself (confirmed
     # 2026-08-04 by Dave, tested as root on DS925+) - no dependency on
     # Drive Info being installed.
-    DISCOVER_SCRIPT="/var/packages/Syno_Toolbox/target/ui/bin/syno_discover.py"
+    DISCOVER_SCRIPT="/var/packages/Syno_Toolbox/target/bin/syno_discover.py"
     if [[ ! -f "$DISCOVER_SCRIPT" ]]; then
         echo '{"success":false,"message":"syno_discover.py not found in this package build. Add target NAS manually instead."}'
         exit 0

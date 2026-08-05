@@ -3,7 +3,7 @@
     "SYNO.SDS._ThirdParty.App.Syno_Toolbox": {
       "type": "app",
       "title": "Syno Toolbox",
-      "desc": "Toggle small utility scripts and scheduled tasks",
+      "desc": "Package containing many 007revad scripts that are too small to have their own package",
       "icon": "images/icon_{0}.png",
       "appWindow": "SYNO.SDS.Syno_Toolbox.MainWindow",
       "allowMultiInstance": false,

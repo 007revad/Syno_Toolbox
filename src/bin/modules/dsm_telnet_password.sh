@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2034
 #----------------------------------------------------------------------------
 # Default DSM telnet password used to be blank.
 #
@@ -25,7 +26,7 @@
 #----------------------------------------------------------------------------
 
 script="Synology_DSM_Telnet_Password"
-scriptver="1.0.2"
+scriptver="1.0.2-toolbox"
 repo="007revad/Synology_DSM_Telnet_Password"
 
 usage(){ 
@@ -102,7 +103,7 @@ if options="$(getopt -o abcdefghijklmnopqrstuvwxyz0123456789 -l \
                 break
                 ;;
             *)                  # Show usage options
-                echo -e "Invalid option '$1'\n"
+                echo -e "Invalid option '$1'"
                 usage "$1"
                 ;;
         esac
@@ -115,7 +116,7 @@ fi
 
 
 # Show script name and version
-echo -e "$script $scriptver - by 007revad \n"
+#echo -e "$script $scriptver - by 007revad \n"
 
 
 if [[ -z $month ]] && [[ -z $day ]]; then
@@ -124,10 +125,10 @@ if [[ -z $month ]] && [[ -z $day ]]; then
     day=$(date +%-d) # Day of the month (1 to 31)
 
     echo "Today's Day:   $day"
-    echo -e "Today's Month: $month \n"
+    echo -e "Today's Month: $month"
 else
     echo "Day:   $day"
-    echo -e "Month: $month \n"
+    echo -e "Month: $month"
 fi
 
 # Validate day and month

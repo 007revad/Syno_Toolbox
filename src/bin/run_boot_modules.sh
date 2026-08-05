@@ -14,7 +14,7 @@ set -u
 PKG_DEST="/var/packages/Syno_Toolbox/target"
 MANIFEST="${PKG_DEST}/conf/modules.json"
 
-source "${PKG_DEST}/scripts/conf_lib.sh"
+source "${PKG_DEST}/bin/conf_lib.sh"
 tb_init || exit 1
 
 if ! command -v jq >/dev/null 2>&1; then

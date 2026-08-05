@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034
 #------------------------------------------------------------------------------
 # Back up synoboot after each DSM update
 # so you can recover from a corrupt USBDOM or EEPROM.
@@ -14,7 +15,7 @@
 bakpath=/volume1/backups/synoboot
 
 
-scriptver="v1.0.2"
+scriptver="v1.0.2-toolbox"
 script=Synoboot_backup
 #repo="007revad/Synoboot_backup"
 #scriptname=synoboot_backup
@@ -35,20 +36,20 @@ Off='\e[0m'         # ${Off}
 #echo -e "$script $scriptver\ngithub.com/$repo\n"
 echo "$script $scriptver"
 
-ding(){ 
-    printf \\a
-}
+#ding(){ 
+#    printf \\a
+#}
 
 # Check script is running as root
 if [[ $( whoami ) != "root" ]]; then
-    ding
+    #ding
     echo -e "\n${Error}ERROR${Off} This script must be run as sudo or root!\n"
     exit 1
 fi
 
 # Check script is running on a Synology NAS
 if ! /usr/bin/uname -a | grep -i synology >/dev/null; then
-    ding
+    #ding
     echo -e "\n${Error}ERROR${Off} This script is NOT running on a Synology NAS!"
     echo -e "Copy the script to a folder on the Synology and run it from there.\n"
     exit 1  # Not a Synology NAS
@@ -56,20 +57,26 @@ fi
 
 # Check backup folder exists
 if [[ ! -d $bakpath ]]; then
-    ding
+    #ding
     echo -e "${Error}ERROR${Off} Backup path not found: ${bakpath}\n"
     exit 1
 fi
 
 
 # Get NAS model
-model=$(cat /proc/sys/kernel/syno_hw_version)
-
-# Check for dodgy characters after model number
-if [[ $model =~ 'pv10-j'$ ]]; then  # GitHub syno_hdd_db issue #10
-    model=${model%??????}+          # replace last 6 chars with +
-elif [[ $model =~ '-j'$ ]]; then    # GitHub syno_hdd_db issue #2
-    model=${model%??}               # remove last 2 chars
+model=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/synoinfo.conf upnpmodelname 2>/dev/null)
+# Fallback for systems where upnpmodelname is unavailable
+if [[ -z "$nas_model" && -f /proc/sys/kernel/syno_hw_version ]]; then
+    model=$(cat /proc/sys/kernel/syno_hw_version 2>/dev/null || echo "")
+    # Check for dodgy characters after model number
+    if [[ ${nas_model,,} =~ 'pv10-j'$ ]]; then  # GitHub issue #10
+        model=${nas_model%??????}+              # replace last 6 chars with +
+    elif [[ ${nas_model} =~ '-j'$ ]]; then      # GitHub issue #2
+        model=${nas_model%??}                   # remove last 2 chars
+    fi
+fi
+if [[ -z "$nas_model" ]]; then
+    model="Unknown_model"
 fi
 
 # Get serial number
@@ -92,7 +99,7 @@ echo -e "Backup path: ${bakpath}\n"
 
 # Check NAS has /dev/synoboot
 if [[ ! -e /dev/synoboot ]]; then
-    ding
+    #ding
     echo -e "${Error}ERROR${Off} /dev/synoboot not found!"
     echo -e "Unsupported Synology model: $model\n"
     exit 1

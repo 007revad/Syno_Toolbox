@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034
 #--------------------------------------------------------------------------
 # Backup Synology system configuration and copy backup to another NAS
 #         Must be run as root or scheduled to run as root
@@ -51,6 +52,8 @@ Remote2_User=
 #--------------------------------------------------------------------------
 #                 Nothing below here should need changing
 #--------------------------------------------------------------------------
+
+scriptver="v1.1.6-toolbox"
 
 # Set backup filename
 

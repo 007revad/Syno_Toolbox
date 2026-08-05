@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034
 #
 # v1.1.1
 # - Added code to decode expansion unit serial numbers.
@@ -12,19 +13,33 @@
 # maillang="enu"
 # supplang="enu,cht,chs,krn,tha,ger,fre,ita,spn,jpn,dan,nor,sve,nld,rus,plk,ptb,ptg,hun,trk,csy"
 
-scriptver="v1.1.2"
+scriptver="v1.1.2-toolbox"
 script=Synology_created_date
 repo="007revad/Synology_created_date"
-#scriptname=syno_created_date
+scriptname=syno_created_date
 
 # Show script version
-echo -e "$script $scriptver\ngithub.com/$repo\n"
+#echo -e "$script $scriptver\ngithub.com/$repo\n"
 #echo -e "$script $scriptver\n"
 
 nas_revision="$(cat /proc/sys/kernel/syno_hw_revision)"
 if [[ $nas_revision ]]; then nas_revision=" $nas_revision"; fi
 
-nas_model=$(cat /proc/sys/kernel/syno_hw_version)
+# Get NAS model
+nas_model=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/synoinfo.conf upnpmodelname 2>/dev/null)
+# Fallback for systems where upnpmodelname is unavailable
+if [[ -z "$nas_model" && -f /proc/sys/kernel/syno_hw_version ]]; then
+    nas_model=$(cat /proc/sys/kernel/syno_hw_version 2>/dev/null || echo "")
+    # Check for dodgy characters after model number
+    if [[ ${nas_model,,} =~ 'pv10-j'$ ]]; then  # GitHub issue #10
+        nas_model=${nas_model%??????}+              # replace last 6 chars with +
+    elif [[ ${nas_model} =~ '-j'$ ]]; then      # GitHub issue #2
+        nas_model=${nas_model%??}                   # remove last 2 chars
+    fi
+fi
+if [[ -z "$nas_model" ]]; then
+    nas_model="Unknown_model"
+fi
 
 nas_serial=$(cat /proc/sys/kernel/syno_serial)
 

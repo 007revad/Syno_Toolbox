@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2076,SC2207
+# shellcheck disable=SC2076,SC2207,SC2034
 #------------------------------------------------------------------------------
 # Github: https://github.com/007revad/Synology_enable_sequential_IO
 # Script verified at https://www.shellcheck.net/
@@ -26,7 +26,7 @@
 # Bug fix for when multiple caches are found.
 
 
-scriptver="v2.0.3"
+scriptver="v2.0.3-toolbox"
 script=Synology_enable_sequential_IO
 repo="007revad/Synology_enable_sequential_IO"
 #scriptname=syno_seq_io
@@ -61,6 +61,7 @@ Options:
       --kb=KB           Set a specific sequential I/O kb value
                           Use to disable sequential I/O
                           --kb=1024
+  -c, --check           Check current value
   -e, --email           Disable colored text in output scheduler emails
   -h, --help            Show this help message
   -v, --version         Show the script version
@@ -71,7 +72,7 @@ EOF
 
 # Check for flags with getopt
 if options="$(getopt -o abcdefghijklmnopqrstuvwxyz0123456789 -l \
-    volumes:,kb:,email,help,version -- "${args[@]}")"; then
+    volumes:,kb:,check,email,help,version -- "${args[@]}")"; then
     eval set -- "$options"
     while true; do
         case "${1,,}" in
@@ -94,6 +95,10 @@ if options="$(getopt -o abcdefghijklmnopqrstuvwxyz0123456789 -l \
                     kb="$2"
                     shift
                 fi
+                ;;
+            -c|--check)         # Show current raid type
+                check=yes
+                #break
                 ;;
             -e|--email)         # Disable colour text in task scheduler emails
                 color=no
@@ -138,8 +143,8 @@ if [[ $color != "no" ]]; then
     #White='\e[0;37m'   # ${White}
     #Error='\e[41m'      # ${Error}
     Off='\e[0m'         # ${Off}
-else
-    echo ""  # For task scheduler email readability
+#else
+#    echo ""  # For task scheduler email readability
 fi
 
 

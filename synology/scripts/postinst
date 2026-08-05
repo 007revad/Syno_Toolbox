@@ -4,6 +4,7 @@ PKG_NAME=$(basename "$SYNOPKG_PKGDEST")
 TARGET_DIR="/var/packages/$PKG_NAME/target"
 UI_DIR="$TARGET_DIR/ui"
 BIN_DIR="$TARGET_DIR/bin"
+MODULES_DIR="$BIN_DIR/modules"
 
 # Get DSM major version
 dsm=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)
@@ -30,15 +31,15 @@ log_message "Removed spurious package builder files"
 chmod +x "$UI_DIR/api.cgi" 2>/dev/null
 log_message "Set execute permissions for api.cgi"
 
-for binfile in conf.sh run_boot_modules.sh synotoolbox.sh task_setup.sh; do
+for binfile in conf_lib.sh run_boot_modules.sh synotoolbox_api.sh task_setup.sh syno_discover.py; do
     chmod +x "$BIN_DIR/$binfile" 2>/dev/null
     log_message "Set execute permissions for $binfile"
-fi
+done
 
-for module in "$UI_DIR/*.sh"; do
+for module in $MODULES_DIR/*.sh; do
     chmod +x "$module" 2>/dev/null
     log_message "Set execute permissions for $module"
-fi
+done
 
 # NOTE: sudoers grant is NOT created here. postinst is not reliably
 # running as root on DSM 7 (see set_package_permissions.md), so the

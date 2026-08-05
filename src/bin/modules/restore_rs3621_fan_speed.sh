@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034
 # https://github.com/007revad/Restore_RS3621_Fan_Speed
 #
 # Restore DSM 7.3.2 RS3621XS+ and RS3621RPxs fan speeds to DSM 7.3.1 speeds
@@ -10,6 +11,8 @@
 #
 # Change second pwm_duty_low to 100 only if it is currently 120
 #<pwm_config name="pwm2" sensor_type="allinput" high_freq="yes" pwm_duty_low="120" pwm_duty_high="220"></pwm_config>
+
+scriptver="1.0.0-toolbox"
 
 # Check script is running as root
 if [[ $( whoami ) != "root" ]]; then
@@ -25,9 +28,24 @@ if [[ $buildnumber -lt "86009" ]]; then
     exit 1
 fi
 
+# Get NAS model
+model=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/synoinfo.conf upnpmodelname 2>/dev/null)
+# Fallback for systems where upnpmodelname is unavailable
+if [[ -z "$nas_model" && -f /proc/sys/kernel/syno_hw_version ]]; then
+    model=$(cat /proc/sys/kernel/syno_hw_version 2>/dev/null || echo "")
+    # Check for dodgy characters after model number
+    if [[ ${nas_model,,} =~ 'pv10-j'$ ]]; then  # GitHub issue #10
+        model=${nas_model%??????}+              # replace last 6 chars with +
+    elif [[ ${nas_model} =~ '-j'$ ]]; then      # GitHub issue #2
+        model=${nas_model%??}                   # remove last 2 chars
+    fi
+fi
+if [[ -z "$nas_model" ]]; then
+    model="Unknown_model"
+fi
+
 # Check correct Synology model
 supported_models=("RS3621xs+" "RS3621RPxs")
-model=$(cat /proc/sys/kernel/syno_hw_version)
 if [[ ! ${supported_models[*]} =~ $model ]]; then
     echo -e "ERROR Script not needed for $model"
     exit 1
@@ -39,12 +57,12 @@ scemd_file="/usr/syno/etc.defaults/scemd.xml"
 if [[ ! -f "${scemd_file}.bak" ]]; then
     backup_file="${scemd_file}.bak"
     if cp -p "$scemd_file" "$backup_file"; then
-        echo -e "Backed up scemd.xml to: ${backup_file}\n"
+        echo -e "Backed up scemd.xml to: ${backup_file}"
     else
-        echo -e "ERROR Failed to backup $scemd_file \n to: $backup_file\n"
+        echo -e "ERROR Failed to backup $scemd_file \n to: $backup_file"
     fi
 else
-    echo -e "Backup of scemd.xml already exists\n"
+    echo -e "Backup of scemd.xml already exists"
 fi
 
 

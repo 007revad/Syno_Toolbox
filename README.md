@@ -9,7 +9,7 @@
 
 ### Description
 
-Synology package containing many of 007revad's scripts that are too small to have their own package.
+Synology package containing many 007revad scripts that are too small to have their own package.
 
 Available for DSM 7 and DSM 6.
 

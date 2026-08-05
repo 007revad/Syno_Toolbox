@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034
 #------------------------------------------------------------------------------
 # Some Synology NAS and Expansion Units do not have enough power to spin-up
 # multiple Seagate's 20TB and larger drives during boot-up.
@@ -29,22 +30,24 @@
 vSeaChest=v24.08.1
 archive=openSeaChest-v24.08.1-linux-x86_64-portable
 
-scriptver="v1.0.2"
+scriptver="v1.0.2-toolbox"
 script=Seagate_lowCurrentSpinup
-#repo="007revad/Seagate_lowCurrentSpinup"
-#scriptname=seagate_lowcurrentspinup
+repo="007revad/Seagate_lowCurrentSpinup"
+scriptname=seagate_lowcurrentspinup
 
 # Show script version
-echo "$script $scriptver"
+#echo "$script $scriptver"
 
 # Check script is running as root
 if [[ $( whoami ) != "root" ]]; then
-    echo -e "\nERROR This script must be run as sudo or root!\n"
+    echo -e "ERROR This script must be run as sudo or root!"
     exit 1
 fi
 
 if [[ $1 == "disable" ]]; then
     disable="yes"
+elif [[ $1 == "check" ]]; then
+    check="yes"
 fi
 
 
@@ -61,14 +64,14 @@ pause(){
 # Download openSeaChest portable if needed
 if [[ ! -f /opt/openSeaChest_PowerControl ]] || [[ ! -f /opt/openSeaChest_Configure ]]; then
     if [[ ! -f "/tmp/${archive}.tar.xz" ]]; then
-        echo -e "\nDownloading openSeaChest portable from Seagate"
+        echo -e "Downloading openSeaChest portable from Seagate"
         wget -P /tmp/ https://github.com/Seagate/openSeaChest/releases/download/"${vSeaChest:?}/${archive:?}".tar.xz &>/dev/null
     fi
 fi
 
 # Extract openSeaChest_PowerControl to /tmp if needed
 if [[ ! -d "/tmp/${archive:?}" ]] && [[ -f "/tmp/${archive}.tar.xz" ]]; then
-    echo -e "\nExtracting openSeaChest archive"
+    echo -e "Extracting openSeaChest archive"
     tar -xf "/tmp/${archive}.tar.xz" -C /tmp
 
     # Delete downloaded archive
@@ -161,6 +164,48 @@ set_lcs(){
     fi
 }
 
+check_puis(){ 
+    # Check Power Up In Standby (PUIS) status
+    #--------------------------------------------------------------------------
+    # --puisFeature info  (SATA Only)
+    #         No settings are changed. This just queries and prints one of:
+    #             "PUIS is not supported on this device."
+    #             "PUIS is supported"                 (supported but disabled)
+    #             "PUIS is supported and enabled"
+    #--------------------------------------------------------------------------
+    local puis_info
+    header=$(/opt/openSeaChest_PowerControl -d "$sg" --puisFeature info | grep '/dev/sg')
+    puis_info=$(/opt/openSeaChest_PowerControl -d "$sg" --puisFeature info)
+
+    echo -e "\n$header"
+    if echo "$puis_info" | grep -q 'PUIS is not supported'; then
+        echo "PUIS: Not supported"
+    elif echo "$puis_info" | grep -q 'PUIS is supported and enabled'; then
+        echo "PUIS: Enabled"
+    else
+        echo "PUIS: Disabled"
+    fi
+}
+
+check_lcs(){ 
+    # Check lowCurrentSpinup status
+    #--------------------------------------------------------------------------
+    # openSeaChest_Configure has no "--lowCurrentSpinup info" option
+    # (only low | ultra | disable are accepted), so the current state has
+    # to be read from the --deviceInfo (-i) output instead, which includes
+    # a "Low Current Spinup:" line for Seagate SATA drives only.
+    #--------------------------------------------------------------------------
+    local lcs_line
+    lcs_line=$(/opt/openSeaChest_Configure -d "$sg" -i | grep 'Low Current Spinup:')
+
+    if [[ -z $lcs_line ]]; then
+        echo "Low Current Spinup: Not supported (not a Seagate SATA drive, or feature unavailable)"
+    else
+        # Trim leading tab/whitespace, e.g. "	Low Current Spinup: Enabled"
+        echo "${lcs_line#"${lcs_line%%[![:space:]]*}"}"
+    fi
+}
+
 
 # Process SATA Seagate HDDs larger than 16TB
 IFS=$'\n' read -r -d '' -a array < <(/opt/openSeaChest_PowerControl --scan |\
@@ -168,30 +213,40 @@ IFS=$'\n' read -r -d '' -a array < <(/opt/openSeaChest_PowerControl --scan |\
     # https://grep.js.org/  Online grep tester
     #grep -E '^ATA.*ST[2-4][0,9][0]{3,}')  # All Seagate 20TB and larger drives
     #grep -E '^ATA.*ST[1-4][0-9][0]{3,}N[T|E|M|G]')  # All Seagate Exos and Ironwolf Pro drives 10TB and larger
-    grep -E '^ATA.*ST(1[68]|[2-5][02468])[0]{3,}N[T|E|M|G]')  # All Seagate Exos and Ironwolf Pro 16TB to 58TB
+#    grep -E '^ATA.*ST(1[68]|[2-5][02468])[0]{3,}N[T|E|M|G]')  # All Seagate Exos and Ironwolf Pro 16TB to 58TB
 
-    #grep -E '^ATA.*ST[1-4][0-9][0]{3,}')  # debug with smaller Seagate Ironwolf drives
+    grep -E '^ATA.*ST[1-4][0-9][0]{3,}')  # debug with smaller Seagate Ironwolf drives
 IFS=
 
 if [[ "${#array[@]}" -gt "0" ]]; then
-    if [[ $disable == "yes" ]]; then
-        echo -e "Disabling 'Enable Power-Up in Standby' and 'Low Current Spin-up'\n"
+    if [[ $check == "yes" ]]; then
+        for drive in "${array[@]}"; do
+            #echo "$drive" | awk '{print $3, $4}'  # debug
+            sg=$(echo "$drive" | awk '{print $2}')
+            check_puis
+            check_lcs
+        done
+
     else
-        echo -e "Enabling 'Enable Power-Up in Standby' and 'Low Current Spin-up'\n"
+        #if [[ $disable == "yes" ]]; then
+        #    echo -e "Disabling 'Enable Power-Up in Standby' and 'Low Current Spin-up'"
+        #else
+        #    echo -e "Enabling 'Enable Power-Up in Standby' and 'Low Current Spin-up'"
+        #fi
+        for drive in "${array[@]}"; do
+            #echo "$drive" | awk '{print $3, $4}'  # debug
+            sg=$(echo "$drive" | awk '{print $2}')
+#            /opt/openSeaChest_PowerControl -d "$sg" --puisFeature enable
+
+            # PUIS info
+#            /opt/openSeaChest_PowerControl -d "$sg" --puisFeature info | tail +9
+            #echo
+
+            set_puis
+            set_lcs
+
+        done
     fi
-    for drive in "${array[@]}"; do
-        #echo "$drive" | awk '{print $3, $4}'  # debug
-        sg=$(echo "$drive" | awk '{print $2}')
-#        /opt/openSeaChest_PowerControl -d "$sg" --puisFeature enable
-
-        # PUIS info
-#        /opt/openSeaChest_PowerControl -d "$sg" --puisFeature info | tail +9
-        #echo
-
-        set_puis
-        set_lcs
-
-    done
 else
-    echo -e "\nNo Seagate Exos or Ironwolf Pro 16TB to 38TB HDDs found.\n"
+    echo -e "No Seagate Exos or Ironwolf Pro 16TB to 38TB HDDs found."
 fi

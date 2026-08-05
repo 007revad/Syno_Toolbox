@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034
 # Check UPS client connection to UPS server
 # Exit 1 = problem (Task Scheduler sends email), Exit 0 = OK
+
+scriptver="1.0.1-toolbox"
 
 DSM_VER="$(synogetkeyvalue /etc.defaults/VERSION majorversion)"
 

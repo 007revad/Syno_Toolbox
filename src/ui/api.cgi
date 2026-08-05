@@ -11,7 +11,7 @@
 PKG_NAME="Syno_Toolbox"
 PKG_ROOT="/var/packages/${PKG_NAME}"
 TARGET_DIR="${PKG_ROOT}/target"
-BIN_DIR="${TARGET_DIR}/scripts"
+BIN_DIR="${TARGET_DIR}/bin"
 
 dsm=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)
 if [[ $dsm -ge 7 ]]; then
