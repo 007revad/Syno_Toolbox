@@ -187,6 +187,23 @@ run)
     fi
     ;;
 
+check)
+    # Runs a module's check_args regardless of its enabled/disabled state - this
+    # is a status display independentof Syno_Toolbox's own toggle for that module.
+    MODULE_ID="${1:-}"
+    if [[ -z "$MODULE_ID" ]]; then
+        echo '{"success":false,"message":"No module id given"}'
+        exit 1
+    fi
+    RESULT="$(run_module_script "$MODULE_ID" check_args 2>&1)"
+    RC=$?
+    if [[ $RC -eq 0 ]]; then
+        printf '{"success":true,"result":%s}\n' "$(printf '%s' "$RESULT" | jq -Rs .)"
+    else
+        printf '{"success":false,"message":%s}\n' "$(printf '%s' "$RESULT" | jq -Rs .)"
+    fi
+    ;;
+
 save)
     JSON_BLOB="${1:-{\}}"
 

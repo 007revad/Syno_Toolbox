@@ -155,7 +155,8 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     renderRow: function(mod) {
         var checked = mod.current_enabled === "yes" ? "checked" : "";
         var controlsHtml = this.renderControls(mod);
-        var resultHtml = (mod.control === "toggle-display" || mod.control === "toggle-run")
+        var hasCheckArgs = !!(mod.check_args && mod.check_args !== null);
+        var resultHtml = (mod.control === "toggle-display" || mod.control === "toggle-run" || hasCheckArgs || mod.live === true)
             ? '<div class="tb-row-result" data-result-for="' + mod.id + '"></div>'
             : "";
 
@@ -263,11 +264,21 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             var moduleId = rowEl.getAttribute("data-module-id");
             var mod = this.findModule(moduleId);
             var checkbox = rowEl.querySelector(".tb-enabled");
+            var hasCheckArgs = !!(mod && mod.check_args && mod.check_args !== null);
 
             Ext.fly(checkbox).on("change", (function() {
                 this.setDirty(true);
-                if (mod && mod.live === true) {
-                    this.runModule(moduleId, rowEl);
+                // "live" modules re-run their result on toggle, but only
+                // while enabled - unlike check_args modules (below), which
+                // always reflect the NAS's actual state regardless of the
+                // toggle.
+                if (mod && mod.live === true && !hasCheckArgs) {
+                    if (checkbox.checked) {
+                        this.runModule(moduleId, rowEl);
+                    } else {
+                        var resultEl = rowEl.querySelector('[data-result-for="' + moduleId + '"]');
+                        if (resultEl) { resultEl.textContent = ""; }
+                    }
                 }
             }).createDelegate(this));
 
@@ -276,8 +287,13 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 Ext.fly(field).on("change", (function() { this.setDirty(true); }).createDelegate(this));
             }, this);
 
-            // Live modules show their result immediately on load too.
-            if (mod && mod.live === true) {
+            if (hasCheckArgs) {
+                // Always reflects the NAS's real current state, regardless
+                // of whether this module's toggle is on or off.
+                this.checkModule(moduleId, rowEl);
+            } else if (mod && mod.live === true && checkbox.checked) {
+                // Live modules (no check_args) only show a result while
+                // their own toggle is enabled.
                 this.runModule(moduleId, rowEl);
             }
 
@@ -365,6 +381,20 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         var resultEl = rowEl.querySelector('[data-result-for="' + moduleId + '"]');
         if (resultEl) { resultEl.textContent = "Running\u2026"; }
         SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: moduleId }, (function(resp) {
+            if (!resultEl) { return; }
+            resultEl.textContent = resp && resp.success
+                ? (resp.result || "(no output)")
+                : ("Error: " + ((resp && resp.message) || "unknown"));
+        }).createDelegate(this));
+    },
+
+    // Runs a module's check_args and shows the result - this reflects the
+    // NAS's actual current state and always runs regardless of whether
+    // the module's own toggle is enabled or disabled.
+    checkModule: function(moduleId, rowEl) {
+        var resultEl = rowEl.querySelector('[data-result-for="' + moduleId + '"]');
+        if (resultEl) { resultEl.textContent = "Checking\u2026"; }
+        SYNO.SDS.Syno_Toolbox.apiCall("check", { module_id: moduleId }, (function(resp) {
             if (!resultEl) { return; }
             resultEl.textContent = resp && resp.success
                 ? (resp.result || "(no output)")

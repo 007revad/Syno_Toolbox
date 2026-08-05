@@ -155,6 +155,17 @@ run)
     fi
     ;;
 
+check)
+    MODULE_ID="${PARAM[module_id]}"
+    run_privileged check "$MODULE_ID"
+    if [ "$RUN_RC" -ne 0 ] || [ -z "$RUN_OUT" ]; then
+        log "[ERROR] check ${MODULE_ID} failed (rc=${RUN_RC}): ${RUN_OUT}"
+        json_response false "Failed to check ${MODULE_ID}" ""
+    else
+        echo "$RUN_OUT"
+    fi
+    ;;
+
 save)
     # PARAM[form_json] is a JSON object string built client-side by
     # main.js from every toggle/field in the panel, e.g.

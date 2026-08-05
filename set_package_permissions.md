@@ -11,6 +11,7 @@ file=/etc/sudoers.d/Syno_Toolbox
 script=/var/packages/Syno_Toolbox/target/bin/synotoolbox_api.sh
 echo "$pkg ALL=(root) NOPASSWD: $script run *" > "$file"
 echo "$pkg ALL=(root) NOPASSWD: $script save *" >> "$file"
+echo "$pkg ALL=(root) NOPASSWD: $script check *" >> "$file"
 echo "$pkg ALL=(root) NOPASSWD: $script listshares *" >> "$file"
 for action in getstate listvolumes discovernas; do
     echo "$pkg ALL=(root) NOPASSWD: $script $action" >> "$file"
@@ -34,6 +35,7 @@ cat "$file"
     script=/var/packages/Syno_Toolbox/target/bin/synotoolbox_api.sh
     echo "$pkg ALL=(root) NOPASSWD: $script run *" > "$file"
     echo "$pkg ALL=(root) NOPASSWD: $script save *" >> "$file"
+    echo "$pkg ALL=(root) NOPASSWD: $script check *" >> "$file"
     echo "$pkg ALL=(root) NOPASSWD: $script listshares *" >> "$file"
     for action in getstate listvolumes discovernas; do
         echo "$pkg ALL=(root) NOPASSWD: $script $action" >> "$file"

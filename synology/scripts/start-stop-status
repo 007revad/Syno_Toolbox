@@ -1,11 +1,16 @@
 #!/bin/sh
 #----------------------------------------------------------
-# CPUTemp has no background daemon - it runs on demand when
-# the main window is opened. Standard no-daemon template.
+# Syno_Toolbox has no persistent background daemon, but several
+# modules need to run once at package start (trigger: "boot" or
+# "scheduled" in modules.json, when enabled) - e.g. DSM Telnet
+# Password, Sequential I/O Tuning, Uninstall Active Insight.
 #----------------------------------------------------------
+
+PKG_DEST="/var/packages/Syno_Toolbox/target"
 
 case "$1" in
     start)
+        "${PKG_DEST}/bin/run_boot_modules.sh" >> /var/log/synotoolbox.log 2>&1
         exit 0
         ;;
     stop)
