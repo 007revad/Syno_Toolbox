@@ -37,6 +37,11 @@ Cyan='\e[0;36m'     # ${Cyan}
 Error='\e[41m'      # ${Error}
 Off='\e[0m'         # ${Off}
 
+Red=""
+Cyan=""
+Error=""
+Off=""
+
 
 usage(){ 
     cat <<EOF
@@ -114,7 +119,7 @@ fi
 
 # Check script is running as root
 if [[ $( whoami ) != "root" ]]; then
-    echo -e "${Error}ERROR${Off} This script must be run as root or sudo!"
+    echo -e "${Error}Error:${Off} This script must be run as root or sudo!"
     exit 1
 fi
 
@@ -174,19 +179,19 @@ checkcurrent(){
     settingshr="$(/usr/syno/bin/synogetkeyvalue $synoinfo ${sshr})"
     settingraidgrp="$(/usr/syno/bin/synogetkeyvalue $synoinfo ${srg})"
     if [[ $settingshr == "yes" ]] && [[ $settingraidgrp != "yes" ]]; then
-        echo -e "${Cyan}SHR${Off} ${1}enabled.\n" >&2
+        echo -e "${Cyan}SHR${Off} ${1}enabled" >&2
         enabled="shr"
     elif [[ $settingshr != "yes" ]] && [[ $settingraidgrp == "yes" ]]; then
-        echo -e "${Cyan}RAID Groups${Off} ${1}enabled.\n" >&2
+        echo -e "${Cyan}RAID Groups${Off} ${1}enabled" >&2
         enabled="raidgrp"
     fi
 
     settingraidf1="$(/usr/syno/bin/synogetkeyvalue $synoinfo ${srf1})"
     if [[ $settingraidf1 == "yes" ]]; then
-        echo -e "${Cyan}RAID-F1${Off} ${1}enabled.\n" >&2
+        echo -e "${Cyan}RAID-F1${Off} ${1}enabled" >&2
         enabledf1="raidf1"
     else
-        echo -e "${Cyan}RAID-F1${Off} ${1}disabled.\n" >&2
+        echo -e "${Cyan}RAID-F1${Off} ${1}disabled" >&2
     fi
 }
 
@@ -229,7 +234,7 @@ select raid in "${options[@]}"; do
             shr="yes"
             echo -e "You selected ${Cyan}SHR${Off}"
             if [[ $enabled == "shr" ]]; then
-                echo -e "${Cyan}SHR${Off} is already enabled."
+                echo -e "${Cyan}SHR${Off} is already enabled"
             else
                 break
             fi
@@ -238,7 +243,7 @@ select raid in "${options[@]}"; do
             raidgrp="yes"
             echo -e "You selected ${Cyan}RAID Group${Off}"
             if [[ $enabled == "raidgrp" ]]; then
-                echo -e "${Cyan}RAID Groups${Off} is already enabled."
+                echo -e "${Cyan}RAID Groups${Off} is already enabled"
             else
                 break
             fi
@@ -248,7 +253,7 @@ select raid in "${options[@]}"; do
             raidf1="yes"
             echo -e "You selected ${Cyan}RAID-F1${Off}"
             if [[ $enabledf1 == "raidf1" ]]; then
-                echo -e "${Cyan}RAID-F1${Off} is already enabled."
+                echo -e "${Cyan}RAID-F1${Off} is already enabled"
             else
                 break
             fi
@@ -281,7 +286,7 @@ if [[ $restore == "yes" ]]; then
         #    checkcurrent "is now "
         #    exit
         #else
-        #    echo -e "\n${Error}ERROR${Off} Restore from backup failed!"
+        #    echo -e "\n${Error}Error:${Off} Restore from backup failed!"
         #    exit 1
         #fi
 
@@ -322,7 +327,7 @@ if [[ $restore == "yes" ]]; then
         fi
         checkcurrent "is "
     else
-        echo -e "\n${Error}ERROR${Off} Backup synoinfo.conf not found!"
+        echo -e "${Error}Error:${Off} Backup synoinfo.conf not found!"
         exit 1
     fi
     exit
@@ -334,13 +339,13 @@ fi
 
 if [[ ! -f ${synoinfo}.bak ]]; then
     if cp -p "$synoinfo" "$synoinfo".bak ; then
-        echo -e "\nsynoinfo.conf backed up."
+        echo -e "synoinfo.conf backed up"
     else
-        echo -e "\n${Error}ERROR${Off} synoinfo.conf backup failed!"
+        echo -e "${Error}Error:${Off} synoinfo.conf backup failed!"
         exit 1
     fi
 else
-    echo -e "\nsynoinfo.conf already backed up."
+    echo -e "synoinfo.conf already backed up"
 fi
 
 
@@ -356,9 +361,9 @@ if [[ $raidgrp == "yes" ]]; then
     settingshr="$(/usr/syno/bin/synogetkeyvalue $synoinfo ${sshr})"
     settingraidgrp="$(/usr/syno/bin/synogetkeyvalue $synoinfo ${srg})"
     if [[ $settingshr != "yes" ]] && [[ $settingraidgrp == "yes" ]]; then
-        echo -e "\n${Cyan}RAID Group${Off} has been enabled.\n"
+        echo -e "${Cyan}RAID Group${Off} has been enabled"
     else
-        echo -e "\n${Error}ERROR${Off} Failed to enable RAID Group!"
+        echo -e "${Error}Error:${Off} Failed to enable RAID Group!"
     fi
 fi
 
@@ -371,9 +376,9 @@ if [[ $shr == "yes" ]]; then
     settingshr="$(/usr/syno/bin/synogetkeyvalue $synoinfo ${sshr})"
     settingraidgrp="$(/usr/syno/bin/synogetkeyvalue $synoinfo ${srg})"
     if [[ $settingshr == "yes" ]] && [[ $settingraidgrp != "yes" ]]; then
-        echo -e "\n${Cyan}SHR${Off} has been enabled.\n"
+        echo -e "${Cyan}SHR${Off} has been enabled"
     else
-        echo -e "\n${Error}ERROR${Off} Failed to enable SHR!"
+        echo -e "${Error}Error:${Off} Failed to enable SHR!"
     fi
 fi
 
@@ -384,9 +389,9 @@ if [[ $raidf1 == "yes" ]]; then
     # Check if we enabled RAID-F1
     settingraidf1="$(/usr/syno/bin/synogetkeyvalue $synoinfo ${srf1})"
     if [[ $settingraidf1 == "yes" ]]; then
-        echo -e "\n${Cyan}RAID-F1${Off} has been enabled.\n"
+        echo -e "${Cyan}RAID-F1${Off} has been enabled"
     else
-        echo -e "\n${Error}ERROR${Off} Failed to enable RAID-F1!"
+        echo -e "${Error}Error:${Off} Failed to enable RAID-F1!"
     fi
 fi
 

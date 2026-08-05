@@ -1,8 +1,11 @@
+v1.0.3
+- 4th beta release.
+
 v1.0.2
-- Third beta release.
+- 3rd beta release.
 
 v1.0.1
-- Second beta release.
+- 2nd beta release.
 
 v1.0.0
-- First beta release.
+- 1st beta release.

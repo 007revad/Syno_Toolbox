@@ -16,7 +16,7 @@ scriptver="1.0.0-toolbox"
 
 # Check script is running as root
 if [[ $( whoami ) != "root" ]]; then
-    echo -e "ERROR This script must be run as sudo or root"
+    echo -e "Error: This script must be run as sudo or root"
     exit 1
 fi
 
@@ -24,7 +24,7 @@ fi
 dsm_version=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION productversion)
 buildnumber=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION buildnumber)
 if [[ $buildnumber -lt "86009" ]]; then
-    echo "ERROR Script not needed for DSM ${dsm_version}-$buildnumber"
+    echo "Error: Script not needed for DSM ${dsm_version}-$buildnumber"
     exit 1
 fi
 
@@ -40,15 +40,15 @@ if [[ -z "$nas_model" && -f /proc/sys/kernel/syno_hw_version ]]; then
         model=${nas_model%??}                   # remove last 2 chars
     fi
 fi
-if [[ -z "$nas_model" ]]; then
+if [[ -z "$model" ]]; then
     model="Unknown_model"
 fi
 
 # Check correct Synology model
 supported_models=("RS3621xs+" "RS3621RPxs")
 if [[ ! ${supported_models[*]} =~ $model ]]; then
-    echo -e "ERROR Script not needed for $model"
-    exit 1
+    echo -e "Script not needed for $model"
+    exit
 fi
 
 # Backup scemd.xml if no backup exists
@@ -59,7 +59,7 @@ if [[ ! -f "${scemd_file}.bak" ]]; then
     if cp -p "$scemd_file" "$backup_file"; then
         echo -e "Backed up scemd.xml to: ${backup_file}"
     else
-        echo -e "ERROR Failed to backup $scemd_file \n to: $backup_file"
+        echo -e "Error: Failed to backup $scemd_file \n to: $backup_file"
     fi
 else
     echo -e "Backup of scemd.xml already exists"

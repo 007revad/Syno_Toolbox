@@ -34,7 +34,7 @@ repo="007revad/Synology_enable_sequential_IO"
 # Check script is running as root
 if [[ $( whoami ) != "root" ]]; then
     echo -e "$script $scriptver - by 007revad"
-    echo -e "ERROR This script must be run as sudo or root!"
+    echo -e "Error: This script must be run as sudo or root!"
     exit 1
 fi
 
@@ -124,12 +124,14 @@ if [[ -z "$kb" ]]; then
 fi
 
 # Show script version
-version
+#version
 
 # Show options used
-if [[ ${#args[@]} -gt "0" ]]; then
-    echo "Using options: ${args[*]}"
-fi
+#if [[ ${#args[@]} -gt "0" ]]; then
+#    echo "Using options: ${args[*]}"
+#fi
+
+color="no"
 
 # Shell Colors
 if [[ $color != "no" ]]; then
@@ -154,7 +156,11 @@ IFS=$'\n' caches=($(sort <<<"${cachelist[*]}")); unset IFS
 
 
 if [[ ${#caches[@]} -lt "1" ]]; then
-    echo "No caches found!" && exit 1
+    if [[ $check == "yes" ]]; then
+        echo "No SSD caches found" && exit
+    else
+        echo "No SSD caches found!" && exit 1
+    fi
 fi
 
 
@@ -185,10 +191,14 @@ if [[ $scheduled != "yes" ]]; then
         done
         echo "----------------------"
     else
-        echo "No caches found!" && exit 1
+        if [[ $check == "yes" ]]; then
+            echo "No SSD caches found" && exit
+        else
+            echo "No SSD caches found!" && exit 1
+        fi
     fi
-else
-    echo ""
+#else
+#    echo ""
 fi
 
 

@@ -120,7 +120,7 @@ fi
 
 # Check script is running as root
 if [[ $( whoami ) != "root" ]]; then
-    echo -e "${Error}ERROR${Off} This script must be run as root or sudo!"
+    echo -e "${Error}Error:${Off} This script must be run as root or sudo!"
     exit 1
 fi
 
@@ -155,9 +155,9 @@ if [[ $buildphase == GM ]]; then buildphase=""; fi
 if [[ $smallfixnumber -gt "0" ]]; then smallfix="-$smallfixnumber"; fi
 #echo -e "$model DSM $productversion-$buildnumber$smallfix $buildphase\n"
 
-if [[ "$check" == "yes" ]]; then
-    #for s in /usr/syno/synoman/webman/texts/*/strings; do echo -e "\n$s" && grep -E '^size_.b' "$s"; done
-    for s in /usr/syno/synoman/webman/texts/*/strings; do
+if [[ $check == "yes" ]]; then
+    gui_lang="$(synogetkeyvalue /etc/synoinfo.conf maillang)"
+    for s in /usr/syno/synoman/webman/texts/"$gui_lang"/strings; do
         lang="$(echo "$s" | cut -d"/" -f7 | cut -d"/" -f1)"
         echo "[${lang^^}]"
         grep -E '^size_.b' "$s"

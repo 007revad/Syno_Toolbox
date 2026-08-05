@@ -79,8 +79,8 @@ elif [[ "$status" == "warn" ]]; then
     echo "WARNING: $result"
     exit 1
 else
-    echo "ERROR: UPS connection to $UPS_SERVER failed!"
-    echo "ERROR: Response: $result"
+    echo "Error: UPS connection to $UPS_SERVER failed!"
+    echo "Error: Response: $result"
     grep -i 'upsmon' /var/log/messages | tail -2
     exit 1
 fi

@@ -65,7 +65,7 @@ File_Name="$( hostname )_$( date +%F_%H%M ).dss"
 # Check that script is running as root
 
 if [[ $( whoami ) != "root" ]]; then
-	echo -e "\nERROR: This script must be run as root!\nERROR: $( whoami ) is not root. Aborting.\n"
+	echo -e "Error: This script must be run as sudo or root!"
 	# Abort script because it isn't being run by root
 	exit 255
 fi
@@ -83,7 +83,7 @@ fi
 
 cd "${Target_DIR}" || exit 255
 if [[ -f "${Target_DIR}/${File_Name}" ]]; then
-	echo -e "ERROR: Backup file already exists: \n${Target_DIR}/${File_Name}"
+	echo -e "Error: Backup file already exists: \n${Target_DIR}/${File_Name}"
 	exit 255
 else
     /usr/syno/bin/synoconfbkp export --filepath="${Target_DIR}/${File_Name}" >/dev/null
@@ -93,7 +93,7 @@ fi
 
 # Check exported file created
 if [[ ! -f "${Target_DIR}/${File_Name}" ]]; then
-	echo -e "ERROR: Backup file not created: \n${Target_DIR}/${File_Name}"
+	echo -e "Error: Backup file not created: \n${Target_DIR}/${File_Name}"
 	exit 255
 else
 	#echo "Synology configuration exported to $File_Name on $( hostname )"

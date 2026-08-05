@@ -26,9 +26,34 @@
 # https://www.perplexity.ai/search/my-synology-1821-wont-start-up-DCEWq2y5TvO4WoUsFli_sw
 #------------------------------------------------------------------------------
 
-# openSeaChest version variables
+# openSeaChest version
 vSeaChest=v24.08.1
-archive=openSeaChest-v24.08.1-linux-x86_64-portable
+
+# Get NAS model
+model=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/synoinfo.conf upnpmodelname 2>/dev/null)
+# Fallback for systems where upnpmodelname is unavailable
+if [[ -z "$nas_model" && -f /proc/sys/kernel/syno_hw_version ]]; then
+    model=$(cat /proc/sys/kernel/syno_hw_version 2>/dev/null || echo "")
+    # Check for dodgy characters after model number
+    if [[ ${nas_model,,} =~ 'pv10-j'$ ]]; then  # GitHub issue #10
+        model=${nas_model%??????}+              # replace last 6 chars with +
+    elif [[ ${nas_model} =~ '-j'$ ]]; then      # GitHub issue #2
+        model=${nas_model%??}                   # remove last 2 chars
+    fi
+fi
+if [[ -z "$model" ]]; then
+    model="Unknown_model"
+fi
+
+# Check supported arches
+arch="$(uname -m)"
+supported_arches=("x86_64" "aarch64" "arm7l")
+if [[ ! ${supported_arches[*]} =~ $arch ]]; then
+    echo -e "$model not supported"
+    exit 
+fi
+
+archive="openSeaChest-v24.08.1-linux-${arch}-portable"
 
 scriptver="v1.0.2-toolbox"
 script=Seagate_lowCurrentSpinup
@@ -40,7 +65,7 @@ scriptname=seagate_lowcurrentspinup
 
 # Check script is running as root
 if [[ $( whoami ) != "root" ]]; then
-    echo -e "ERROR This script must be run as sudo or root!"
+    echo -e "Error: This script must be run as sudo or root!"
     exit 1
 fi
 
@@ -61,6 +86,57 @@ pause(){
     echo -e "\n"
 }
 
+is_usb(){ 
+    # $1 is /dev/sda or /sys/block/sda etc
+    if realpath /sys/block/"$(basename "$1")" | grep -q usb; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+is_seagate(){ 
+    # Check if drive is Seagate Exos or Ironwolf Pro 16TB to 58TB
+    DEVICE=$(smartctl -A -i /dev/"$1" | awk -F ' ' '/Device Model/{print $3}')
+    if [[ -z $DEVICE ]]; then
+        DEVICE=$(smartctl -A -i /dev/"$1" | awk -F ' ' '/Product/{print $2}')
+    fi
+#    if echo "$DEVICE" | grep -qE '^ATA.*ST(1[68]|[2-5][02468])[0]{3,}N[T|E|M|G]'; then  # All Seagate Exos and Ironwolf Pro 16TB to 58TB
+    if echo "$DEVICE" | grep -qE '^ATA.*ST[1-4][0-9][0]{3,}'; then  # debug with smaller Seagate Ironwolf drives
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Add drives to drives to skip installing openSeaChest if no Seagate drives
+for d in /sys/block/*; do
+    # $d is /sys/block/sata1 etc
+    case "$(basename -- "${d}")" in
+        sd*|hd*)
+            if [[ $d =~ [hs]d[a-z][a-z]?$ ]]; then
+                if ! realpath /sys/block/"$(basename "$d")" | grep -q usb; then
+                    if is_seagate "$(basename -- "${d}")"; then
+                        drives+=("$(basename -- "${d}")")
+                    fi
+                fi
+            fi
+        ;;
+        sata*|sas*)
+            if [[ $d =~ (sas|sata)[0-9][0-9]?[0-9]?$ ]]; then
+                if is_seagate "$(basename -- "${d}")"; then
+                    drives+=("$(basename -- "${d}")")
+                fi
+            fi
+        ;;
+    esac
+done
+
+if [[ ${#drives[@]} -lt 1 ]]; then
+    echo -e "No Seagate Exos or Ironwolf Pro 16TB to 38TB HDDs found"
+    exit
+fi
+
 # Download openSeaChest portable if needed
 if [[ ! -f /opt/openSeaChest_PowerControl ]] || [[ ! -f /opt/openSeaChest_Configure ]]; then
     if [[ ! -f "/tmp/${archive}.tar.xz" ]]; then
@@ -79,14 +155,13 @@ if [[ ! -d "/tmp/${archive:?}" ]] && [[ -f "/tmp/${archive}.tar.xz" ]]; then
     echo
 fi
 
-
 # Create /opt if needed
 if [[ ! -d /opt ]]; then
     if mkdir /opt; then
         chown root:root /opt
         chmod 711 /opt
     else
-        echo -e "ERROR Failed to create /opt !"
+        echo -e "Error: Failed to create /opt !"
         exit 1
     fi
 fi
@@ -98,7 +173,7 @@ if [[ ! -f /opt/openSeaChest_PowerControl ]]; then
         chown root:root /opt/openSeaChest_PowerControl
         chmod 755 /opt/openSeaChest_PowerControl
     else
-        echo -e "ERROR Failed to copy openSeaChest_PowerControl to /opt !"
+        echo -e "Error: Failed to copy openSeaChest_PowerControl to /opt !"
         exit 1
     fi    
 fi
@@ -110,7 +185,7 @@ if [[ ! -f /opt/openSeaChest_Configure ]]; then
         chown root:root /opt/openSeaChest_Configure
         chmod 755 /opt/openSeaChest_Configure
     else
-        echo -e "ERROR Failed to copy openSeaChest_Configure to /opt !"
+        echo -e "Error: Failed to copy openSeaChest_Configure to /opt !"
         exit 1
     fi    
 fi
@@ -214,7 +289,6 @@ IFS=$'\n' read -r -d '' -a array < <(/opt/openSeaChest_PowerControl --scan |\
     #grep -E '^ATA.*ST[2-4][0,9][0]{3,}')  # All Seagate 20TB and larger drives
     #grep -E '^ATA.*ST[1-4][0-9][0]{3,}N[T|E|M|G]')  # All Seagate Exos and Ironwolf Pro drives 10TB and larger
 #    grep -E '^ATA.*ST(1[68]|[2-5][02468])[0]{3,}N[T|E|M|G]')  # All Seagate Exos and Ironwolf Pro 16TB to 58TB
-
     grep -E '^ATA.*ST[1-4][0-9][0]{3,}')  # debug with smaller Seagate Ironwolf drives
 IFS=
 
@@ -248,5 +322,5 @@ if [[ "${#array[@]}" -gt "0" ]]; then
         done
     fi
 else
-    echo -e "No Seagate Exos or Ironwolf Pro 16TB to 38TB HDDs found."
+    echo -e "No Seagate Exos or Ironwolf Pro 16TB to 38TB HDDs found"
 fi

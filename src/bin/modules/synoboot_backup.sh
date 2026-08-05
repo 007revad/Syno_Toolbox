@@ -43,14 +43,14 @@ echo "$script $scriptver"
 # Check script is running as root
 if [[ $( whoami ) != "root" ]]; then
     #ding
-    echo -e "\n${Error}ERROR${Off} This script must be run as sudo or root!\n"
+    echo -e "\n${Error}Error:${Off} This script must be run as sudo or root!\n"
     exit 1
 fi
 
 # Check script is running on a Synology NAS
 if ! /usr/bin/uname -a | grep -i synology >/dev/null; then
     #ding
-    echo -e "\n${Error}ERROR${Off} This script is NOT running on a Synology NAS!"
+    echo -e "\n${Error}Error:${Off} This script is NOT running on a Synology NAS!"
     echo -e "Copy the script to a folder on the Synology and run it from there.\n"
     exit 1  # Not a Synology NAS
 fi
@@ -58,7 +58,7 @@ fi
 # Check backup folder exists
 if [[ ! -d $bakpath ]]; then
     #ding
-    echo -e "${Error}ERROR${Off} Backup path not found: ${bakpath}\n"
+    echo -e "${Error}Error:${Off} Backup path not found: ${bakpath}\n"
     exit 1
 fi
 
@@ -100,7 +100,7 @@ echo -e "Backup path: ${bakpath}\n"
 # Check NAS has /dev/synoboot
 if [[ ! -e /dev/synoboot ]]; then
     #ding
-    echo -e "${Error}ERROR${Off} /dev/synoboot not found!"
+    echo -e "${Error}Error:${Off} /dev/synoboot not found!"
     echo -e "Unsupported Synology model: $model\n"
     exit 1
 fi

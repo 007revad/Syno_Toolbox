@@ -9,7 +9,7 @@ scriptver="1.0.1-toolbox"
 
 # Check that script is running as root
 if [[ $( whoami ) != "root" ]]; then
-	echo -e "ERROR: This script must be run as root or sudo!"
+	echo -e "Error: This script must be run as root or sudo!"
 	exit 1
 fi
 

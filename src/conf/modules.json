@@ -2,7 +2,7 @@
   "modules": [
     {
       "id": "fix_size_units",
-      "name": "Fix Size Units",
+      "name": "Change Size Units to Binary",
       "control": "toggle-display",
       "script": "bin/modules/syno_fix_size_units.sh",
       "trigger": "boot",
@@ -13,7 +13,7 @@
     },
     {
       "id": "telnet_password",
-      "name": "DSM Telnet Password",
+      "name": "DSM Telnet Password of the Day",
       "control": "toggle-display",
       "script": "bin/modules/dsm_telnet_password.sh",
       "trigger": "boot",
@@ -35,19 +35,19 @@
     },
     {
       "id": "toggle_reset_button",
-      "name": "Toggle Reset Button",
+      "name": "Disable Reset Button",
       "control": "toggle-display",
       "script": "bin/modules/toggle_reset_button.sh",
       "trigger": "boot",
       "live": false,
-      "run_args": ["enable"],
-      "disable_args": ["disable"],
+      "run_args": ["disable"],
+      "disable_args": ["enable"],
       "check_args": ["check"],
       "note": "single script, 3 modes (enable/disable/check) verified by Dave - not separate files"
     },
     {
       "id": "low_current_spinup",
-      "name": "Seagate Low Current Spinup",
+      "name": "Enable Seagate Low Current Spinup",
       "control": "toggle-display",
       "script": "bin/modules/seagate_lowcurrentspinup.sh",
       "trigger": "boot",
@@ -93,7 +93,7 @@
     },
     {
       "id": "ups_connected",
-      "name": "Check UPS Connected",
+      "name": "Check Connected to UPS Server",
       "control": "toggle-schedule",
       "script": "bin/modules/check_ups_connected.sh",
       "trigger": "scheduled",
@@ -105,7 +105,7 @@
     },
     {
       "id": "config_backup",
-      "name": "Synology Config Backup",
+      "name": "DSM Configuration Backup and Export",
       "control": "toggle-config-backup",
       "script": "bin/modules/synology_config_backup.sh",
       "trigger": "scheduled",
@@ -118,7 +118,7 @@
     },
     {
       "id": "synoboot_backup",
-      "name": "Synoboot Backup",
+      "name": "Backup Synoboot Image",
       "control": "toggle-filepicker",
       "script": "bin/modules/synoboot_backup.sh",
       "trigger": "scheduled",
@@ -130,7 +130,7 @@
     },
     {
       "id": "seq_io",
-      "name": "Sequential I/O Tuning",
+      "name": "Enable Sequential I/O for SSD Cache",
       "control": "toggle-volume-numeric",
       "script": "bin/modules/syno_seq_io.sh",
       "trigger": "boot",
@@ -144,7 +144,7 @@
     },
     {
       "id": "shr_switch",
-      "name": "SHR / RAID Group Switch",
+      "name": "Switch between SHR and RAID Group or Enable RAID F1",
       "control": "toggle-selector",
       "script": "bin/modules/syno_shr_switch.sh",
       "trigger": "on_save",

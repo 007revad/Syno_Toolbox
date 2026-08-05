@@ -30,7 +30,7 @@ fi
 # Check script is running as root
 if [[ $( whoami ) != "root" ]]; then
     #ding
-    echo -e "${Error}ERROR${Off} This script must be run as sudo or root!"
+    echo -e "${Error}Error:${Off} This script must be run as sudo or root!"
     exit 1
 fi
 

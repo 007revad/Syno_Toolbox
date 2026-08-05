@@ -84,7 +84,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-row-name { font-weight:bold; font-size:13px; }',
             '  .tb-row-controls { margin-top:6px; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:#555; }',
             '  .tb-row-controls input[type=text], .tb-row-controls input[type=number], .tb-row-controls select { padding:3px 5px; font-size:12px; border:1px solid #ccc; border-radius:3px; }',
-            '  .tb-row-result { margin-top:6px; font-family:Verdana,Arial,sans-serif; font-size:11px; color:#777; white-space:pre-wrap; }',
+            '  .tb-row-result { margin-top:6px; font-family:Verdana,Arial,sans-serif; font-size:11px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
             '  .tb-toggle { width:38px; height:20px; position:relative; display:inline-block; flex:0 0 auto; }',
             '  .tb-toggle input { opacity:0; width:0; height:0; }',
             '  .tb-toggle .tb-slider { position:absolute; inset:0; background:#ccc; border-radius:20px; cursor:pointer; transition:.15s; }',
@@ -111,6 +111,12 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
 
         Ext.fly(el.querySelector(".tb-refresh")).on("click", this.loadState, this);
         Ext.fly(this.saveBtn).on("click", this.onSave, this);
+
+        // DSM's desktop chrome suppresses the native right-click menu
+        // globally (likely a document-level listener, same instinct as
+        // the user-select:none override above). Stopping propagation
+        // here keeps it from reaching that handler, so Copy etc. shows
+        // up normally over our own content.
         Ext.fly(el).on("contextmenu", function(ev) { ev.stopPropagation(); });
 
         this.loadState();
