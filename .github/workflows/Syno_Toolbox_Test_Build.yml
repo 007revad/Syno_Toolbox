@@ -5,7 +5,7 @@ on:
     inputs:
       test_tag:
         # Set zip file name 
-        description: 'Label for this test build (used to name the downloadable artifact only - never published)'
+        description: 'spk filename prefix for this test build (also used to name the downloadable artifact zip - never published)'
         required: false
         default: ''
 
