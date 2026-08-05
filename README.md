@@ -33,7 +33,7 @@ There are 2 ways to install the package:
 ### Screenshots
 
 <!--- <p align="center">Description of image 1 goes here</p> --->
-<p align="center"><kbd><img src="/images/IMAGE_NAME.png"></kbd></p>
+<p align="center"><kbd><img src="/images/installed.png"></kbd></p>
 
 <br>
 
