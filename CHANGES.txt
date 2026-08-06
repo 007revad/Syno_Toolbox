@@ -1,3 +1,6 @@
+v1.0.4
+- 5th beta release.
+
 v1.0.3
 - 4th beta release.
 
