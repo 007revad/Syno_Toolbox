@@ -90,8 +90,10 @@ json_response() {
     fi
 }
 
+HELPER="${BIN_DIR}/helper/synotoolbox-helper"
+
 run_privileged() {
-    RUN_OUT=$(sudo -n "$API_SCRIPT" "$@" 2>>"${LOG_FILE}")
+    RUN_OUT=$("$HELPER" "$@" 2>>"${LOG_FILE}")
     RUN_RC=$?
 }
 

@@ -1,7 +1,7 @@
 /*
- * smartinfo-helper.c
+ * synotoolbox-helper.c
  *
- * Narrow setuid-root launcher for SynoSmartInfo.
+ * Narrow setuid-root launcher for Syno_Toolbox.
  * Installed with owner root:root, mode 6755 (setuid) by postinst,
  * which itself always runs as root during DSM package install.
  *
@@ -16,54 +16,55 @@
 #include <string.h>
 #include <stdlib.h>
 
-/* Overridable at compile time (-DTARGET_SCRIPT='"/path"') for testing only;
- * production builds always use the real script path below. */
 #ifndef TARGET_SCRIPT
-#define TARGET_SCRIPT "/var/packages/Synosmartinfo/target/bin/syno_smart_info.sh"
+#define TARGET_SCRIPT "/var/packages/Syno_Toolbox/target/bin/synotoolbox_api.sh"
 #endif
 
 int main(int argc, char *argv[])
 {
-    /* Must match syno_smart_info.sh's actual accepted options exactly;
-     * "-i" was never a real option upstream and always failed. */
-    const char *allowed[] = { "", "-a", "-v", "-h", NULL };
-    const char *opt = (argc >= 2) ? argv[1] : "";
+    const char *no_arg[]  = { "getstate", "listvolumes", "listshares", "discovernas", NULL };
+    const char *one_arg[] = { "run", "check", "save", NULL };
 
-    if (argc > 2) {
-        fprintf(stderr, "smartinfo-helper: too many arguments\n");
+    if (argc < 2) {
+        fprintf(stderr, "synotoolbox-helper: missing subcommand\n");
         return 1;
     }
+    const char *cmd = argv[1];
 
-    int ok = 0;
-    for (int i = 0; allowed[i] != NULL; i++) {
-        if (strcmp(opt, allowed[i]) == 0) { ok = 1; break; }
-    }
-    if (!ok) {
-        fprintf(stderr, "smartinfo-helper: rejected option '%s'\n", opt);
+    int is_no_arg = 0, is_one_arg = 0;
+    for (int i = 0; no_arg[i] != NULL; i++)
+        if (strcmp(cmd, no_arg[i]) == 0) { is_no_arg = 1; break; }
+    for (int i = 0; one_arg[i] != NULL; i++)
+        if (strcmp(cmd, one_arg[i]) == 0) { is_one_arg = 1; break; }
+
+    if ((is_no_arg && argc != 2) || (is_one_arg && argc != 3) ||
+        (!is_no_arg && !is_one_arg)) {
+        fprintf(stderr, "synotoolbox-helper: rejected '%s' with %d argument(s)\n",
+                cmd, argc - 2);
         return 1;
     }
 
     /* setuid binary gives us euid=0; promote ruid too so the exec'd
      * script is genuinely root, not just effectively root. */
     if (setuid(0) != 0) {
-        perror("smartinfo-helper: setuid(0) failed");
+        perror("synotoolbox-helper: setuid(0) failed");
         return 1;
     }
 
     /* Sanitize environment: fixed PATH, no inherited surprises. */
     if (clearenv() != 0) {
-        fprintf(stderr, "smartinfo-helper: clearenv failed\n");
+        fprintf(stderr, "synotoolbox-helper: clearenv failed\n");
         return 1;
     }
     setenv("PATH", "/usr/bin:/bin:/usr/sbin:/sbin:/usr/syno/bin:/usr/syno/sbin", 1);
     setenv("HOME", "/root", 1);
 
-    if (opt[0] == '\0') {
-        execl(TARGET_SCRIPT, TARGET_SCRIPT, (char *)NULL);
+    if (argc == 2) {
+        execl(TARGET_SCRIPT, TARGET_SCRIPT, cmd, (char *)NULL);
     } else {
-        execl(TARGET_SCRIPT, TARGET_SCRIPT, opt, (char *)NULL);
+        execl(TARGET_SCRIPT, TARGET_SCRIPT, cmd, argv[2], (char *)NULL);
     }
 
-    perror("smartinfo-helper: execl failed");
+    perror("synotoolbox-helper: execl failed");
     return 1;
 }
