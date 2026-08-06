@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #----------------------------------------------------------
 # Syno_Toolbox has no persistent background daemon, but several
 # modules need to run once at package start (trigger: "boot" or
@@ -6,11 +6,17 @@
 # Password, Sequential I/O Tuning, Uninstall Active Insight.
 #----------------------------------------------------------
 
-PKG_DEST="/var/packages/Syno_Toolbox/target"
+PKG_ROOT="/var/packages/Syno_Toolbox"
+DSM=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)
+if [[ $DSM -ge 7 ]]; then
+    VAR_DIR="${PKG_ROOT}/var"
+else
+    VAR_DIR="${PKG_ROOT}/etc"
+fi
 
 case "$1" in
     start)
-        "${PKG_DEST}/bin/run_boot_modules.sh" >> /var/log/synotoolbox.log 2>&1
+        "${PKG_ROOT}/target/bin/run_boot_modules.sh" >> "${VAR_DIR}/synotoolbox.log" 2>&1
         exit 0
         ;;
     stop)
