@@ -33,10 +33,12 @@ jobs:
             echo "new_tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
           else
             # Get most recent release including pre-releases
-            latest_tag=$(curl -s "https://api.github.com/repos/007revad/Syno_Toolbox/releases?per_page=1" \
-              | jq -r '.[0].tag_name // empty')
+            response=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/007revad/Syno_Toolbox/releases?per_page=1")
+            latest_tag=$(echo "$response" | jq -r 'if type == "array" then .[0].tag_name // empty else empty end')
             if [ -z "$latest_tag" ]; then
-              echo "ERROR: Could not determine release tag" >&2
+              echo "ERROR: Could not determine release tag. API response:" >&2
+              echo "$response" >&2
               exit 1
             fi
             echo "new_tag=$latest_tag" >> $GITHUB_OUTPUT
