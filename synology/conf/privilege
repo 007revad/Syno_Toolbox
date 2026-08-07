@@ -1,7 +1,7 @@
 {
   "defaults": { "run-as": "package" },
-  "username": "revad-synotoolbox",
-  "groupname": "synotoolbox",
+  "username": "Syno_Toolbox",
+  "groupname": "Syno_Toolbox",
   "tool": [
     {
       "relpath": "bin/helper/synotoolbox-helper",
