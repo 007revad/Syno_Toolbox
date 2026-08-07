@@ -1,3 +1,6 @@
+v1.0.7
+- 8th beta release.
+
 v1.0.6
 - 7th beta release.
 
