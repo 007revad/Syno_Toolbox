@@ -90,7 +90,7 @@ jobs:
           ls -l ./dist
           rm ./dist/*_debug.spk
           for f in ./dist/*.spk; do
-            mv "$f" "./dist/Syno_Toolbox-${{ steps.arch_label.outputs.label }}-${{ steps.get_tag.outputs.new_tag }}-${{ steps.dsm_suffix.outputs.suffix }}.spk"
+            mv "$f" "./dist/Syno_Toolbox-${{ steps.arch_label.outputs.label }}-${{ steps.get_latest_tag.outputs.new_tag }}-${{ steps.dsm_suffix.outputs.suffix }}.spk"
           done
           ls -l ./dist
 
