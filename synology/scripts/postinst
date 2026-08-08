@@ -27,6 +27,11 @@ rm -f "$UI_DIR/ui"  # self-referencing symlink
 rm -f "$UI_DIR/texts/strings"  # strings file template
 log_message "Removed spurious package builder files"
 
+if [[ $dsm -le 6 ]]; then
+    rm -f "$TARGET_DIR/bin/helper/synotoolbox-helper"
+    log_message "Removed helper/synotoolbox-helper (only needed for DSM 7)"   
+fi
+
 # Set execute permissions
 chmod +x "$UI_DIR/api.cgi" 2>/dev/null
 log_message "Set execute permissions for api.cgi"
