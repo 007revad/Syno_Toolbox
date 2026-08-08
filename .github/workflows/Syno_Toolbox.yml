@@ -89,6 +89,52 @@ jobs:
           arch: ${{ matrix.arch }}
           output: ./dist
 
+      # SynoBuild/PkgCreate.py don't reliably fail the Action when our
+      # custom post-make helper-compile step (in stubs/SynoBuildConf/build)
+      # errors out - the log shows Synology's own tooling can still emit
+      # a .spk in that case. Check the actual built artifact instead of
+      # trusting the exit code chain through Synology's build driver.
+      - name: Verify setuid helper compiled correctly
+        if: steps.check_assets.outputs.spk_count == '0'
+        run: |
+          set -euo pipefail
+
+          case "${{ matrix.arch }}" in
+            kvmx64)    expect_arch="x86-64" ;;
+            rtd1296)   expect_arch="ARM aarch64" ;;
+            armada38x) expect_arch="ARM" ;;
+            evansport) expect_arch="Intel 80386" ;;
+            *) echo "::error::No expected ELF arch mapped for '${{ matrix.arch }}'"; exit 1 ;;
+          esac
+
+          spk=$(ls ./dist/*.spk | grep -v _debug | head -n1)
+          if [ -z "$spk" ]; then
+            echo "::error::No non-debug .spk found in ./dist"
+            exit 1
+          fi
+
+          workdir=$(mktemp -d)
+          tar -xf "$spk" -C "$workdir" package.tgz
+          tar -xf "$workdir/package.tgz" -C "$workdir" bin/helper/synotoolbox-helper
+
+          helper="$workdir/bin/helper/synotoolbox-helper"
+          if [ ! -s "$helper" ]; then
+            echo "::error::synotoolbox-helper missing or empty in $spk - helper compile likely failed silently"
+            exit 1
+          fi
+
+          file_out=$(file -b "$helper")
+          echo "synotoolbox-helper: $file_out"
+          case "$file_out" in
+            *"$expect_arch"*) echo "OK: matches expected arch '$expect_arch'" ;;
+            *)
+              echo "::error::synotoolbox-helper in $spk doesn't look like '$expect_arch' (got: $file_out) - wrong-arch compiler was likely used"
+              exit 1
+              ;;
+          esac
+
+          rm -rf "$workdir"
+
       - name: Remove debug spk and rename package
         if: steps.check_assets.outputs.spk_count == '0'
         run: |
