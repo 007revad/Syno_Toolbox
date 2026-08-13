@@ -93,7 +93,16 @@ json_response() {
 HELPER="${BIN_DIR}/helper/synotoolbox-helper"
 
 run_privileged() {
-    RUN_OUT=$("$HELPER" "$@" 2>>"${LOG_FILE}")
+    # DSM 7's package CGI runs sandboxed enough to need real escalation
+    # (setuid helper); DSM 6 doesn't - confirmed against Drive Info's
+    # existing dsm-version branch (sudo on >=7, plain bash on 6, for its
+    # SMART script). Same split applied here, minus the helper on DSM 6
+    # since it was never built/installed for that version.
+    if [[ "$dsm" -ge 7 ]]; then
+        RUN_OUT=$("$HELPER" "$@" 2>>"${LOG_FILE}")
+    else
+        RUN_OUT=$(bash "$API_SCRIPT" "$@" 2>>"${LOG_FILE}")
+    fi
     RUN_RC=$?
 }
 
@@ -131,6 +140,17 @@ listshares)
     if [ "$RUN_RC" -ne 0 ]; then
         log "[ERROR] listshares failed (rc=${RUN_RC}): ${RUN_OUT}"
         json_response false "Could not list shared folders" ""
+    else
+        json_response true "" "${RUN_OUT}"
+    fi
+    ;;
+
+listfolder)
+    FOLDER_PATH="${PARAM[path]}"
+    run_privileged listfolder "$FOLDER_PATH"
+    if [ "$RUN_RC" -ne 0 ]; then
+        log "[ERROR] listfolder ${FOLDER_PATH} failed (rc=${RUN_RC}): ${RUN_OUT}"
+        json_response false "Could not list folder" ""
     else
         json_response true "" "${RUN_OUT}"
     fi

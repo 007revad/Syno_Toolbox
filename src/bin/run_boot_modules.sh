@@ -48,7 +48,7 @@ for (( i=0; i<MODULE_COUNT; i++ )); do
     script_path="${PKG_DEST}/${script}"
     if [[ -x "$script_path" ]]; then
         echo "Syno_Toolbox: running $id ($script ${args[*]})"
-        "$script_path" "${args[@]}" >> /var/log/synotoolbox.log 2>&1
+        "$script_path" "${args[@]:-}" >> /var/log/synotoolbox.log 2>&1
     else
         echo "Syno_Toolbox: WARNING $script_path missing or not executable" >&2
     fi

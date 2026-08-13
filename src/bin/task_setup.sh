@@ -1,5 +1,5 @@
 #!/bin/bash
-#----------------------------------------------------------
+#--------------------------------------------------------------------
 # Creates/updates/disables the CPUTemp scheduled task via
 # SYNO.Core.TaskScheduler. Run as root (sudo'd from cpu_temp_api.sh).
 #
@@ -36,7 +36,7 @@
 # Usage:
 #   task_setup.sh set <repeat_hour 1-11>
 #   task_setup.sh remove
-#----------------------------------------------------------
+#--------------------------------------------------------------------
 
 PKG_NAME="CPUTemp"
 PKG_DEST="/var/packages/${PKG_NAME}/target"

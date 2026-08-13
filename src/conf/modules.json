@@ -1,7 +1,47 @@
 {
+  "comment1": "Syno_Toolbox module manifest",
+  "comment2": "see modules_json_field_reference.md for field meanings",
   "modules": [
     {
+      "id": "created_date",
+      "category": "info",
+      "name": "Synology Created Date",
+      "control": "toggle-display",
+      "script": "bin/modules/syno_created_date.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": [],
+      "note": "candidate for header display instead of a toggle row"
+    },
+    {
+      "id": "var_log_size",
+      "category": "info",
+      "name": "DSM temp logs size",
+      "control": "toggle-display",
+      "script": "bin/modules/var_log_size.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": []
+    },
+    {
+      "id": "telnet_password",
+      "category": "info",
+      "name": "DSM Telnet Password of the Day",
+      "control": "toggle-display",
+      "script": "bin/modules/dsm_telnet_password.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": []
+    },
+    {
       "id": "fix_size_units",
+      "category": "tools",
       "name": "Change Size Units to Binary",
       "control": "toggle-display",
       "script": "bin/modules/syno_fix_size_units.sh",
@@ -12,29 +52,20 @@
       "check_args": ["--check"]
     },
     {
-      "id": "telnet_password",
-      "name": "DSM Telnet Password of the Day",
-      "control": "toggle-display",
-      "script": "bin/modules/dsm_telnet_password.sh",
-      "trigger": "boot",
-      "live": false,
-      "run_args": [],
-      "disable_args": null,
-      "check_args": null
-    },
-    {
       "id": "cleanup_coredumps",
+      "category": "tools",
       "name": "Cleanup Coredumps",
       "control": "toggle-display",
-      "script": "bin/modules/syno_cleanup_coredumps.sh",
+      "script": "bin/modules/syno_clean_coredumps.sh",
       "trigger": "boot",
       "live": false,
       "run_args": [],
       "disable_args": null,
-      "check_args": null
+      "check_args": ["--check"]
     },
     {
       "id": "toggle_reset_button",
+      "category": "tools",
       "name": "Disable Reset Button",
       "control": "toggle-display",
       "script": "bin/modules/toggle_reset_button.sh",
@@ -47,6 +78,7 @@
     },
     {
       "id": "low_current_spinup",
+      "category": "tools",
       "name": "Enable Seagate Low Current Spinup",
       "control": "toggle-display",
       "script": "bin/modules/seagate_lowcurrentspinup.sh",
@@ -57,19 +89,8 @@
       "check_args": ["check"]
     },
     {
-      "id": "created_date",
-      "name": "Synology Created Date",
-      "control": "toggle-display",
-      "script": "bin/modules/syno_created_date.sh",
-      "trigger": "boot",
-      "live": true,
-      "run_args": [],
-      "disable_args": null,
-      "check_args": null,
-      "note": "candidate for header display instead of a toggle row"
-    },
-    {
       "id": "restore_fan_speed",
+      "category": "tools",
       "name": "Restore RS3621 Fan Speed",
       "control": "toggle-display",
       "script": "bin/modules/restore_rs3621_fan_speed.sh",
@@ -81,6 +102,7 @@
     },
     {
       "id": "uninstall_active_insight",
+      "category": "tools",
       "name": "Uninstall Active Insight",
       "control": "toggle-run",
       "script": "bin/modules/uninstall_active_insight.sh",
@@ -93,6 +115,7 @@
     },
     {
       "id": "ups_connected",
+      "category": "tools",
       "name": "Check Connected to UPS Server",
       "control": "toggle-schedule",
       "script": "bin/modules/check_ups_connected.sh",
@@ -105,6 +128,7 @@
     },
     {
       "id": "config_backup",
+      "category": "tools",
       "name": "DSM Configuration Backup and Export",
       "control": "toggle-config-backup",
       "script": "bin/modules/synology_config_backup.sh",
@@ -118,6 +142,7 @@
     },
     {
       "id": "synoboot_backup",
+      "category": "tools",
       "name": "Backup Synoboot Image",
       "control": "toggle-filepicker",
       "script": "bin/modules/synoboot_backup.sh",
@@ -130,6 +155,7 @@
     },
     {
       "id": "seq_io",
+      "category": "tools",
       "name": "Enable Sequential I/O for SSD Cache",
       "control": "toggle-volume-numeric",
       "script": "bin/modules/syno_seq_io.sh",
@@ -144,6 +170,7 @@
     },
     {
       "id": "shr_switch",
+      "category": "tools",
       "name": "Switch between SHR and RAID Group or Enable RAID F1",
       "control": "toggle-selector",
       "script": "bin/modules/syno_shr_switch.sh",

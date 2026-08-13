@@ -38,4 +38,14 @@ There are 2 ways to install the package:
 <br>
 
 <!--- <p align="center">Description of image 2 goes here</p> --->
-<p align="center"><kbd><img src="/images/IMAGE_NAME.png"></kbd></p>
+<p align="center"><kbd><img src="/images/info_tab_20260812.png"></kbd></p>
+
+<br>
+
+<!--- <p align="center">Description of image 2 goes here</p> --->
+<p align="center"><kbd><img src="/images/tools_tab_20260812.png"></kbd></p>
+
+<br>
+
+<!--- <p align="center">Description of image 2 goes here</p> --->
+<!--- <p align="center"><kbd><img src="/images/IMAGE_NAME.png"></kbd></p> --->

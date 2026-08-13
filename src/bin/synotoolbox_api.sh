@@ -73,7 +73,13 @@ run_module_script() {
 
     local script_path="${PKG_DEST}/${script}"
     if [[ -x "$script_path" ]]; then
-        "$script_path" "${resolved_args[@]}"
+        # "${resolved_args[@]:-}" not "${resolved_args[@]}": bash < 4.4
+        # (DSM 6's shipped bash) throws "unbound variable" under set -u
+        # when expanding an EMPTY array with plain [@], even though the
+        # array is legitimately defined as empty - a known bash bug fixed
+        # in 4.4. The :- suffix works around it without changing behavior
+        # when the array actually has elements.
+        "$script_path" "${resolved_args[@]:-}"
     else
         echo "Syno_Toolbox: $script_path missing or not executable" >&2
         return 1
@@ -124,7 +130,7 @@ listvolumes)
             fi
         fi
     done
-    printf '%s\n' "${volumes[@]}" | jq -R . | jq -s .
+    printf '%s\n' "${volumes[@]:-}" | jq -R . | jq -s .
     ;;
 
 listshares)
@@ -139,13 +145,48 @@ listshares)
     fi
 
     OUT="[]"
-    for share in "${shares_array[@]}"; do
+    for share in "${shares_array[@]:-}"; do
         path="$(synoshare --getmap "$share" | grep '\[/volume[1-9]' | cut -d"[" -f2 | cut -d"]" -f1)"
         [[ -z "$path" ]] && continue
         entry=$(jq -n --arg name "$share" --arg path "$path" '{name: $name, path: $path}')
         OUT=$(echo "$OUT" | jq --argjson e "$entry" '. + [$e]')
     done
     echo "$OUT"
+    ;;
+
+listfolder)
+    # Lists immediate subdirectories of a real /volumeN/... path. Plain
+    # filesystem read - no Synology webapi, no SynoToken, no DSM 6 vs 7
+    # branching. Used by main.js's folder picker to browse below a share
+    # root (listshares gives the share roots themselves).
+    TARGET_PATH="${1:-}"
+    # Only real volume paths, and reject any segment starting with "."
+    # (blocks ".." traversal and hidden dirs) rather than trying to
+    # resolve/canonicalize the path ourselves.
+    if [[ -z "$TARGET_PATH" || ! "$TARGET_PATH" =~ ^/volume[0-9]+(/[^./][^/]*)*$ ]]; then
+        echo '{"success":false,"message":"Invalid path"}'
+        exit 1
+    fi
+    if [[ ! -d "$TARGET_PATH" ]]; then
+        echo '{"success":false,"message":"Not a directory"}'
+        exit 1
+    fi
+
+    OUT="[]"
+    shopt -s nullglob
+    for dir in "$TARGET_PATH"/*/; do
+        dir="${dir%/}"
+        name="$(basename "$dir")"
+        # Skip Synology's own system/hidden folders (#recycle, @eaDir,
+        # @tmp, etc.) - not useful backup destinations.
+        case "$name" in
+            \#*|@*) continue ;;
+        esac
+        entry=$(jq -n --arg name "$name" --arg path "$dir" '{name: $name, path: $path}')
+        OUT=$(echo "$OUT" | jq --argjson e "$entry" '. + [$e]')
+    done
+    shopt -u nullglob
+    echo "$OUT" | jq 'sort_by(.name)'
     ;;
 
 discovernas)

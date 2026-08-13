@@ -154,4 +154,4 @@ gcd_result=$(gcd "$month" "$day")
 
 # Format and print the password
 printf "DSM Telnet Password for today is: %x%02d-%02x%02d\n\n" "$month" "$month" "$day" "$gcd_result"
-
+echo "Default DSM Telnet password is: 101-0101"
