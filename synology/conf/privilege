@@ -1,7 +1,7 @@
 {
   "defaults": { "run-as": "package" },
   "username": "Syno_Toolbox",
-  "join-groupname": "system",
+  "join-groupname": "007revad",
   "tool": [
     {
       "relpath": "bin/helper/synotoolbox-helper",

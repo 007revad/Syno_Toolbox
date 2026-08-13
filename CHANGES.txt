@@ -1,3 +1,7 @@
+v1.0.13
+- 14th beta release.
+- Changed group to 00revad.
+
 v1.0.12
 - 13th beta release.
 - Updated and added modules.
