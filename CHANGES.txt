@@ -1,7 +1,7 @@
 v1.0.14
 - 14th beta release.
 - Changed group back to system.
-- Added the folowing to ui/config
+- Added the following to ui/config
       "grantPrivilege": "all",
       "advanceGrantPrivilege": true
 
