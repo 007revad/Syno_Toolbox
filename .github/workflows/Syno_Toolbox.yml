@@ -141,7 +141,7 @@ jobs:
           ls -l ./dist
           rm ./dist/*_debug.spk
           for f in ./dist/*.spk; do
-            mv "$f" "./dist/Syno_Toolbox-${{ steps.arch_label.outputs.label }}-${{ steps.get_latest_tag.outputs.new_tag }}-${{ steps.dsm_suffix.outputs.suffix }}.spk"
+            mv "$f" "./dist/SynoToolbox-${{ steps.arch_label.outputs.label }}-${{ steps.get_latest_tag.outputs.new_tag }}-${{ steps.dsm_suffix.outputs.suffix }}.spk"
           done
           ls -l ./dist
 
@@ -151,7 +151,7 @@ jobs:
       - name: Create noarch package for DSM 6
         if: steps.check_assets.outputs.spk_count == '0' && matrix.arch == 'kvmx64'
         run: |
-          for f in ./dist/Syno_Toolbox-${{ steps.arch_label.outputs.label }}-*.spk; do
+          for f in ./dist/SynoToolbox-${{ steps.arch_label.outputs.label }}-*.spk; do
             dsm6="${f/${{ steps.arch_label.outputs.label }}/noarch}"
             dsm6="${dsm6/${{ steps.dsm_suffix.outputs.suffix }}/DSM-6.x}"
             tmpdir=$(mktemp -d)

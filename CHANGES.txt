@@ -1,5 +1,11 @@
+v1.0.15
+- 16th beta release.
+- Testing without the following in conf/privilege
+  "username": "Syno_Toolbox",
+  "join-groupname": "system",
+
 v1.0.14
-- 14th beta release.
+- 15th beta release.
 - Changed group back to system.
 - Added the following to ui/config
       "grantPrivilege": "all",
