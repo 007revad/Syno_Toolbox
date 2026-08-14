@@ -1,3 +1,10 @@
+v1.0.14
+- 14th beta release.
+- Changed group back to system.
+- Added the folowing to ui/config
+      "grantPrivilege": "all",
+      "advanceGrantPrivilege": true
+
 v1.0.13
 - 14th beta release.
 - Changed group to 00revad.

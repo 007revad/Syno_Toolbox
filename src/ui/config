@@ -8,7 +8,9 @@
       "appWindow": "SYNO.SDS.Syno_Toolbox.MainWindow",
       "allowMultiInstance": false,
       "allowStandalone": true,
-      "allUsers": true
+      "allUsers": true,
+      "grantPrivilege": "all",
+      "advanceGrantPrivilege": true
     },
     "SYNO.SDS.Syno_Toolbox.MainWindow": {
       "type": "lib",
