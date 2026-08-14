@@ -20,6 +20,7 @@ log_message() {
 }
 
 log_message "Post-installation starting for package: $PKG_NAME"
+log_message "Running postinst as: $(whoami) (uid=$(id -u))"
 
 # Remove spurious files injected by the package builder
 rm -f "$UI_DIR/Makefile"
@@ -55,6 +56,19 @@ fi
 # running as root on DSM 7 (see set_package_permissions.md), so the
 # NOPASSWD grant that lets api.cgi write the live feeds file as root has
 # to be setup manually (SSH or Task Scheduler), same as my other packages.
+
+# Lock down synotoolbox_api.sh
+chown root:root "$BIN_DIR/synotoolbox_api.sh" 2>/dev/null  # Needs postinst to run as root?
+chmod 555 "$BIN_DIR/synotoolbox_api.sh" 2>/dev/null        # Blocks injection exploit
+log_message "Secured synotoolbox_api.sh"
+
+# Lock down bin and sbin
+chmod 555 "$BIN_DIR" 2>/dev/null                           # Blocks delete/recreate exploit
+chmod 555 "${SBIN_DIR:?}" 2>/dev/null                      # Blocks delete/recreate exploit
+log_message "Secured bin and sbin folders"
+
+# Lock down target folder
+chmod 555 /var/packages/${PKG_NAME}/target 2>/dev/null     # Needs postinst to run as root?
 
 if [ -z "$ERRORS" ]; then
     log_message "Post-installation completed successfully"
