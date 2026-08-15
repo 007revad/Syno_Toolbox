@@ -2,7 +2,7 @@
  * synotoolbox-helper.c
  *
  * Narrow setuid-root launcher for Syno_Toolbox.
- * Installed with owner root:root, mode 6755 (setuid) by postinst,
+ * Installed with owner root:root, mode 6550 (setuid) by postinst,
  * which itself always runs as root during DSM package install.
  *
  * This replaces the sudoers-based escalation: it does not depend on

@@ -1,3 +1,7 @@
+v1.0.17
+- 18th beta release.
+- Secured against possible exploits.
+
 v1.0.16
 - 17th beta release.
 - postinst chmod and chown root:root test.

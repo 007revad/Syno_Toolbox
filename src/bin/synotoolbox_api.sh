@@ -15,10 +15,66 @@ set -u
 
 PKG_NAME="Syno_Toolbox"
 PKG_DEST="/var/packages/${PKG_NAME}/target"
+BIN_DIR="${PKG_DEST}/bin"
+MODULES_DIR="${BIN_DIR}/modules"
 MANIFEST="${PKG_DEST}/conf/modules.json"
+
+# ---------------------------------------------------------------------
+# Self-heal file ownership.
+#
+# bin/ and bin/modules/ are locked to 555 by postinst, which blocks
+# create/delete/rename of files inside them - but postinst runs as
+# Syno_Toolbox, not root (confirmed 2026-08-15), so it can never chown
+# anything. Every file under bin/ therefore starts out still owned by
+# Syno_Toolbox. An owner can always chmod u+w their own file regardless
+# of the containing directory's permissions, then overwrite its
+# content in place - confirmed exploitable against conf_lib.sh on
+# DS218 2026-08-15 despite bin/ being 555.
+#
+# Since this script always runs as root (invoked only via
+# synotoolbox-helper's setuid), it closes that gap on every single
+# invocation: chown root:root + re-lock any file that's still
+# Syno_Toolbox-owned. Cheap enough to run unconditionally rather than
+# caching a "did we already do this" flag - a handful of stat calls.
+#
+# Targets are found by globbing bin/ and bin/modules/ directly, not by
+# reading modules.json's own "script" list - the manifest itself is
+# one of the things being secured, so building the target list from
+# its content would let a compromised manifest hide its own overwrite
+# target from this check. Since both directories are 555 (no new
+# files can be created), globbing what's actually on disk covers every
+# possible overwrite target without trusting content that could be
+# the attack itself.
+#
+# LIMITATION: this cannot protect this script (synotoolbox_api.sh)
+# itself. If it's been replaced before this code runs, the replacement
+# executes instead and this check never fires - self-heal logic in the
+# original file doesn't help once the original file is gone. This is
+# a narrow, accepted gap: the window between postinst completing and
+# the first invocation of this script (which happens automatically on
+# first page load via getstate). Everything this function iterates
+# over is fully self-healing from that point forward; this file itself
+# is the one exception.
+tb_self_heal() {
+    local f owner
+    for f in "$BIN_DIR"/*.sh "$BIN_DIR"/*.py \
+             "$MODULES_DIR"/*.sh "$MODULES_DIR"/*.py \
+             "$MANIFEST" \
+             "$0"; do
+        [[ -f "$f" ]] || continue
+        owner="$(stat -c '%U' "$f" 2>/dev/null)"
+        if [[ "$owner" != "root" ]]; then
+            chown root:root "$f" 2>/dev/null
+            chmod 555 "$f" 2>/dev/null
+            echo "Syno_Toolbox: self-heal secured $f (was owned by $owner)" \
+                >> "${TOOLBOX_CONF%.conf}.log" 2>/dev/null
+        fi
+    done
+}
 
 source "${PKG_DEST}/bin/conf_lib.sh"
 tb_init || exit 1
+tb_self_heal
 
 if ! command -v jq >/dev/null 2>&1; then
     echo '{"success":false,"message":"jq not found on this NAS"}'

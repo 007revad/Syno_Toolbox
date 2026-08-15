@@ -5,6 +5,7 @@ TARGET_DIR="/var/packages/$PKG_NAME/target"
 UI_DIR="$TARGET_DIR/ui"
 BIN_DIR="$TARGET_DIR/bin"
 MODULES_DIR="$BIN_DIR/modules"
+SBIN_DIR="$TARGET_DIR/sbin"
 
 # Get DSM major version
 dsm=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)
@@ -19,6 +20,7 @@ log_message() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$VAR_DIR/install.log" 2>/dev/null || echo "$1"
 }
 
+echo "" >> "$VAR_DIR/install.log"
 log_message "Post-installation starting for package: $PKG_NAME"
 log_message "Running postinst as: $(whoami) (uid=$(id -u))"
 
@@ -37,13 +39,15 @@ fi
 chmod +x "$UI_DIR/api.cgi" 2>/dev/null
 log_message "Set execute permissions for api.cgi"
 
-for binfile in conf_lib.sh run_boot_modules.sh synotoolbox_api.sh task_setup.sh syno_discover.py; do
+for binfile in "$BIN_DIR"/*.sh "$BIN_DIR"/*.py; do
     chmod +x "$BIN_DIR/$binfile" 2>/dev/null
+    chmod 555 "$BIN_DIR/$binfile" 2>/dev/null              # Blocks injection exploit
     log_message "Set execute permissions for $binfile"
 done
 
-for module in "$MODULES_DIR/"*.sh; do
+for module in "$MODULES_DIR/"*.sh "$MODULES_DIR/"*.py; do
     chmod +x "$module" 2>/dev/null
+    chmod 555 "$module" 2>/dev/null                        # Blocks injection exploit
     log_message "Set execute permissions for $module"
 done
 
@@ -58,17 +62,21 @@ fi
 # to be setup manually (SSH or Task Scheduler), same as my other packages.
 
 # Lock down synotoolbox_api.sh
-chown root:root "$BIN_DIR/synotoolbox_api.sh" 2>/dev/null  # Needs postinst to run as root?
 chmod 555 "$BIN_DIR/synotoolbox_api.sh" 2>/dev/null        # Blocks injection exploit
 log_message "Secured synotoolbox_api.sh"
 
-# Lock down bin and sbin
-chmod 555 "$BIN_DIR" 2>/dev/null                           # Blocks delete/recreate exploit
-chmod 555 "${SBIN_DIR:?}" 2>/dev/null                      # Blocks delete/recreate exploit
-log_message "Secured bin and sbin folders"
+
+# Lock down bin and sbin and modules folders
+# Must be after "chmod 555" and "chmod +x" for files in these folders
+chmod 555 "$MODULES_DIR" 2>/dev/null                       # Blocks delete/recreate/rename exploit
+chmod 555 "$BIN_DIR" 2>/dev/null                           # Blocks delete/recreate/rename exploit
+chmod 555 "${SBIN_DIR:?}" 2>/dev/null                      # Blocks delete/recreate/rename exploit
+log_message "Secured bin, sbin and modules folders"
 
 # Lock down target folder
-chmod 555 /var/packages/${PKG_NAME}/target 2>/dev/null     # Needs postinst to run as root?
+# Must be the last command
+chmod 555 "/var/packages/${PKG_NAME}/target" 2>/dev/null   # Blocks delete/recreate/rename exploit
+
 
 if [ -z "$ERRORS" ]; then
     log_message "Post-installation completed successfully"

@@ -16,7 +16,8 @@ fi
 
 case "$1" in
     start)
-        "${PKG_ROOT}/target/bin/run_boot_modules.sh" >> "${VAR_DIR}/synotoolbox.log" 2>&1
+        # Not needed or used
+        #"${PKG_ROOT}/target/bin/run_boot_modules.sh" >> "${VAR_DIR}/synotoolbox.log" 2>&1
         exit 0
         ;;
     stop)
