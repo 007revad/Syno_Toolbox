@@ -70,6 +70,23 @@ tb_self_heal() {
                 >> "${TOOLBOX_CONF%.conf}.log" 2>/dev/null
         fi
     done
+
+    # toolbox.conf is data, not code - root still writes it on every
+    # save. 600 rather than 555: no group/other bits at all, since
+    # root bypasses the mode entirely and the only thing left to
+    # control is whether Syno_Toolbox can read config values (some,
+    # e.g. config_backup_remote_user/_remote_ip, are worth keeping
+    # off a wider read path even though nothing currently depends on
+    # that confidentiality).
+    if [[ -f "$TOOLBOX_CONF" ]]; then
+        owner="$(stat -c '%U' "$TOOLBOX_CONF" 2>/dev/null)"
+        if [[ "$owner" != "root" ]]; then
+            chown root:root "$TOOLBOX_CONF" 2>/dev/null
+            chmod 600 "$TOOLBOX_CONF" 2>/dev/null
+            echo "Syno_Toolbox: self-heal secured $TOOLBOX_CONF (was owned by $owner)" \
+                >> "${TOOLBOX_CONF%.conf}.log" 2>/dev/null
+        fi
+    fi
 }
 
 source "${PKG_DEST}/bin/conf_lib.sh"
@@ -147,6 +164,10 @@ shift || true
 
 case "$ACTION" in
 
+selfheal)
+    echo '{"success":true,"message":"Self-heal complete"}'
+    ;;
+
 getstate)
     # Dump manifest + current conf values merged, for main.js to render.
     # current_fields is generic: every "<module_id>_<field>" key found in
@@ -161,7 +182,7 @@ getstate)
         if [[ -f "$TOOLBOX_CONF" ]]; then
             while IFS='=' read -r key raw_val; do
                 [[ "$key" == "${id}_"* ]] || continue
-                suffix="${key#${id}_}"
+                suffix="${key#"${id}"_}"
                 val="${raw_val%\"}"; val="${val#\"}"
                 fields_json=$(echo "$fields_json" | jq --arg k "$suffix" --arg v "$val" '. + {($k): $v}')
             done < "$TOOLBOX_CONF"
