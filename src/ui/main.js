@@ -77,6 +77,8 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-toolbar button:hover { background-color:#057FEB; }',
             '  .tb-toolbar button:disabled { opacity:0.5; cursor:default; }',
             '  .tb-status { font-size:13px; color:#888; }',
+            '  .tb-spinner { display:none; vertical-align:middle; margin-right:0px; }',
+            '  .tb-spinner.show { display:inline-block; }',
             '  .tb-tabs { flex:0 0 auto; display:flex; gap:2px; border-bottom:1px solid #e0e0e0; margin-bottom:0; }',
             '  .tb-tab { padding:8px 18px; cursor:pointer; border:none; background:none; font-size:13px; font-weight:bold; color:#888; border-bottom:2px solid transparent; }',
             '  .tb-tab:hover { color:#1B8AED; }',
@@ -91,6 +93,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-row-controls { margin-top:6px; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:#555; }',
             '  .tb-row-controls input[type=text], .tb-row-controls input[type=number], .tb-row-controls select { padding:3px 5px; font-size:12px; border:1px solid #ccc; border-radius:3px; }',
             '  .tb-row-result { margin-top:6px; font-family:Verdana,Arial,sans-serif; font-size:11px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
+            '  .tb-row-result-monospace { margin-top:6px; font-family:Consolas,Monaco,"Courier New",monospace; font-size:11px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
             '  .tb-toggle { width:38px; height:20px; position:relative; display:inline-block; flex:0 0 auto; }',
             '  .tb-toggle.tb-toggle-hidden { visibility:hidden; }',
             '  .tb-toggle input { opacity:0; width:0; height:0; }',
@@ -117,6 +120,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  <div class="tb-toolbar">',
             '    <button type="button" class="tb-save" disabled>Save</button>',
             '    <button type="button" class="tb-refresh">Refresh</button>',
+            '    <img class="tb-spinner" src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="20" height="20">',
             '    <span class="tb-status"></span>',
             '  </div>',
             '  <div class="tb-tabs">',
@@ -144,6 +148,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         this.infoPanel = el.querySelector('.tb-panel[data-panel="info"]');
         this.toolsPanel = el.querySelector('.tb-panel[data-panel="tools"]');
         this.statusEl = el.querySelector(".tb-status");
+        this.spinnerEl = el.querySelector(".tb-spinner");
         this.saveBtn = el.querySelector(".tb-save");
 
         Ext.fly(el.querySelector(".tb-refresh")).on("click", this.loadState, this);
@@ -276,8 +281,15 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         this.closeFolderPicker();
     },
 
-    setStatus: function(msg) {
+    setStatus: function(msg, busy) {
         if (this.statusEl) { this.statusEl.textContent = msg || ""; }
+        if (this.spinnerEl) {
+            if (busy && msg) {
+                Ext.fly(this.spinnerEl).addClass("show");
+            } else {
+                Ext.fly(this.spinnerEl).removeClass("show");
+            }
+        }
     },
 
     setDirty: function(dirty) {
@@ -289,7 +301,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // Load module state and render rows
     // ---------------------------------------------------------------
     loadState: function() {
-        this.setStatus("Loading\u2026");
+        this.setStatus("Loading\u2026", true);
         SYNO.SDS.Syno_Toolbox.apiCall("getstate", {}, (function(resp) {
             if (!resp || !resp.success) {
                 this.setStatus((resp && resp.message) || "Failed to load state");
@@ -324,8 +336,9 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         var checked = mod.current_enabled === "yes" ? "checked" : "";
         var controlsHtml = this.renderControls(mod);
         var hasCheckArgs = !!(mod.check_args && mod.check_args !== null);
+        var resultClass = mod.result_style === "monospace" ? "tb-row-result tb-row-result-monospace" : "tb-row-result";
         var resultHtml = (mod.control === "toggle-display" || mod.control === "toggle-run" || hasCheckArgs || mod.live === true)
-            ? '<div class="tb-row-result" data-result-for="' + mod.id + '"></div>'
+            ? '<div class="' + resultClass + '" data-result-for="' + mod.id + '"></div>'
             : "";
         // Pure info modules - live display with no real enable/disable
         // action behind them - have a toggle that doesn't gate anything,
@@ -562,14 +575,26 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         return null;
     },
 
+    // Escapes module output by default, then selectively re-enables a single,
+    // tightly-matched <a href="https://...">label</a> pattern - the only HTML
+    // a module's check/run output is allowed to carry. Everything else in the
+    // string stays escaped, so module output can never inject arbitrary HTML.
+    safeResultHtml: function(text) {
+        var escaped = Ext.util.Format.htmlEncode(text);
+        return escaped.replace(
+            /&lt;a href=&quot;(https:\/\/[^&"]+)&quot;&gt;([^&<]*)&lt;\/a&gt;/g,
+            '<a href="$1" target="_blank" rel="noopener noreferrer">$2</a>'
+        );
+    },
+
     runModule: function(moduleId, rowEl) {
         var resultEl = rowEl.querySelector('[data-result-for="' + moduleId + '"]');
         if (resultEl) { resultEl.textContent = "Running\u2026"; }
         SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: moduleId }, (function(resp) {
             if (!resultEl) { return; }
-            resultEl.textContent = resp && resp.success
-                ? (resp.result || "(no output)")
-                : ("Error: " + ((resp && resp.message) || "unknown"));
+            resultEl.innerHTML = resp && resp.success
+                ? this.safeResultHtml(resp.result || "(no output)")
+                : this.safeResultHtml("Error: " + ((resp && resp.message) || "unknown"));
         }).createDelegate(this));
     },
 
@@ -581,9 +606,9 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         if (resultEl) { resultEl.textContent = "Checking\u2026"; }
         SYNO.SDS.Syno_Toolbox.apiCall("check", { module_id: moduleId }, (function(resp) {
             if (!resultEl) { return; }
-            resultEl.textContent = resp && resp.success
-                ? (resp.result || "(no output)")
-                : ("Error: " + ((resp && resp.message) || "unknown"));
+            resultEl.innerHTML = resp && resp.success
+                ? this.safeResultHtml(resp.result || "(no output)")
+                : this.safeResultHtml("Error: " + ((resp && resp.message) || "unknown"));
         }).createDelegate(this));
     },
 
@@ -643,7 +668,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     },
 
     onSave: function() {
-        this.setStatus("Saving\u2026");
+        this.setStatus("Saving\u2026", true);
         this.saveBtn.disabled = true;
         var formData = this.collectFormJson();
         var changedIds = this.computeChangedModuleIds(formData);
@@ -651,7 +676,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         SYNO.SDS.Syno_Toolbox.apiCall("save", { form_json: formJson }, "POST", (function(resp) {
             if (resp && resp.success) {
                 this.setStatus("Saved");
-                this.refreshAfterSave(changedIds);
+                this.refreshAfterSave(changedIds, resp.results || {});
             } else {
                 this.setStatus((resp && resp.message) || "Failed to save");
                 this.saveBtn.disabled = false;
@@ -679,7 +704,12 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // listvolumes/listshares/discovernas/check/run for every row. Only the
     // rows whose enabled state actually changed this save get their result
     // text re-run, since those are the only ones the backend just acted on.
-    refreshAfterSave: function(changedIds) {
+    // save()'s own captured output is shown directly when present (this is
+    // the only place the "hard refresh" style messages can ever appear -
+    // check_args is a read-only probe and never prints them). checkModule
+    // is only a fallback for modules like restore_fan_speed that have no
+    // disable_args, so save() ran nothing for them to capture.
+    refreshAfterSave: function(changedIds, results) {
         SYNO.SDS.Syno_Toolbox.apiCall("getstate", {}, (function(resp) {
             this.setDirty(false);
             if (!resp || !resp.success) { return; }
@@ -690,15 +720,19 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 var mod = this.findModule(id);
                 if (!rowEl || !mod) { return; }
                 var hasCheckArgs = !!(mod.check_args && mod.check_args !== null);
-                if (hasCheckArgs) {
+
+                if (results && results[id] !== undefined) {
+                    var resultEl = rowEl.querySelector('[data-result-for="' + id + '"]');
+                    if (resultEl) { resultEl.innerHTML = this.safeResultHtml(results[id] || "(no output)"); }
+                } else if (hasCheckArgs) {
                     this.checkModule(id, rowEl);
                 } else if (mod.live === true) {
                     var checkbox = rowEl.querySelector(".tb-enabled");
                     if (checkbox && checkbox.checked) {
                         this.runModule(id, rowEl);
                     } else {
-                        var resultEl = rowEl.querySelector('[data-result-for="' + id + '"]');
-                        if (resultEl) { resultEl.textContent = ""; }
+                        var resultEl2 = rowEl.querySelector('[data-result-for="' + id + '"]');
+                        if (resultEl2) { resultEl2.textContent = ""; }
                     }
                 }
             }, this);

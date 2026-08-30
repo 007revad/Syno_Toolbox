@@ -2,8 +2,7 @@
  * synotoolbox-helper.c
  *
  * Narrow setuid-root launcher for Syno_Toolbox.
- * Installed with owner root:root, mode 6550 (setuid) by postinst,
- * which itself always runs as root during DSM package install.
+ * Installed by DSM owner root:<package>, mode 6550 (setuid), from conf/privilege.
  *
  * This replaces the sudoers-based escalation: it does not depend on
  * /usr/bin/sudo being present, and only ever executes one fixed,
@@ -22,7 +21,7 @@
 
 int main(int argc, char *argv[])
 {
-    const char *no_arg[]  = { "getstate", "listvolumes", "listshares", "discovernas", "selfheal", NULL };
+    const char *no_arg[]  = { "getstate", "listvolumes", "listshares", "discovernas", "selfheal", "runboot", NULL };
     const char *one_arg[] = { "run", "check", "save", "listfolder", NULL };
 
     if (argc < 2) {

@@ -46,8 +46,8 @@ MANIFEST="${PKG_DEST}/conf/modules.json"
 # possible overwrite target without trusting content that could be
 # the attack itself.
 #
-# LIMITATION: this cannot protect this script (synotoolbox_api.sh)
-# itself. If it's been replaced before this code runs, the replacement
+# LIMITATION: This cannot protect this script (synotoolbox_api.sh)
+# itself if it's been replaced before this code runs, the replacement
 # executes instead and this check never fires - self-heal logic in the
 # original file doesn't help once the original file is gone. This is
 # a narrow, accepted gap: the window between postinst completing and
@@ -166,6 +166,26 @@ case "$ACTION" in
 
 selfheal)
     echo '{"success":true,"message":"Self-heal complete"}'
+    ;;
+
+runboot)
+    # Called only via synotoolbox-helper on DSM 7+ package start, since
+    # start-stop-status never runs as root there (confirmed by Dave -
+    # unlike DSM 6, where start-stop-status runs as root and calls
+    # run_boot_modules.sh directly instead of going through this helper
+    # gate). Same enabled/trigger logic run_boot_modules.sh used to do
+    # on its own, but reusing run_module_script/module_field here so
+    # there's one implementation of "resolve args, find script, run it"
+    # instead of two.
+    for (( i=0; i<MODULE_COUNT; i++ )); do
+        id="$(module_field "$i" id)"
+        trigger="$(module_field "$i" trigger)"
+        [[ "$trigger" == "boot" || "$trigger" == "scheduled" ]] || continue
+        tb_is_enabled "$id" || continue
+
+        echo "Syno_Toolbox: running $id"
+        run_module_script "$id" run_args 2>&1
+    done
     ;;
 
 getstate)
@@ -323,6 +343,9 @@ check)
     ;;
 
 save)
+    #date +%s.%N >> "${TOOLBOX_CONF%.conf}.log"   # start
+    #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] start save" >> "${TOOLBOX_CONF%.conf}.log"
+
     JSON_BLOB="${1:-{\}}"
 
     # 1. Snapshot old *_enabled state before writing anything.
@@ -332,14 +355,23 @@ save)
         OLD_STATE["$id"]="$(tb_get "${id}_enabled" "no")"
     done
 
+    #echo "old_state done: $(date +%s.%N)" >> "${TOOLBOX_CONF%.conf}.log"
+    #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] old state done" >> "${TOOLBOX_CONF%.conf}.log"
+
     # 2. Write every submitted key=value to conf.
     while IFS=$'\t' read -r key value; do
         [[ -z "$key" ]] && continue
         tb_set "$key" "$value"
     done < <(echo "$JSON_BLOB" | jq -r 'to_entries[] | "\(.key)\t\(.value)"')
 
-    # 3. Diff enabled state per module, run apply/reverse as appropriate.
+    #echo "tb_set loop done: $(date +%s.%N)" >> "${TOOLBOX_CONF%.conf}.log"
+    #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] tb_set loop done" >> "${TOOLBOX_CONF%.conf}.log"
+
+    # 3. Diff enabled state per module, run apply/reverse as appropriate,
+    #    capturing each module's stdout so the frontend can show it
+    #    directly instead of discarding it.
     LOG=""
+    RESULTS="{}"
     for (( i=0; i<MODULE_COUNT; i++ )); do
         id="$(module_field "$i" id)"
         live="$(module_field "$i" live)"
@@ -349,18 +381,24 @@ save)
         new="$(tb_get "${id}_enabled" "no")"
 
         if [[ "$old" == "no" && "$new" == "yes" ]]; then
-            run_module_script "$id" run_args >/dev/null 2>>"${TOOLBOX_CONF%.conf}.log"
+            output="$(run_module_script "$id" run_args 2>>"${TOOLBOX_CONF%.conf}.log")"
             LOG+="enabled:${id} "
+            RESULTS=$(echo "$RESULTS" | jq --arg k "$id" --arg v "$output" '. + {($k): $v}')
         elif [[ "$old" == "yes" && "$new" == "no" ]]; then
             disable_args="$(module_field "$i" disable_args)"
             if [[ "$disable_args" != "null" ]]; then
-                run_module_script "$id" disable_args >/dev/null 2>>"${TOOLBOX_CONF%.conf}.log"
+                output="$(run_module_script "$id" disable_args 2>>"${TOOLBOX_CONF%.conf}.log")"
                 LOG+="disabled:${id} "
+                RESULTS=$(echo "$RESULTS" | jq --arg k "$id" --arg v "$output" '. + {($k): $v}')
             fi
         fi
     done
 
-    printf '{"success":true,"message":%s}\n' "$(printf '%s' "$LOG" | jq -Rs .)"
+    #echo "diff loop done: $(date +%s.%N)" >> "${TOOLBOX_CONF%.conf}.log"
+    #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] diff loop done" >> "${TOOLBOX_CONF%.conf}.log"
+
+    printf '{"success":true,"message":%s,"results":%s}\n' \
+        "$(printf '%s' "$LOG" | jq -Rs .)" "$RESULTS"
     ;;
 
 *)

@@ -94,7 +94,7 @@ if options="$(getopt -o abcdefghijklmnopqrstuvwxyz0123456789 -l \
                 ;;
             -c|--check)         # Show current size units
                 check=yes
-                break
+                #break
                 ;;
             --)
                 shift
@@ -155,84 +155,123 @@ if [[ $buildphase == GM ]]; then buildphase=""; fi
 if [[ $smallfixnumber -gt "0" ]]; then smallfix="-$smallfixnumber"; fi
 #echo -e "$model DSM $productversion-$buildnumber$smallfix $buildphase\n"
 
-if [[ $check == "yes" ]]; then
+# Check if set to enabled in toolbox.conf
+toggle_state="$(synogetkeyvalue /var/packages/Syno_Toolbox/var/toolbox.conf fix_size_units_enabled)"
+
+check_state(){ 
     gui_lang="$(synogetkeyvalue /etc/synoinfo.conf maillang)"
-    for s in /usr/syno/synoman/webman/texts/"$gui_lang"/strings; do
-        lang="$(echo "$s" | cut -d"/" -f7 | cut -d"/" -f1)"
-        echo "[${lang^^}]"
-        grep -E '^size_.b' "$s"
-        echo ""
-    done
+    echo "Current size units for ${gui_lang^^}"
+    grep -E '^size_.b' /usr/syno/synoman/webman/texts/"$gui_lang"/strings
+    echo ""
+
+    # Refresh browser window
+    if [[ $edited == "yes" ]]; then
+        echo -e "You will need to hard refresh the DSM browser tab or window to see the changes"
+    fi
+}
+
+if [[ $check == "yes" && "$toggle_state" != "yes" ]]; then
+    check_state
     exit
 fi
 
 if [[ $restore = "yes" ]]; then
-    # Edit strings files:
-    for strings in /usr/syno/synoman/webman/texts/*/strings; do sed -i 's/\"KiB\"/\"KB\"/g' "$strings"; done
-    for strings in /usr/syno/synoman/webman/texts/*/strings; do sed -i 's/\"MiB\"/\"MB\"/g' "$strings"; done
-    for strings in /usr/syno/synoman/webman/texts/*/strings; do sed -i 's/\"GiB\"/\"GB\"/g' "$strings"; done
-    for strings in /usr/syno/synoman/webman/texts/*/strings; do sed -i 's/\"TiB\"/\"TB\"/g' "$strings"; done
-
-    # German
-    sed -i 's/\"KiB\"/\"kB\"/g' /usr/syno/synoman/webman/texts/ger/strings
-
-    # Czech
-    sed -i 's/\"KiB\"/\"kB\"/g' /usr/syno/synoman/webman/texts/csy/strings
-
-    # French
-    sed -i 's/\"Kio\"/\"Ko\"/g' /usr/syno/synoman/webman/texts/fre/strings
-    sed -i 's/\"Mio\"/\"Mo\"/g' /usr/syno/synoman/webman/texts/fre/strings
-    sed -i 's/\"Gio\"/\"Go\"/g' /usr/syno/synoman/webman/texts/fre/strings
-    sed -i 's/\"Tio\"/\"To\"/g' /usr/syno/synoman/webman/texts/fre/strings
-
-    # Russian
-    # KB
-    sed -i 's/\"КиБ\"/\"КБ\"/g' /usr/syno/synoman/webman/texts/rus/strings
-    # MB
-    sed -i 's/\"МиБ\"/\"МБ\"/g' /usr/syno/synoman/webman/texts/rus/strings
-    # GB
-    sed -i 's/\"ГиБ\"/\"ГБ\"/g' /usr/syno/synoman/webman/texts/rus/strings
-    # TB
-    sed -i 's/\"ТиБ\"/\"ТБ\"/g' /usr/syno/synoman/webman/texts/rus/strings
+    gui_lang="$(synogetkeyvalue /etc/synoinfo.conf maillang)"
+    strings_file=/usr/syno/synoman/webman/texts/"$gui_lang"/strings
+    case "$gui_lang" in
+        ger|csy)  # German and Czech
+            if grep -q '"KiB"' "$strings_file"; then
+                sed -i 's/\"KiB\"/\"kB\"/g' "$strings_file"
+                sed -i 's/\"MiB\"/\"MB\"/g' "$strings_file"
+                sed -i 's/\"GiB\"/\"GB\"/g' "$strings_file"
+                sed -i 's/\"TiB\"/\"TB\"/g' "$strings_file"
+                edited="yes"
+            fi
+            ;;
+        fre)  # French
+            if grep -q '"Kio"' "$strings_file"; then
+                sed -i 's/\"Kio\"/\"Ko\"/g' "$strings_file"
+                sed -i 's/\"Mio\"/\"Mo\"/g' "$strings_file"
+                sed -i 's/\"Gio\"/\"Go\"/g' "$strings_file"
+                sed -i 's/\"Tio\"/\"To\"/g' "$strings_file"
+                edited="yes"
+            fi
+            ;;
+        rus)  # Russian
+            if grep -q '"КиБ"' "$strings_file"; then
+                sed -i 's/\"КиБ\"/\"КБ\"/g' "$strings_file"
+                sed -i 's/\"МиБ\"/\"МБ\"/g' "$strings_file"
+                sed -i 's/\"ГиБ\"/\"ГБ\"/g' "$strings_file"
+                sed -i 's/\"ТиБ\"/\"ТБ\"/g' "$strings_file"
+                edited="yes"
+            fi
+            ;;
+        *)  # Other languages
+            if grep -q '"KiB"' "$strings_file"; then
+                sed -i 's/\"KiB\"/\"KB\"/g' "$strings_file"
+                sed -i 's/\"MiB\"/\"MB\"/g' "$strings_file"
+                sed -i 's/\"GiB\"/\"GB\"/g' "$strings_file"
+                sed -i 's/\"TiB\"/\"TB\"/g' "$strings_file"
+                edited="yes"
+            fi
+            ;;
+    esac
 else
-    # Edit strings files:
-    for strings in /usr/syno/synoman/webman/texts/*/strings; do sed -i 's/\"KB\"/\"KiB\"/g' "$strings"; done
-    for strings in /usr/syno/synoman/webman/texts/*/strings; do sed -i 's/\"MB\"/\"MiB\"/g' "$strings"; done
-    for strings in /usr/syno/synoman/webman/texts/*/strings; do sed -i 's/\"GB\"/\"GiB\"/g' "$strings"; done
-    for strings in /usr/syno/synoman/webman/texts/*/strings; do sed -i 's/\"TB\"/\"TiB\"/g' "$strings"; done
-
-    # German
-    sed -i 's/\"kB\"/\"KiB\"/g' /usr/syno/synoman/webman/texts/ger/strings
-
-    # Czech
-    sed -i 's/\"kB\"/\"KiB\"/g' /usr/syno/synoman/webman/texts/csy/strings
-
-    # French
-    sed -i 's/\"Ko\"/\"Kio\"/g' /usr/syno/synoman/webman/texts/fre/strings
-    sed -i 's/\"Mo\"/\"Mio\"/g' /usr/syno/synoman/webman/texts/fre/strings
-    sed -i 's/\"Go\"/\"Gio\"/g' /usr/syno/synoman/webman/texts/fre/strings
-    sed -i 's/\"To\"/\"Tio\"/g' /usr/syno/synoman/webman/texts/fre/strings
-
-    # Russian
-    # KB
-    sed -i 's/\"КБ\"/\"КиБ\"/g' /usr/syno/synoman/webman/texts/rus/strings
-    # MB
-    sed -i 's/\"МБ\"/\"МиБ\"/g' /usr/syno/synoman/webman/texts/rus/strings
-    # GB
-    sed -i 's/\"ГБ\"/\"ГиБ\"/g' /usr/syno/synoman/webman/texts/rus/strings
-    # TB
-    sed -i 's/\"ТБ\"/\"ТиБ\"/g' /usr/syno/synoman/webman/texts/rus/strings
+    gui_lang="$(synogetkeyvalue /etc/synoinfo.conf maillang)"
+    strings_file=/usr/syno/synoman/webman/texts/"$gui_lang"/strings
+    case "$gui_lang" in
+        ger|csy)  # German and Czech
+            if grep -q '"kB"' "$strings_file"; then
+                sed -i 's/\"kB\"/\"KiB\"/g' "$strings_file"
+                sed -i 's/\"MB\"/\"MiB\"/g' "$strings_file"
+                sed -i 's/\"GB\"/\"GiB\"/g' "$strings_file"
+                sed -i 's/\"TB\"/\"TiB\"/g' "$strings_file"
+                edited="yes"
+            fi
+            ;;
+        fre)  # French
+            if grep -q '"Ko"' "$strings_file"; then
+                sed -i 's/\"Ko\"/\"Kio\"/g' "$strings_file"
+                sed -i 's/\"Mo\"/\"Mio\"/g' "$strings_file"
+                sed -i 's/\"Go\"/\"Gio\"/g' "$strings_file"
+                sed -i 's/\"To\"/\"Tio\"/g' "$strings_file"
+                edited="yes"
+            fi
+            ;;
+        rus)  # Russian
+            if grep -q '"КБ"' "$strings_file"; then
+                sed -i 's/\"КБ\"/\"КиБ\"/g' "$strings_file"
+                sed -i 's/\"МБ\"/\"МиБ\"/g' "$strings_file"
+                sed -i 's/\"ГБ\"/\"ГиБ\"/g' "$strings_file"
+                sed -i 's/\"ТБ\"/\"ТиБ\"/g' "$strings_file"
+                edited="yes"
+            fi
+            ;;
+        *)  # Other languages
+            if grep -q '"KB"' "$strings_file"; then
+                sed -i 's/\"KB\"/\"KiB\"/g' "$strings_file"
+                sed -i 's/\"MB\"/\"MiB\"/g' "$strings_file"
+                sed -i 's/\"GB\"/\"GiB\"/g' "$strings_file"
+                sed -i 's/\"TB\"/\"TiB\"/g' "$strings_file"
+                edited="yes"
+            fi
+            ;;
+    esac
 fi
 
 
 # Show the changes:
-for s in /usr/syno/synoman/webman/texts/*/strings; do
-    lang="$(echo "$s" | cut -d"/" -f7 | cut -d"/" -f1)"
-    echo "[${lang^^}]"
-    grep -E '^size_.b' "$s"
-    echo ""
-done
+#for s in /usr/syno/synoman/webman/texts/*/strings; do
+#    lang="$(echo "$s" | cut -d"/" -f7 | cut -d"/" -f1)"
+#    #echo "[${lang^^}]"
+#    echo "Size units for ${lang^^} are now"
+#    grep -E '^size_.b' "$s"
+#    echo ""
+#done
+check_state
 
 # Refresh browser window
-echo -e "You will need to hard refresh the DSM browser tab or window to see the changes"
+#if [[ $edited == "yes" ]]; then
+#    echo -e "You will need to hard refresh the DSM browser tab or window to see the changes"
+#fi
 

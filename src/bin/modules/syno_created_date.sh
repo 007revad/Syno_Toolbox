@@ -180,72 +180,74 @@ eunit_lang(){
     esac
 }
 
-# Get array of expansion units
-if which syno_slot_mapping >/dev/null; then
-    #eunits=("$(syno_slot_mapping | grep 'Eunit port' | awk '{print $NF}')")
-    #eunits=("$(syno_slot_mapping | grep 'Eunit port')")  # Also show port number
-    #readarray -t eunits < <(syno_slot_mapping | grep 'Eunit port' | awk '{print $NF}')
-    readarray -t eunits < <(syno_slot_mapping | grep 'Eunit port')  # Also show port number
-    if [[ ${#eunits[@]} -gt "0" ]]; then
-        for e in "${eunits[@]}"; do
-            eunitlist+=("$(echo "$e" | awk '{print $5 "-" $3}')")
+if [[ -t 1 ]]; then  # Running in terminal
+    # Get array of expansion units
+    if which syno_slot_mapping >/dev/null; then
+        #eunits=("$(syno_slot_mapping | grep 'Eunit port' | awk '{print $NF}')")
+        #eunits=("$(syno_slot_mapping | grep 'Eunit port')")  # Also show port number
+        #readarray -t eunits < <(syno_slot_mapping | grep 'Eunit port' | awk '{print $NF}')
+        readarray -t eunits < <(syno_slot_mapping | grep 'Eunit port')  # Also show port number
+        if [[ ${#eunits[@]} -gt "0" ]]; then
+            for e in "${eunits[@]}"; do
+                eunitlist+=("$(echo "$e" | awk '{print $5 "-" $3}')")
+            done
+        fi
+    else
+    #    # Create new /var/log/diskprediction log to ensure newly connected ebox is in latest log
+    #    # Otherwise the new /var/log/diskprediction log is only created a midnight.
+    #    /usr/syno/bin/syno_disk_data_collector record
+    #
+    #    # Get list of connected expansion units (aka eunit/ebox)
+    #    path="/var/log/diskprediction"
+    #    # shellcheck disable=SC2012
+    #    file=$(ls $path | tail -n1)
+    #    #eunitlist=($(grep -Eowi "([FRD]XD?[0-9]{3,4})(rp|ii|sas){0,2}" "$path/$file" | uniq))
+    #    eunitlist=($(grep -Eowi "([FRD]XD?[0-9]{3,4})(rp|ii|sas){0,2}-[0-9]" "$path/$file"))
+        
+        # Use eunit_inof because "syno_disk_data_collector record" is too slow
+        for f in /tmp/eunitinfo_*; do
+            # Remove old /tmp/eunitinfo_N files
+            if [[ -f "$f" ]]; then
+                rm "$f"
+            fi
+        done
+        # Create new /tmp/eunitinfo_N files
+        /usr/syno/sbin/eunit_info
+
+        # Get list of connected expansion units (aka eunit/ebox)
+        for f in /tmp/eunitinfo_*; do
+            if [[ -f "$f" ]]; then
+                eunitlist+=("$(synogetkeyvalue "$f" EUnitModel)")
+            fi
         done
     fi
-else
-#    # Create new /var/log/diskprediction log to ensure newly connected ebox is in latest log
-#    # Otherwise the new /var/log/diskprediction log is only created a midnight.
-#    /usr/syno/bin/syno_disk_data_collector record
-#
-#    # Get list of connected expansion units (aka eunit/ebox)
-#    path="/var/log/diskprediction"
-#    # shellcheck disable=SC2012
-#    file=$(ls $path | tail -n1)
-#    #eunitlist=($(grep -Eowi "([FRD]XD?[0-9]{3,4})(rp|ii|sas){0,2}" "$path/$file" | uniq))
-#    eunitlist=($(grep -Eowi "([FRD]XD?[0-9]{3,4})(rp|ii|sas){0,2}-[0-9]" "$path/$file"))
-    
-    # Use eunit_inof because "syno_disk_data_collector record" is too slow
-    for f in /tmp/eunitinfo_*; do
-        # Remove old /tmp/eunitinfo_N files
-        if [[ -f "$f" ]]; then
-            rm "$f"
-        fi
-    done
-    # Create new /tmp/eunitinfo_N files
-    /usr/syno/sbin/eunit_info
 
-    # Get list of connected expansion units (aka eunit/ebox)
-    for f in /tmp/eunitinfo_*; do
-        if [[ -f "$f" ]]; then
-            eunitlist+=("$(synogetkeyvalue "$f" EUnitModel)")
-        fi
-    done
+    # Ask user to enter the first 3 characters of their expansion units' serial numbers
+    if [[ ${#eunitlist[@]} -gt "0" ]]; then
+        for eunit in "${eunitlist[@]}"; do
+            eunit_lang "$lang"
+            echo ""
+            # shellcheck disable=SC2162  # read without -r will mangle backslashes
+            read -p "${question}: " eunit_serial
+            # Pad serial number with xxxx
+            if [[ ${eunit_serial:1} =~ [0-9] ]]; then
+                eunit_serial="${eunit_serial^^}xxxxxxxxx"
+            else
+                eunit_serial="${eunit_serial^^}xxxxxxx"
+            fi
+
+            convert_serial "$eunit_serial"
+            if [[ $lang ]]; then
+                made=$(synogetkeyvalue "/usr/syno/synoman/webman/texts/${lang}/strings" version_time)
+                echo -e "${eunit} $eunit_serial ${made}: $build_date"
+            else
+                echo -e "${eunit} $eunit_serial Date Created: $build_date"
+            fi
+        done
+    fi
+
+    echo ""
 fi
-
-# Ask user to enter the first 3 characters of their expansion units' serial numbers
-if [[ ${#eunitlist[@]} -gt "0" ]]; then
-    for eunit in "${eunitlist[@]}"; do
-        eunit_lang "$lang"
-        echo ""
-        # shellcheck disable=SC2162  # read without -r will mangle backslashes
-        read -p "${question}: " eunit_serial
-        # Pad serial number with xxxx
-        if [[ ${eunit_serial:1} =~ [0-9] ]]; then
-            eunit_serial="${eunit_serial^^}xxxxxxxxx"
-        else
-            eunit_serial="${eunit_serial^^}xxxxxxx"
-        fi
-
-        convert_serial "$eunit_serial"
-        if [[ $lang ]]; then
-            made=$(synogetkeyvalue "/usr/syno/synoman/webman/texts/${lang}/strings" version_time)
-            echo -e "${eunit} $eunit_serial ${made}: $build_date"
-        else
-            echo -e "${eunit} $eunit_serial Date Created: $build_date"
-        fi
-    done
-fi
-
-echo ""
 
 exit
 

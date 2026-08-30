@@ -1,5 +1,14 @@
 name: TEST Build Syno Toolbox Test Package
 
+env:
+  # --- Edit these when reusing for a different package ---
+  REPO_NAME: "Syno_Toolbox"
+  SPK_PREFIX: "SynoToolbox"
+  HELPER_NAME: "synotoolbox"
+
+  # --- Runner config, shouldn't need to change ---
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   workflow_dispatch:
     inputs:
@@ -8,9 +17,6 @@ on:
         description: 'Version for this test build (also used to name the downloadable artifact zip - never published)'
         required: false
         default: ''
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-test-spk:
@@ -26,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Get test tag
         id: get_tag
@@ -72,14 +78,70 @@ jobs:
           arch: ${{ matrix.arch }}
           output: ./dist
 
+      # SynoBuild/PkgCreate.py don't reliably fail the Action when our
+      # custom post-make helper-compile step (in stubs/SynoBuildConf/build)
+      # errors out - the log shows Synology's own tooling can still emit
+      # a .spk in that case. Check the actual built artifact instead of
+      # trusting the exit code chain through Synology's build driver.
+      - name: Verify setuid helper compiled correctly
+        run: |
+          set -euo pipefail
+
+          case "${{ matrix.arch }}" in
+            kvmx64)    expect_arch="x86-64" ;;
+            rtd1296)   expect_arch="ARM aarch64" ;;
+            armada38x) expect_arch="ARM" ;;
+            evansport) expect_arch="Intel 80386" ;;
+            *) echo "::error::No expected ELF arch mapped for '${{ matrix.arch }}'"; exit 1 ;;
+          esac
+
+          spk=$(ls ./dist/*.spk | grep -v _debug | head -n1)
+          if [ -z "$spk" ]; then
+            echo "::error::No non-debug .spk found in ./dist"
+            exit 1
+          fi
+
+          workdir=$(mktemp -d)
+          tar -xf "$spk" -C "$workdir" package.tgz
+          tar -xf "$workdir/package.tgz" -C "$workdir" bin/helper/${HELPER_NAME}-helper
+
+          helper="$workdir/bin/helper/${HELPER_NAME}-helper"
+          if [ ! -s "$helper" ]; then
+            echo "::error::${HELPER_NAME}-helper missing or empty in $spk - helper compile likely failed silently"
+            exit 1
+          fi
+
+          file_out=$(file -b "$helper")
+          echo "${HELPER_NAME}-helper: $file_out"
+          case "$file_out" in
+            *"$expect_arch"*) echo "OK: matches expected arch '$expect_arch'" ;;
+            *)
+              echo "::error::${HELPER_NAME}-helper in $spk doesn't look like '$expect_arch' (got: $file_out) - wrong-arch compiler was likely used"
+              exit 1
+              ;;
+          esac
+
+          rm -rf "$workdir"
+
       - name: Remove debug spk and rename package
         run: |
           ls -l ./dist
           rm ./dist/*_debug.spk
           for f in ./dist/*.spk; do
-            mv "$f" "./dist/Syno_Toolbox-${{ steps.arch_label.outputs.label }}-${{ steps.get_tag.outputs.new_tag }}-${{ steps.dsm_suffix.outputs.suffix }}.spk"
+            mv "$f" "./dist/${SPK_PREFIX}-${{ steps.arch_label.outputs.label }}-${{ steps.get_tag.outputs.new_tag }}-${{ steps.dsm_suffix.outputs.suffix }}.spk"
           done
           ls -l ./dist
+
+      - name: Fix arch field in INFO for non-x86_64 DSM 7 platforms
+        if: matrix.arch != 'kvmx64'
+        run: |
+          set -euo pipefail
+          spk=$(ls ./dist/*.spk | head -n1)
+          tmpdir=$(mktemp -d)
+          tar -xf "$spk" -C "$tmpdir"
+          sed -i '/^arch=/s/.*/arch="${{ steps.arch_label.outputs.label }}"/' "$tmpdir/INFO"
+          tar -cf "$spk" -C "$tmpdir" $(ls "$tmpdir")
+          rm -rf "$tmpdir"
 
       # Only needs to happen once - the noarch/DSM6 output doesn't
       # depend on which arch built it, and running it per matrix leg
@@ -87,7 +149,7 @@ jobs:
       - name: Create noarch package for DSM 6
         if: matrix.arch == 'kvmx64'
         run: |
-          for f in ./dist/Syno_Toolbox-${{ steps.arch_label.outputs.label }}-*.spk; do
+          for f in ./dist/${SPK_PREFIX}-${{ steps.arch_label.outputs.label }}-*.spk; do
             dsm6="${f/${{ steps.arch_label.outputs.label }}/noarch}"
             dsm6="${dsm6/${{ steps.dsm_suffix.outputs.suffix }}/DSM-6.x}"
             tmpdir=$(mktemp -d)
@@ -95,6 +157,7 @@ jobs:
             sed -i 's/arch=".*"/arch="noarch"/' "$tmpdir/INFO"
             sed -i -E 's/os_min_ver="7\.0-[0-9]+"/os_min_ver="6.0-7321"/' "$tmpdir/INFO"
             sed -i 's/os_max_ver="9.9-99999"/os_max_ver="6.9-99999"/' "$tmpdir/INFO"
+            sed -i -E 's/install_dep_packages="[^"]*"/install_dep_packages="py3k>=3.8.6-0154"/' "$tmpdir/INFO"
             rm -rf "$tmpdir/WIZARD_UIFILES"
             rm -rf "$tmpdir/conf"
             rm -rf "$tmpdir/helper"
@@ -104,7 +167,7 @@ jobs:
           ls -l ./dist
 
       - name: Upload Package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: Syno_Toolbox-${{ steps.arch_label.outputs.label }}-${{ steps.dsm_suffix.outputs.suffix }}-${{ steps.get_tag.outputs.new_tag }}
+          name: ${{ env.SPK_PREFIX }}-${{ steps.arch_label.outputs.label }}-${{ steps.dsm_suffix.outputs.suffix }}-${{ steps.get_tag.outputs.new_tag }}
           path: ./dist/*.spk

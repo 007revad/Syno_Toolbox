@@ -3,11 +3,36 @@
   "comment2": "see modules_json_field_reference.md for field meanings",
   "modules": [
     {
-      "id": "created_date",
+      "id": "dsm_version",
       "category": "info",
-      "name": "Synology Created Date",
+      "name": "DSM Version",
       "control": "toggle-display",
-      "script": "bin/modules/syno_created_date.sh",
+      "script": "bin/modules/dsm_version.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": []
+    },
+    {
+      "id": "ups_connected",
+      "category": "info",
+      "name": "UPS Status",
+      "control": "toggle-display",
+      "script": "bin/modules/ups_status.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": [],
+      "result_style": "monospace"
+    },
+    {
+      "id": "system_partition_info",
+      "category": "info",
+      "name": "DSM System Partition Information",
+      "control": "toggle-display",
+      "script": "bin/modules/system_partition_info.sh",
       "trigger": "boot",
       "live": true,
       "run_args": [],
@@ -28,6 +53,19 @@
       "check_args": []
     },
     {
+      "id": "created_date",
+      "category": "info",
+      "name": "Synology Created Date",
+      "control": "toggle-display",
+      "script": "bin/modules/syno_created_date.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": [],
+      "note": "candidate for header display instead of a toggle row"
+    },
+    {
       "id": "telnet_password",
       "category": "info",
       "name": "DSM Telnet Password of the Day",
@@ -37,7 +75,8 @@
       "live": true,
       "run_args": [],
       "disable_args": null,
-      "check_args": []
+      "check_args": [],
+      "result_style": "monospace"
     },
     {
       "id": "fix_size_units",
@@ -64,36 +103,11 @@
       "check_args": ["--check"]
     },
     {
-      "id": "toggle_reset_button",
-      "category": "tools",
-      "name": "Disable Reset Button",
-      "control": "toggle-display",
-      "script": "bin/modules/toggle_reset_button.sh",
-      "trigger": "boot",
-      "live": false,
-      "run_args": ["disable"],
-      "disable_args": ["enable"],
-      "check_args": ["check"],
-      "note": "single script, 3 modes (enable/disable/check) verified by Dave - not separate files"
-    },
-    {
       "id": "low_current_spinup",
       "category": "tools",
       "name": "Enable Seagate Low Current Spinup",
       "control": "toggle-display",
       "script": "bin/modules/seagate_lowcurrentspinup.sh",
-      "trigger": "boot",
-      "live": false,
-      "run_args": [],
-      "disable_args": null,
-      "check_args": ["check"]
-    },
-    {
-      "id": "restore_fan_speed",
-      "category": "tools",
-      "name": "Restore RS3621 Fan Speed",
-      "control": "toggle-display",
-      "script": "bin/modules/restore_rs3621_fan_speed.sh",
       "trigger": "boot",
       "live": false,
       "run_args": [],
@@ -114,7 +128,7 @@
       "note": "run_args wraps: sudo /usr/syno/bin/synopkg uninstall ActiveInsight - confirm exact wrapper script contents before shipping"
     },
     {
-      "id": "ups_connected",
+      "id": "schedule_ups_connected",
       "category": "tools",
       "name": "Check Connected to UPS Server",
       "control": "toggle-schedule",
@@ -146,7 +160,7 @@
       "name": "Backup Synoboot Image",
       "control": "toggle-filepicker",
       "script": "bin/modules/synoboot_backup.sh",
-      "trigger": "scheduled",
+      "trigger": "boot",
       "live": false,
       "run_args": [],
       "disable_args": null,
@@ -187,6 +201,31 @@
         "secondary_toggle": { "label": "RAID F1", "value": "raidf1" }
       },
       "note": "Confirmed positional CLI: syno_shr_switch.sh <shr|raidgrp> [raidf1]. raidf1 is an optional 2nd positional arg. Our placeholder substitution always passes 2 args - when RAID F1 isn't checked, {raidf1} resolves to an empty string rather than being omitted entirely. ASSUMPTION (not confirmed by Dave): the script treats an empty/non-matching 2nd arg the same as a missing one. Verify against the actual script before relying on this."
+    },
+    {
+      "id": "restore_fan_speed",
+      "category": "tools",
+      "name": "Restore RS3621 Fan Speed",
+      "control": "toggle-display",
+      "script": "bin/modules/restore_rs3621_fan_speed.sh",
+      "trigger": "boot",
+      "live": false,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": ["check"]
+    },
+    {
+      "id": "toggle_reset_button",
+      "category": "tools",
+      "name": "Disable Reset Button",
+      "control": "toggle-display",
+      "script": "bin/modules/toggle_reset_button.sh",
+      "trigger": "boot",
+      "live": false,
+      "run_args": ["disable"],
+      "disable_args": ["enable"],
+      "check_args": ["check"],
+      "note": "single script, 3 modes (enable/disable/check) verified by Dave - not separate files"
     }
   ]
 }

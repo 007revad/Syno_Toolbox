@@ -1,7 +1,7 @@
 {
   "package": "Syno_Toolbox",
   "name": "Syno_Toolbox",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "Package containing many 007revad scripts that are too small to have their own package",
   "target": "./src",
   "install_type": "package",
@@ -16,7 +16,7 @@
     "help_url": "https://github.com/007revad/Syno_Toolbox",
     "os_min_ver": "7.0-40337",
     "os_max_ver": "9.9-99999",
-    "arch": "noarch",
+    "arch": "x86_64",
     "displayname": "Syno Toolbox",
     "dsmuidir": "ui",
     "dsmappname": "SYNO.SDS._ThirdParty.App.Syno_Toolbox",

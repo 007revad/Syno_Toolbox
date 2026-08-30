@@ -41,8 +41,32 @@ tb_get() {
 
 # tb_set <key> <value>
 tb_set() {
-    local key="$1" value="$2"
-    /usr/syno/bin/synosetkeyvalue "$TOOLBOX_CONF" "$key" "$value"
+    local key="$1" value="$2" curval
+    curval="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" "$key")"
+    if [[ "$curval" != "$value" ]]; then
+        /usr/syno/bin/synosetkeyvalue "$TOOLBOX_CONF" "$key" "$value"
+    fi
+}
+
+# tb_set_bulk <json_blob>
+# Writes every key=value in one pass instead of one synosetkeyvalue
+# call per key. Format matches what synosetkeyvalue itself produces
+# (quoted values), so tb_get/synogetkeyvalue can still read it back.
+tb_set_bulk() {
+    local json_blob="$1"
+    local tmp
+    tmp="$(mktemp)"
+    # Start from existing conf, drop any key we're about to overwrite,
+    # then append the new values - single rewrite, single lock.
+    if [[ -f "$TOOLBOX_CONF" ]]; then
+        cp "$TOOLBOX_CONF" "$tmp"
+    fi
+    echo "$json_blob" | jq -r 'to_entries[] | "\(.key)=\"\(.value)\""' | \
+        while IFS='=' read -r key rest; do
+            sed -i "/^${key}=/d" "$tmp"
+        done
+    echo "$json_blob" | jq -r 'to_entries[] | "\(.key)=\"\(.value)\""' >> "$tmp"
+    mv "$tmp" "$TOOLBOX_CONF"
 }
 
 # tb_is_enabled <module_id>

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #--------------------------------------------------------------------
-# Show current /var/log size and largest logs if total size > 150 MB
+# Show current system partitions size
 #--------------------------------------------------------------------
 
 scriptver="v1.0.0-toolbox"
-scriptname=var_log_size
+scriptname=system_partition_info
 
 # Check script is running on a Synology NAS
 if ! uname -a | grep -i synology >/dev/null; then
@@ -19,18 +19,13 @@ if [[ $( whoami ) != "root" ]]; then
     exit 1
 fi
 
-var_log_size="$(du -sh /var/log | awk '{print $1}')"
+#df -h / | awk '{s=index($0,$2); e=index($0,$5)+length($5)-1; print substr($0,s,e-s+1)}'
 
-total_num=${var_log_size%?}
-num_unit="${var_log_size: -1}B"
+df_result="$(df -h / | tail -n +2)"
+size="$(echo -n "$df_result" | awk '{print $2}')"
+used="$(echo -n "$df_result" | awk '{print $3}')"
+avail="$(echo -n "$df_result" | awk '{print $4}')"
+percent="$(echo -n "$df_result" | awk '{print $5}')"
 
-quota_size="$(df -h /var/log | awk 'NR==2 {print $2}')"
-
-if [[ "$quota_size" == "200M" ]]; then
-    echo "/var/log size limit is 200 MB"
-fi
-echo "/var/log current size is $total_num $num_unit"
-
-if [[ "$total_num" -ge "150" ]] && [[ "$num_unit" == "MB" ]]; then
-    du -h /var/log | grep 'M' | head -n -1
-fi
+#echo "Size: $size  Used: $used  Avail: $avail  Used%: $percent"
+echo "Size: $size  Used: $used $percent  Available: $avail"

@@ -58,7 +58,7 @@ fi
 find_task_id() {
     local raw
     raw=$(synowebapi $WEBAPI_FLAG --exec api=SYNO.Core.TaskScheduler method=list version=1 2>>"${VAR_DIR}/api.log")
-    echo "$raw" >> "${VAR_DIR}/api.log"
+    #echo "$raw" >> "${VAR_DIR}/api.log"  # debug
     echo "$raw" | python3 -c "
 import json, sys
 
@@ -193,6 +193,15 @@ disable)
     # See set_enable_task_REFERENCE_ONLY() above
     synowebapi $WEBAPI_FLAG --exec api=SYNO.Core.TaskScheduler method=set_enable version=2 \
         status="[{\"id\":${EXISTING_ID},\"real_owner\":\"root\",\"enable\":false}]"
+    ;;
+
+find)
+    EXISTING_ID=$(find_task_id)
+    if [[ -n "$EXISTING_ID" ]]; then
+        echo "{\"success\":true,\"exists\":true,\"id\":${EXISTING_ID}}"
+    else
+        echo '{"success":true,"exists":false}'
+    fi
     ;;
 
 *)

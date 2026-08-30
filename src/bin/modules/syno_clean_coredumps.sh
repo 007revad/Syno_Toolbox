@@ -19,7 +19,7 @@ scriptname=syno_cleanup_coredumps
 #}
 
 # Check script is running on a Synology NAS
-if ! /usr/bin/uname -a | grep -i synology >/dev/null; then
+if ! uname -a | grep -i synology >/dev/null; then
     #ding
     echo "This script is NOT running on a Synology NAS!"
     echo "Copy the script to a folder on the Synology and run it from there."
@@ -75,22 +75,22 @@ clean_path(){
         echo -e "Deleting all core dumps on ${label}"
     fi
 
-    find "$path" -maxdepth 1 -mmin +$((60*24*age)) \( -name "@*.core" -o -name "@*.core.gz" \) -type f -printf '%s\n' 2>/dev/null \
-    | awk '{count++; sum+=$1} END {printf "%d %.0f\n", count, sum}' \
-    | {
-        read -r count sum
-        if [[ $count -gt 0 ]]; then
-            if find "$path" -maxdepth 1 -mmin +$((60*24*age)) \( -name "@*.core" -o -name "@*.core.gz" \) -type f -delete; then
-                total_mb=$(echo "$sum" | awk '{ megabytes = $1 / 1024 / 1024; printf "%.2f", megabytes }')
-                printf "Deleted %d files (total %.2f MB)\n\n" "$count" "$total_mb"
-            else
-                echo ""
-            fi
+    read -r count sum < <(
+        find "$path" -maxdepth 1 -mmin +$((60*24*age)) \( -name "@*.core" -o -name "@*.core.gz" \) -type f -printf '%s\n' 2>/dev/null \
+        | awk '{count++; sum+=$1} END {printf "%d %.0f\n", count, sum}'
+    )
+    if [[ $count -gt 0 ]]; then
+        if find "$path" -maxdepth 1 -mmin +$((60*24*age)) \( -name "@*.core" -o -name "@*.core.gz" \) -type f -delete; then
+            total_mb=$(echo "$sum" | awk '{ megabytes = $1 / 1024 / 1024; printf "%.2f", megabytes }')
+            printf "Deleted %d core dumps (total %.2f MB)\n\n" "$count" "$total_mb"
         else
-            echo -e "No files to delete.\n"
-            total_count=(total_count +count)
+            echo ""
         fi
-    }
+        total_count=$((total_count +count))
+    else
+        echo -e "No core dumps to delete.\n"
+        #total_count=$((total_count +count))
+    fi
 }
 
 
@@ -105,27 +105,26 @@ check_path(){
         older_than=""
     fi
 
-    find "$path" -maxdepth 1 -mmin +$((60*24*age)) \( -name "@*.core" -o -name "@*.core.gz" \) -type f -printf '%s\n' 2>/dev/null \
-    | awk '{count++; sum+=$1} END {printf "%d %.0f\n", count, sum}' \
-    | {
-        read -r count sum
-        if [[ $count -gt 0 ]]; then
-#            if find "$path" -maxdepth 1 -mmin +$((60*24*age)) \( -name "@*.core" -o -name "@*.core.gz" \) -type f -delete; then
-                total_mb=$(echo "$sum" | awk '{ megabytes = $1 / 1024 / 1024; printf "%.2f", megabytes }')
-                printf "%d core dumps (total %.2f MB)" "$count" "$total_mb"
-                if [[ $label == "/var/crash" ]]; then
-                    echo -e "$older_than in ${label}"
-                else
-                    echo -e "$older_than on ${label}"
-                fi
-#            else
-#                echo ""
-#            fi
-        else
-        #    echo -e "No files to delete.\n"
-            total_count=(total_count +count)
-        fi
-    }   
+    read -r count sum < <(
+        find "$path" -maxdepth 1 -mmin +$((60*24*age)) \( -name "@*.core" -o -name "@*.core.gz" \) -type f -printf '%s\n' 2>/dev/null \
+        | awk '{count++; sum+=$1} END {printf "%d %.0f\n", count, sum}'
+    )
+    if [[ $count -gt 0 ]]; then
+#       if find "$path" -maxdepth 1 -mmin +$((60*24*age)) \( -name "@*.core" -o -name "@*.core.gz" \) -type f -delete; then
+            total_mb=$(echo "$sum" | awk '{ megabytes = $1 / 1024 / 1024; printf "%.2f", megabytes }')
+            printf "%d core dumps (total %.2f MB)" "$count" "$total_mb"
+            if [[ $label == "/var/crash" ]]; then
+                echo -e "$older_than in ${label}"
+            else
+                echo -e "$older_than on ${label}"
+            fi
+#        else
+#            echo ""
+#        fi
+        total_count=$((total_count +count))
+    #else
+    #    echo -e "No core dumps to delete.\n"
+    fi
 }
 
 shopt -s nullglob

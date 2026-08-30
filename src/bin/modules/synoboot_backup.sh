@@ -45,7 +45,7 @@ fi
 #    
 #fi
 
-scriptver="v1.0.2-toolbox"
+scriptver="v1.0.4-toolbox"
 script=Synoboot_backup
 #repo="007revad/Synoboot_backup"
 #scriptname=synoboot_backup
@@ -78,7 +78,7 @@ if [[ $( whoami ) != "root" ]]; then
 fi
 
 # Check script is running on a Synology NAS
-if ! /usr/bin/uname -a | grep -i synology >/dev/null; then
+if ! uname -a | grep -i synology >/dev/null; then
     #ding
     echo -e "\n${Error}Error:${Off} This script is NOT running on a Synology NAS!"
     echo -e "Copy the script to a folder on the Synology and run it from there.\n"
@@ -96,16 +96,16 @@ fi
 # Get NAS model
 model=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/synoinfo.conf upnpmodelname 2>/dev/null)
 # Fallback for systems where upnpmodelname is unavailable
-if [[ -z "$nas_model" && -f /proc/sys/kernel/syno_hw_version ]]; then
+if [[ -z "$model" && -f /proc/sys/kernel/syno_hw_version ]]; then
     model=$(cat /proc/sys/kernel/syno_hw_version 2>/dev/null || echo "")
     # Check for dodgy characters after model number
-    if [[ ${nas_model,,} =~ 'pv10-j'$ ]]; then  # GitHub issue #10
-        model=${nas_model%??????}+              # replace last 6 chars with +
-    elif [[ ${nas_model} =~ '-j'$ ]]; then      # GitHub issue #2
-        model=${nas_model%??}                   # remove last 2 chars
+    if [[ ${model,,} =~ 'pv10-j'$ ]]; then  # GitHub issue #10
+        model=${model%??????}+              # replace last 6 chars with +
+    elif [[ ${model} =~ '-j'$ ]]; then      # GitHub issue #2
+        model=${model%??}                   # remove last 2 chars
     fi
 fi
-if [[ -z "$nas_model" ]]; then
+if [[ -z "$model" ]]; then
     model="Unknown_model"
 fi
 
@@ -136,8 +136,8 @@ if [[ ! -e /dev/synoboot ]]; then
 fi
 
 
-# Set backup image name
-imgname="${model}_${serial}_synoboot_${productversion}-$buildnumber$smallfix"
+# Set synoboot backup image name
+imgname="${model}_${serial}_${productversion}-${buildnumber}${smallfix}_synoboot"
 
 # Backup USB DOM synoboot disk
 if [[ ! -f ${bakpath}/${imgname}.img ]]; then
@@ -148,8 +148,8 @@ else
 fi
 
 
-# Set backup image name
-imgname="${model}_${serial}_synoboot1_${productversion}-$buildnumber$smallfix"
+# Set synoboot1 backup image name
+imgname="${model}_${serial}_${productversion}-${buildnumber}${smallfix}_synoboot1"
 
 # Backup USB DOM synoboot1 partition
 if [[ ! -f ${bakpath}/${imgname}.img ]]; then
@@ -160,8 +160,8 @@ else
 fi
 
 
-# Set backup image name
-imgname="${model}_${serial}_synoboot2_${productversion}-$buildnumber$smallfix"
+# Set synoboot2 backup image name
+imgname="${model}_${serial}_${productversion}-${buildnumber}${smallfix}_synoboot2"
 
 # Backup USB DOM synoboot2 partition
 if [[ ! -f ${bakpath}/${imgname}.img ]]; then

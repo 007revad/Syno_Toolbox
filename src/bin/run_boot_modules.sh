@@ -14,6 +14,20 @@ set -u
 PKG_DEST="/var/packages/Syno_Toolbox/target"
 MANIFEST="${PKG_DEST}/conf/modules.json"
 
+dsm=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)
+if [[ $dsm -ge 7 ]]; then
+    VAR_DIR="/var/packages/Syno_Toolbox//var"
+else
+    VAR_DIR="/var/packages/Syno_Toolbox//etc"
+fi
+LOG_FILE="${VAR_DIR}/toolbox.log"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "${LOG_FILE}"
+}
+
+log "run_boot_modules.sh invoked"
+
 source "${PKG_DEST}/bin/conf_lib.sh"
 tb_init || exit 1
 
@@ -48,8 +62,11 @@ for (( i=0; i<MODULE_COUNT; i++ )); do
     script_path="${PKG_DEST}/${script}"
     if [[ -x "$script_path" ]]; then
         echo "Syno_Toolbox: running $id ($script ${args[*]})"
-        "$script_path" "${args[@]:-}" >> /var/log/synotoolbox.log 2>&1
+        #"$script_path" "${args[@]:-}" >> /var/log/synotoolbox.log 2>&1
+        "$script_path" "${args[@]:-}"
+        log "Syno_Toolbox: $script_path ${args[@]:-}"
     else
-        echo "Syno_Toolbox: WARNING $script_path missing or not executable" >&2
+        echo "Syno_Toolbox: WARNING $script_path missing or not executable"
+        log "Syno_Toolbox: WARNING $script_path missing or not executable"
     fi
 done

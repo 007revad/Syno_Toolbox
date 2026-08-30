@@ -1,5 +1,14 @@
 name: Build n Release Syno Toolbox Package
 
+env:
+  # --- Edit these when reusing for a different package ---
+  REPO_NAME: "Syno_Toolbox"
+  SPK_PREFIX: "SynoToolbox"
+  HELPER_NAME: "synotoolbox"
+
+  # --- Runner config, shouldn't need to change ---
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   release:
     types: [published]
@@ -7,9 +16,6 @@ on:
 
 permissions:
   contents: write
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-spk:
@@ -25,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Get release tag
         id: get_latest_tag
@@ -35,7 +41,7 @@ jobs:
           else
             # Get most recent release including pre-releases
             response=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              "https://api.github.com/repos/007revad/Syno_Toolbox/releases?per_page=1")
+              "https://api.github.com/repos/007revad/${REPO_NAME}/releases?per_page=1")
             latest_tag=$(echo "$response" | jq -r 'if type == "array" then .[0].tag_name // empty else empty end')
             if [ -z "$latest_tag" ]; then
               echo "ERROR: Could not determine release tag. API response:" >&2
@@ -61,7 +67,7 @@ jobs:
       - name: Check if SPKs already exist in release
         id: check_assets
         run: |
-          existing=$(curl -s "https://api.github.com/repos/007revad/Syno_Toolbox/releases/tags/${{ steps.get_latest_tag.outputs.new_tag }}" \
+          existing=$(curl -s "https://api.github.com/repos/007revad/${REPO_NAME}/releases/tags/${{ steps.get_latest_tag.outputs.new_tag }}" \
             | jq -r '.assets[].name' | grep -c '\.spk' || true)
           echo "spk_count=$existing" >> $GITHUB_OUTPUT
 
@@ -115,20 +121,20 @@ jobs:
 
           workdir=$(mktemp -d)
           tar -xf "$spk" -C "$workdir" package.tgz
-          tar -xf "$workdir/package.tgz" -C "$workdir" bin/helper/synotoolbox-helper
+          tar -xf "$workdir/package.tgz" -C "$workdir" bin/helper/${HELPER_NAME}-helper
 
-          helper="$workdir/bin/helper/synotoolbox-helper"
+          helper="$workdir/bin/helper/${HELPER_NAME}-helper"
           if [ ! -s "$helper" ]; then
-            echo "::error::synotoolbox-helper missing or empty in $spk - helper compile likely failed silently"
+            echo "::error::${HELPER_NAME}-helper missing or empty in $spk - helper compile likely failed silently"
             exit 1
           fi
 
           file_out=$(file -b "$helper")
-          echo "synotoolbox-helper: $file_out"
+          echo "${HELPER_NAME}-helper: $file_out"
           case "$file_out" in
             *"$expect_arch"*) echo "OK: matches expected arch '$expect_arch'" ;;
             *)
-              echo "::error::synotoolbox-helper in $spk doesn't look like '$expect_arch' (got: $file_out) - wrong-arch compiler was likely used"
+              echo "::error::${HELPER_NAME}-helper in $spk doesn't look like '$expect_arch' (got: $file_out) - wrong-arch compiler was likely used"
               exit 1
               ;;
           esac
@@ -141,9 +147,20 @@ jobs:
           ls -l ./dist
           rm ./dist/*_debug.spk
           for f in ./dist/*.spk; do
-            mv "$f" "./dist/SynoToolbox-${{ steps.arch_label.outputs.label }}-${{ steps.get_latest_tag.outputs.new_tag }}-${{ steps.dsm_suffix.outputs.suffix }}.spk"
+            mv "$f" "./dist/${SPK_PREFIX}-${{ steps.arch_label.outputs.label }}-${{ steps.get_latest_tag.outputs.new_tag }}-${{ steps.dsm_suffix.outputs.suffix }}.spk"
           done
           ls -l ./dist
+
+      - name: Fix arch field in INFO for non-x86_64 DSM 7 platforms
+        if: steps.check_assets.outputs.spk_count == '0' && matrix.arch != 'kvmx64'
+        run: |
+          set -euo pipefail
+          spk=$(ls ./dist/*.spk | head -n1)
+          tmpdir=$(mktemp -d)
+          tar -xf "$spk" -C "$tmpdir"
+          sed -i '/^arch=/s/.*/arch="${{ steps.arch_label.outputs.label }}"/' "$tmpdir/INFO"
+          tar -cf "$spk" -C "$tmpdir" $(ls "$tmpdir")
+          rm -rf "$tmpdir"
 
       # Only needs to happen once - the noarch/DSM6 output doesn't
       # depend on which arch built it, and running it per matrix leg
@@ -151,7 +168,7 @@ jobs:
       - name: Create noarch package for DSM 6
         if: steps.check_assets.outputs.spk_count == '0' && matrix.arch == 'kvmx64'
         run: |
-          for f in ./dist/SynoToolbox-${{ steps.arch_label.outputs.label }}-*.spk; do
+          for f in ./dist/${SPK_PREFIX}-${{ steps.arch_label.outputs.label }}-*.spk; do
             dsm6="${f/${{ steps.arch_label.outputs.label }}/noarch}"
             dsm6="${dsm6/${{ steps.dsm_suffix.outputs.suffix }}/DSM-6.x}"
             tmpdir=$(mktemp -d)
@@ -159,6 +176,7 @@ jobs:
             sed -i 's/arch=".*"/arch="noarch"/' "$tmpdir/INFO"
             sed -i -E 's/os_min_ver="7\.0-[0-9]+"/os_min_ver="6.0-7321"/' "$tmpdir/INFO"
             sed -i 's/os_max_ver="9.9-99999"/os_max_ver="6.9-99999"/' "$tmpdir/INFO"
+            sed -i -E 's/install_dep_packages="[^"]*"/install_dep_packages="py3k>=3.8.6-0154"/' "$tmpdir/INFO"
             rm -rf "$tmpdir/WIZARD_UIFILES"
             rm -rf "$tmpdir/conf"
             rm -rf "$tmpdir/helper"
@@ -169,9 +187,9 @@ jobs:
 
       - name: Upload Package
         if: steps.check_assets.outputs.spk_count == '0'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: Syno_Toolbox-${{ steps.arch_label.outputs.label }}-${{ steps.dsm_suffix.outputs.suffix }}
+          name: ${{ env.SPK_PREFIX }}-${{ steps.arch_label.outputs.label }}-${{ steps.dsm_suffix.outputs.suffix }}
           path: ./dist/*.spk
 
       - name: Release
@@ -190,10 +208,10 @@ jobs:
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
       - name: Checkout this repo (for synology/PACKAGE_ICON.PNG and package.json)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout 007revad.github.io (for thumbnails/)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: 007revad/007revad.github.io
           token: ${{ secrets.SYNC_TOKEN }}
@@ -206,7 +224,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Read package ID from package.json 
+          # Read package ID from package.json
           # package.json may be at the repo root or under synology/ depending on the repo
           if [ -f "synology/package.json" ]; then
             PKG_JSON="synology/package.json"

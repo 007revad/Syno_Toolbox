@@ -1,3 +1,16 @@
+v1.0.19
+- 20th beta release.
+- Added spinner for "Loading..." and "Saving..."
+- Reduced save time from 4.5 seconds to 0.5 seconds.
+- Update modules order.
+- Added dsm_version, ups_status, restore_ups_acl and system _partition_info modules.
+- Updated fix_size_units, var_log_size, syno_created_date, clean_coredumps and synoboot_backup modules.
+- Added monospace option in manifest - for packages whose output needs to be monospace.
+- Improved logging.
+- Bug fix for not showing scripts' output if the script also had a check option.
+- Bug fix for not installing python3 in DSM 6 if python3 not installed.
+- Bug fix for modules set to run at boot not running when package starts.
+
 v1.0.18
 - 19th beta release.
 - Secured against another possible exploit.
