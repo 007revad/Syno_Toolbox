@@ -258,6 +258,31 @@ listwoldevices)
     fi
     ;;
 
+discoverwol)
+    # Launches discover_ip_macs.sh (the arp-scan that populates
+    # wol_devices.tsv, ~4.5s) detached from this request entirely, so
+    # the HTTP response returns immediately - main.js fires this once
+    # on page open and never waits on its result. If a scan is already
+    # running (page reopened quickly, or overlapping with a scheduled
+    # run once one exists), skip launching a second one rather than
+    # stacking concurrent arp-scans against the same interfaces.
+    #
+    # ASSUMPTION (not confirmed by Dave): discover_ip_macs.sh is
+    # deployed at $BIN_DIR/discover_ip_macs.sh - alongside bin/, not
+    # inside bin/modules/, since it isn't a toggleable module in its
+    # own right. Confirm/adjust this path before relying on it.
+    DISCOVER_SCRIPT="${BIN_DIR}/discover_ip_macs.sh"
+    if [[ ! -x "$DISCOVER_SCRIPT" ]]; then
+        echo '{"launched": false, "reason": "script not found or not executable"}'
+    elif pgrep -f "$DISCOVER_SCRIPT" >/dev/null 2>&1; then
+        echo '{"launched": false, "reason": "already running"}'
+    else
+        nohup "$DISCOVER_SCRIPT" >/dev/null 2>>"${TOOLBOX_CONF%.conf}.log" &
+        disown
+        echo '{"launched": true}'
+    fi
+    ;;
+
 listshares)
     # Shared folder -> /volumeN/share path map, via synoshare.
     # Optional exclude regex as $1 (pipe-separated share names).

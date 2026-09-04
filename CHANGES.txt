@@ -1,3 +1,7 @@
+v1.0.21
+- 22nd beta release.
+- Updated back-end to pre-populate local mac addresses for send_wol module.
+
 v1.0.20
 - 21st beta release.
 - Added uninstall_active_insight, eth_speed, network_mac and send_wol modules.

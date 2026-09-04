@@ -145,6 +145,16 @@ listwoldevices)
     fi
     ;;
 
+discoverwol)
+    run_privileged discoverwol
+    if [ "$RUN_RC" -ne 0 ]; then
+        log "[ERROR] discoverwol failed (rc=${RUN_RC}): ${RUN_OUT}"
+        json_response false "Could not start WOL device discovery" ""
+    else
+        json_response true "" "${RUN_OUT}"
+    fi
+    ;;
+
 listshares)
     run_privileged listshares
     if [ "$RUN_RC" -ne 0 ]; then

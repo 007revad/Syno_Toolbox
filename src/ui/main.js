@@ -151,7 +151,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         this.spinnerEl = el.querySelector(".tb-spinner");
         this.saveBtn = el.querySelector(".tb-save");
 
-        Ext.fly(el.querySelector(".tb-refresh")).on("click", this.loadState, this);
+        Ext.fly(el.querySelector(".tb-refresh")).on("click", (function() { this.loadState(false); }).createDelegate(this));
         Ext.fly(this.saveBtn).on("click", this.onSave, this);
 
         Ext.each(el.querySelectorAll(".tb-tab"), function(tabBtn) {
@@ -182,7 +182,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         // ever reaching that listener.
         Ext.fly(el).on("selectstart", function(ev) { ev.stopPropagation(); });
 
-        this.loadState();
+        this.loadState(true);
     },
 
     switchTab: function(category) {
@@ -300,8 +300,19 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // ---------------------------------------------------------------
     // Load module state and render rows
     // ---------------------------------------------------------------
-    loadState: function() {
+    loadState: function(isInitial) {
         this.setStatus("Loading\u2026", true);
+
+        // Only on package open, not on a manual Refresh - the arp-scan
+        // behind this takes ~4.5s, so Refresh (meant to feel instant)
+        // never triggers it. Fire-and-forget: we don't wait on its
+        // response or let it hold up getstate's own render below: the
+        // WOL dropdown just picks up fresher results next time it's
+        // populated, once the backgrounded scan finishes.
+        if (isInitial) {
+            SYNO.SDS.Syno_Toolbox.apiCall("discoverwol", {}, function() {});
+        }
+
         SYNO.SDS.Syno_Toolbox.apiCall("getstate", {}, (function(resp) {
             if (!resp || !resp.success) {
                 this.setStatus((resp && resp.message) || "Failed to load state");
