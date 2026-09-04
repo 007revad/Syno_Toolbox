@@ -337,13 +337,16 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         var controlsHtml = this.renderControls(mod);
         var hasCheckArgs = !!(mod.check_args && mod.check_args !== null);
         var resultClass = mod.result_style === "monospace" ? "tb-row-result tb-row-result-monospace" : "tb-row-result";
-        var resultHtml = (mod.control === "toggle-display" || mod.control === "toggle-run" || hasCheckArgs || mod.live === true)
+        var resultHtml = (mod.control === "toggle-display" || mod.control === "toggle-run" || mod.control === "toggle-wol-selector" || hasCheckArgs || mod.live === true)
             ? '<div class="' + resultClass + '" data-result-for="' + mod.id + '"></div>'
             : "";
         // Pure info modules - live display with no real enable/disable
         // action behind them - have a toggle that doesn't gate anything,
         // so hide it (visibility, not display, to keep row alignment).
-        var toggleHiddenClass = (mod.live === true && hasCheckArgs) ? " tb-toggle-hidden" : "";
+        // toggle-wol-selector is the same story for a different reason:
+        // it's a one-shot "send now" action fired by its own button, not
+        // a persistent enabled/disabled state, so the toggle is unused.
+        var toggleHiddenClass = ((mod.live === true && hasCheckArgs) || mod.control === "toggle-wol-selector") ? " tb-toggle-hidden" : "";
 
         return [
             '<div class="tb-row" data-module-id="' + mod.id + '">',
@@ -395,6 +398,11 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 var secChecked = sec && f.raidf1 === sec.value ? " checked" : "";
                 return '<select class="tb-mode">' + optHtml + '</select>' +
                     (sec ? ' <label><input type="checkbox" class="tb-raid-f1"' + secChecked + '> ' + sec.label + '</label>' : "");
+
+            case "toggle-wol-selector":
+                return '<select class="tb-wol-mac" style="min-width:240px;"><option value="">Loading devices\u2026</option></select>' +
+                    ' <button type="button" class="tb-send-wol">Send WOL</button>' +
+                    ' <span class="tb-wol-status" style="color:#888;"></span>';
 
             default:
                 return "";
@@ -503,6 +511,12 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             if (mod && mod.control === "toggle-config-backup") {
                 this.wireConfigBackupRow(rowEl, mod);
             }
+
+            if (mod && mod.control === "toggle-wol-selector") {
+                var wolSelect = rowEl.querySelector(".tb-wol-mac");
+                if (wolSelect) { this.populateWolDevices(wolSelect, mod); }
+                this.wireSendWolRow(rowEl, moduleId);
+            }
         }, this);
     },
 
@@ -523,6 +537,75 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             Ext.each(wrapEl.querySelectorAll(".tb-volume-cb"), function(cb) {
                 Ext.fly(cb).on("change", (function() { this.setDirty(true); }).createDelegate(this));
             }, this);
+        }).createDelegate(this));
+    },
+
+    // ---------------------------------------------------------------
+    // Send WOL row: dropdown of previously-discovered devices (from
+    // discover_ip_macs.sh's persistent store), populated via a
+    // listwoldevices action - same shape as populateVolumes/listvolumes.
+    // ---------------------------------------------------------------
+    populateWolDevices: function(selectEl, mod) {
+        SYNO.SDS.Syno_Toolbox.apiCall("listwoldevices", {}, (function(resp) {
+            if (!resp || !resp.success || !resp.result || !resp.result.length) {
+                selectEl.innerHTML = '<option value="">No devices discovered yet</option>';
+                return;
+            }
+            var current = (mod.current_fields && mod.current_fields.mac) || "";
+            selectEl.innerHTML = resp.result.map(function(dev) {
+                var label = dev.mac + (dev.host ? " - " + dev.host : "") + (dev.ip ? " (" + dev.ip + ")" : "");
+                var sel = dev.mac === current ? " selected" : "";
+                return '<option value="' + Ext.util.Format.htmlEncode(dev.mac) + '"' + sel + '>' +
+                    Ext.util.Format.htmlEncode(label) + '</option>';
+            }).join("");
+        }).createDelegate(this));
+    },
+
+    // Send is a one-shot action, independent of the main Save button:
+    // it (1) persists the selected mac to conf via the normal save()
+    // call, the same generic write path config_backup's fields use, so
+    // it's remembered as current_fields.mac next time this row renders,
+    // then (2) calls run, which (per seq_io's {volumes}/{kb} precedent)
+    // is expected to substitute {mac} in run_args from that just-saved
+    // conf field. Note this reuses the *full* form (collectFormJson),
+    // same as the main Save button - clicking Send also commits any
+    // other unsaved edits currently sitting in the form.
+    wireSendWolRow: function(rowEl, moduleId) {
+        var btn = rowEl.querySelector(".tb-send-wol");
+        var statusEl = rowEl.querySelector(".tb-wol-status");
+        var resultEl = rowEl.querySelector('[data-result-for="' + moduleId + '"]');
+        if (!btn) { return; }
+
+        Ext.fly(btn).on("click", (function() {
+            var selectEl = rowEl.querySelector(".tb-wol-mac");
+            if (!selectEl || !selectEl.value) {
+                if (statusEl) { statusEl.textContent = "Select a device first"; }
+                return;
+            }
+
+            btn.disabled = true;
+            if (statusEl) { statusEl.textContent = "Sending\u2026"; }
+            if (resultEl) { resultEl.textContent = ""; }
+
+            var formData = this.collectFormJson();
+            SYNO.SDS.Syno_Toolbox.apiCall("save", { form_json: Ext.encode(formData) }, "POST", (function(saveResp) {
+                if (!saveResp || !saveResp.success) {
+                    btn.disabled = false;
+                    if (statusEl) { statusEl.textContent = (saveResp && saveResp.message) || "Failed to save selection"; }
+                    return;
+                }
+                this.setDirty(false);
+
+                SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: moduleId }, (function(runResp) {
+                    btn.disabled = false;
+                    if (statusEl) { statusEl.textContent = ""; }
+                    if (resultEl) {
+                        resultEl.innerHTML = runResp && runResp.success
+                            ? this.safeResultHtml(runResp.result || "(no output)")
+                            : this.safeResultHtml("Error: " + ((runResp && runResp.message) || "unknown"));
+                    }
+                }).createDelegate(this));
+            }).createDelegate(this));
         }).createDelegate(this));
     },
 
@@ -663,6 +746,9 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
 
             var raidF1El = rowEl.querySelector(".tb-raid-f1");
             if (raidF1El) { form[id + "_raidf1"] = raidF1El.checked ? "raidf1" : ""; }
+
+            var wolMacEl = rowEl.querySelector(".tb-wol-mac");
+            if (wolMacEl) { form[id + "_mac"] = wolMacEl.value; }
         });
         return form;
     },

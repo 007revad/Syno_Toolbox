@@ -14,7 +14,6 @@ else
     VAR_DIR="${PKG_ROOT}/etc"
 fi
 LOG_FILE="${VAR_DIR}/toolbox.log"
-echo "" >> "${LOG_FILE}"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "${LOG_FILE}"
@@ -22,13 +21,14 @@ log() {
 
 case "$1" in
     start)
+        echo "" >> "${LOG_FILE}"
         log "Syno_Toolbox starting"
         if [[ $DSM -ge 7 ]]; then
             # DSM 7: start-stop-status does not run as root, so
             # run_boot_modules.sh would fail every module's root check.
             # Go through the setuid helper instead (same privilege gate
             # the CGI actions use).
-            "${PKG_ROOT}/target/bin/synotoolbox-helper" runboot >> "${LOG_FILE}" 2>&1
+            "${PKG_ROOT}/target/bin/helper/synotoolbox-helper" runboot >> "${LOG_FILE}" 2>&1
         else
             # DSM 6: start-stop-status runs as root, so this can call
             # run_boot_modules.sh directly - no setuid helper needed.
@@ -37,6 +37,7 @@ case "$1" in
         exit 0
         ;;
     stop)
+        echo "" >> "${LOG_FILE}"
         log "Syno_Toolbox stopping"
         exit 0
         ;;

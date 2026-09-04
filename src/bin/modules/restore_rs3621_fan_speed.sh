@@ -24,8 +24,8 @@ fi
 dsm_version=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION productversion)
 buildnumber=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION buildnumber)
 if [[ $buildnumber -lt "86009" ]]; then
-    echo "Error: Script not needed for DSM ${dsm_version}-$buildnumber"
-    exit 1
+    echo "Not needed for DSM ${dsm_version}-$buildnumber"
+    exit
 fi
 
 # Get NAS model

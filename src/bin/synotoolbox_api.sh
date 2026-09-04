@@ -89,6 +89,7 @@ tb_self_heal() {
     fi
 }
 
+# shellcheck source=/dev/null
 source "${PKG_DEST}/bin/conf_lib.sh"
 tb_init || exit 1
 tb_self_heal
@@ -146,13 +147,17 @@ run_module_script() {
 
     local script_path="${PKG_DEST}/${script}"
     if [[ -x "$script_path" ]]; then
-        # "${resolved_args[@]:-}" not "${resolved_args[@]}": bash < 4.4
-        # (DSM 6's shipped bash) throws "unbound variable" under set -u
-        # when expanding an EMPTY array with plain [@], even though the
-        # array is legitimately defined as empty - a known bash bug fixed
-        # in 4.4. The :- suffix works around it without changing behavior
-        # when the array actually has elements.
-        "$script_path" "${resolved_args[@]:-}"
+        # Explicit count check instead of "${resolved_args[@]:-}": the
+        # latter was assumed safe on bash < 4.4 but still throws
+        # "unbound variable" under set -u on Webber's DSM 6 bash for a
+        # genuinely empty array - confirmed 2026-08-30. ${#arr[@]} is
+        # always safe to expand under set -u regardless of bash
+        # version, even when the array is empty or never populated.
+        if (( ${#resolved_args[@]} )); then
+            "$script_path" "${resolved_args[@]}"
+        else
+            "$script_path"
+        fi
     else
         echo "Syno_Toolbox: $script_path missing or not executable" >&2
         return 1
@@ -228,6 +233,29 @@ listvolumes)
         fi
     done
     printf '%s\n' "${volumes[@]:-}" | jq -R . | jq -s .
+    ;;
+
+listwoldevices)
+    # Reads the persistent store discover_ip_macs.sh (send_wol's sibling
+    # discovery script, run separately/on its own schedule) maintains via
+    # arp-scan: mac\tip\thost\tseen, one device per line, "-" for host
+    # when no NetBIOS name resolved. Store lives alongside toolbox.conf -
+    # derived from $TOOLBOX_CONF's own directory (set by conf_lib.sh's
+    # tb_init) rather than re-deriving VAR_DIR a second time here, since
+    # TOOLBOX_CONF is the one path this script already has confirmed.
+    STORE="$(dirname "$TOOLBOX_CONF")/wol_devices.tsv"
+    if [[ ! -f "$STORE" ]]; then
+        echo '[]'
+    else
+        OUT="[]"
+        while IFS=$'\t' read -r mac ip host seen; do
+            [[ -z "$mac" ]] && continue
+            [[ "$host" == "-" ]] && host=""
+            entry=$(jq -n --arg mac "$mac" --arg ip "$ip" --arg host "$host" '{mac: $mac, ip: $ip, host: $host}')
+            OUT=$(echo "$OUT" | jq --argjson e "$entry" '. + [$e]')
+        done < "$STORE"
+        echo "$OUT" | jq 'sort_by(if .host == "" then 1 else 0 end, .host, (.ip | split(".") | map(tonumber)))'
+    fi
     ;;
 
 listshares)

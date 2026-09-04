@@ -15,6 +15,42 @@
       "check_args": []
     },
     {
+      "id": "eth_speed",
+      "category": "info",
+      "name": "LAN port connected speed",
+      "control": "toggle-display",
+      "script": "bin/modules/eth_speed.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": []
+    },
+    {
+      "id": "network_mac",
+      "category": "info",
+      "name": "LAN port MAC address",
+      "control": "toggle-display",
+      "script": "bin/modules/network_mac.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": []
+    },
+    {
+      "id": "wol_status",
+      "category": "info",
+      "name": "LAN port WOL status",
+      "control": "toggle-display",
+      "script": "bin/modules/wol_status.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": []
+    },
+    {
       "id": "ups_connected",
       "category": "info",
       "name": "UPS Status",
@@ -77,6 +113,19 @@
       "disable_args": null,
       "check_args": [],
       "result_style": "monospace"
+    },
+    {
+      "id": "send_wol",
+      "category": "tools",
+      "name": "Send WOL",
+      "control": "toggle-wol-selector",
+      "script": "bin/modules/send_wol.sh",
+      "trigger": "on_save",
+      "live": false,
+      "run_args": ["{mac}"],
+      "disable_args": null,
+      "check_args": null,
+      "note": "No real 'enabled' state - this is a one-shot action fired by its own Send button, not by Save's enable-diff or boot. trigger stays on_save purely so run_boot_modules.sh never auto-fires it; the toggle checkbox is hidden in the UI and never flips, so that diff path never actually runs. run_args' {mac} placeholder is filled from current_fields.mac, which the Send button persists via save() immediately before calling run - same placeholder-from-saved-conf-field mechanism as seq_io's {volumes}/{kb}, just never previously exercised via a manual button click. NEEDS DAVE'S CONFIRMATION: (1) that synotoolbox_api.sh's run_module_script() resolver re-reads {mac} from conf's send_wol_mac key at run time, the same way it presumably does for seq_io's {volumes}/{kb} - that path has only ever been exercised via Save's enable-diff before, never via a standalone button click straight after a save, so it's unverified for this flow; (2) requires a new listwoldevices action added to synotoolbox_api.sh that reads wol_devices.tsv and returns [{mac,ip,host}] - modelled on discovernas' response shape but not yet implemented."
     },
     {
       "id": "fix_size_units",

@@ -13,47 +13,60 @@
 # Script verified at https://www.shellcheck.net/
 #--------------------------------------------------------------------------
 
-# Required Setting:
+scriptver="v1.1.6-toolbox"
+
+PKG_NAME="Syno_Toolbox"
+PKG_ROOT="/var/packages/${PKG_NAME}"
+
+dsm=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)
+if [[ $dsm -ge 7 ]]; then
+    VAR_DIR="${PKG_ROOT}/var"
+else
+    VAR_DIR="${PKG_ROOT}/etc"
+fi
+TOOLBOX_CONF="${VAR_DIR}/toolbox.conf"
+
 
 # Set where to save the exported configuration file
-Target_DIR=
+Target_DIR="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_target_dir)"
+
+# Requires SSH key is setup for remote user
+Remote_Backup="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote_backup)"
+Remote_DIR="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote_dir)"
+Remote_IP="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote_ip)"
+Remote_Port="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote_port)"
+Remote_DIR="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote_dir)"
+Remote_User="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote_user)"
+Local_User="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_local_user)"
+
+# Requires SSH key is setup for remote2 user
+Remote2_Backup="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote2_backup)"
+Remote2_DIR="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote2_dir)"
+Remote2_IP="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote2_ip)"
+Remote2_Port="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote2_port)"
+Remote2_DIR="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote2_dir)"
+Remote2_User="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote2_user)"
+Local2_User="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_local_user2)"
 
 
-# Optional Remote Backup Settings:
-
-# Set to yes to enable remote backup. Anything else = no
-Remote_Backup=
-
-# Where to copy the exported configuration file to
-Remote_Port=22
-Remote_IP=
-Remote_DIR=
-
-# Local and remote users with SSH key setup
-Local_User=
-Remote_User=
-
-
-# Optional 2nd Remote Backup Settings:
-
-# Set to yes to enable remote backup. Anything else = no
-Remote2_Backup=
-
-# Where to copy 2nd exported configuration file to
-Remote2_Port=22
-Remote2_IP=
-Remote2_DIR=
-
-# Local and 2nd remote users with SSH key setup
-Local2_User=
-Remote2_User=
-
-
-#--------------------------------------------------------------------------
-#                 Nothing below here should need changing
-#--------------------------------------------------------------------------
-
-scriptver="v1.1.6-toolbox"
+# Get volume $Target_DIR is currently located on
+backupshare=$(echo -n "$Target_DIR" | cut -d"/" -f3)
+buildnumber=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION buildnumber)
+if [[ $buildnumber -gt "64570" ]]; then
+    # DSM 7.2.1 and later
+    # synoshare --get-real-path is case insensitive
+    vol=$(/usr/syno/sbin/synoshare --get-real-path "$backupshare")
+else
+    # DSM 7.2 and earlier
+    # synoshare --getmap is case insensitive
+    vol=$(/usr/syno/sbin/synoshare --getmap "$backupshare" | grep volume | cut -d"[" -f2 | cut -d"]" -f1)
+    # I could also have used:
+    # vol=$(/usr/syno/sbin/synoshare --get "$backupshare" | tr '[]' '\n' | sed -n "9p")
+fi
+# Set current volume where shared folder is located
+#if [[ ! $vol =~ $bakpath ]]; then
+#    
+#fi
 
 # Set backup filename
 

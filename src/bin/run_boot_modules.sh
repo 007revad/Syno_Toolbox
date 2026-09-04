@@ -28,6 +28,7 @@ log() {
 
 log "run_boot_modules.sh invoked"
 
+# shellcheck source=/dev/null
 source "${PKG_DEST}/bin/conf_lib.sh"
 tb_init || exit 1
 
@@ -61,12 +62,23 @@ for (( i=0; i<MODULE_COUNT; i++ )); do
 
     script_path="${PKG_DEST}/${script}"
     if [[ -x "$script_path" ]]; then
-        echo "Syno_Toolbox: running $id ($script ${args[*]})"
-        #"$script_path" "${args[@]:-}" >> /var/log/synotoolbox.log 2>&1
-        "$script_path" "${args[@]:-}"
-        log "Syno_Toolbox: $script_path ${args[@]:-}"
+        # Explicit count check instead of "${args[@]:-}": the latter was
+        # assumed safe on bash < 4.4 but still throws "unbound variable"
+        # under set -u on Webber's DSM 6 bash for a genuinely empty
+        # array - confirmed 2026-08-30. ${#arr[@]} is always safe to
+        # expand under set -u regardless of bash version, even when the
+        # array is empty or never populated.
+        if (( ${#args[@]} )); then
+            log "Running $script_path ${args[*]}"
+            #echo "Syno_Toolbox: running $id ($script ${args[*]})"
+            "$script_path" "${args[@]}" 2>&1
+        else
+            log "Running $script_path"
+            #echo "Syno_Toolbox: running $id ($script)"
+            "$script_path" 2>&1
+        fi
     else
-        echo "Syno_Toolbox: WARNING $script_path missing or not executable"
-        log "Syno_Toolbox: WARNING $script_path missing or not executable"
+        log "WARNING $script_path missing or not executable"
+        #echo "Syno_Toolbox: WARNING $script_path missing or not executable"
     fi
 done

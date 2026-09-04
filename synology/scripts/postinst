@@ -40,16 +40,30 @@ chmod +x "$UI_DIR/api.cgi" 2>/dev/null
 log_message "Set execute permissions for api.cgi"
 
 for binfile in "$BIN_DIR"/*.sh "$BIN_DIR"/*.py; do
-    chmod +x "$BIN_DIR/$binfile" 2>/dev/null
-    chmod 555 "$BIN_DIR/$binfile" 2>/dev/null              # Blocks injection exploit
+    chmod 555 "$binfile" 2>/dev/null                      # Sets execute + blocks injection exploit
     log_message "Set execute permissions for $binfile"
 done
 
 for module in "$MODULES_DIR/"*.sh "$MODULES_DIR/"*.py; do
-    chmod +x "$module" 2>/dev/null
-    chmod 555 "$module" 2>/dev/null                        # Blocks injection exploit
+    chmod 555 "$module" 2>/dev/null                        # Sets execute + blocks injection exploit
     log_message "Set execute permissions for $module"
 done
+
+chmod 555 "$BIN_DIR"/aarch64/arp-scan 2>/dev/null          # Sets execute + blocks injection exploit
+chmod 555 "$BIN_DIR"/i686/arp-scan 2>/dev/null             # Sets execute + blocks injection exploit
+chmod 555 "$BIN_DIR"/x86_64/arp-scan 2>/dev/null           # Sets execute + blocks injection exploit
+
+# Create toolbox.log if it doesn't exist yet (fresh install, or an
+# upgrade from a version that predates it). World-writable because
+# start-stop-status runs as $PKG_NAME on DSM 7 while the setuid helper
+# path runs as root - both need to append to the same file. Only
+# touches a missing file; an existing toolbox.log (whatever its
+# current owner/mode) is left alone here.
+if [[ -d "$VAR_DIR" && ! -f "$VAR_DIR/toolbox.log" ]]; then
+    touch "$VAR_DIR/toolbox.log" 2>/dev/null
+    chmod 666 "$VAR_DIR/toolbox.log" 2>/dev/null
+    log_message "Created toolbox.log"
+fi
 
 # Set owner:group on logs to package:package
 if [[ -d "$VAR_DIR" ]]; then

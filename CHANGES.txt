@@ -1,3 +1,11 @@
+v1.0.20
+- 21st beta release.
+- Added uninstall_active_insight, eth_speed, network_mac and send_wol modules.
+- Updated synology_config_backup and syno_clean_coredumps modules.
+- Improved log formatting.
+- Bug fixes for logging.
+- Bug fix for DSM 6's older bash version.
+
 v1.0.19
 - 20th beta release.
 - Added spinner for "Loading..." and "Saving..."

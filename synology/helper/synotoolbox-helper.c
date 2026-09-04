@@ -21,7 +21,7 @@
 
 int main(int argc, char *argv[])
 {
-    const char *no_arg[]  = { "getstate", "listvolumes", "listshares", "discovernas", "selfheal", "runboot", NULL };
+    const char *no_arg[]  = { "getstate", "listvolumes", "listwoldevices", "listshares", "discovernas", "selfheal", "runboot", NULL };
     const char *one_arg[] = { "run", "check", "save", "listfolder", NULL };
 
     if (argc < 2) {

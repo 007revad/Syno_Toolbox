@@ -82,7 +82,9 @@ clean_path(){
     if [[ $count -gt 0 ]]; then
         if find "$path" -maxdepth 1 -mmin +$((60*24*age)) \( -name "@*.core" -o -name "@*.core.gz" \) -type f -delete; then
             total_mb=$(echo "$sum" | awk '{ megabytes = $1 / 1024 / 1024; printf "%.2f", megabytes }')
-            printf "Deleted %d core dumps (total %.2f MB)\n\n" "$count" "$total_mb"
+            #printf "Deleted %d core dumps (total %.2f MB)\n\n" "$count" "$total_mb"
+            [[ $count -eq 1 ]] && dumps="core dump" || dumps="core dumps"
+            printf "Deleted %d %s (total %.2f MB)\n\n" "$count" "$dumps" "$total_mb"
         else
             echo ""
         fi
@@ -110,17 +112,15 @@ check_path(){
         | awk '{count++; sum+=$1} END {printf "%d %.0f\n", count, sum}'
     )
     if [[ $count -gt 0 ]]; then
-#       if find "$path" -maxdepth 1 -mmin +$((60*24*age)) \( -name "@*.core" -o -name "@*.core.gz" \) -type f -delete; then
-            total_mb=$(echo "$sum" | awk '{ megabytes = $1 / 1024 / 1024; printf "%.2f", megabytes }')
-            printf "%d core dumps (total %.2f MB)" "$count" "$total_mb"
-            if [[ $label == "/var/crash" ]]; then
-                echo -e "$older_than in ${label}"
-            else
-                echo -e "$older_than on ${label}"
-            fi
-#        else
-#            echo ""
-#        fi
+        total_mb=$(echo "$sum" | awk '{ megabytes = $1 / 1024 / 1024; printf "%.2f", megabytes }')
+        #printf "%d core dumps (total %.2f MB)" "$count" "$total_mb"
+        [[ $count -eq 1 ]] && dumps="core dump" || dumps="core dumps"
+        printf "%d %s (total %.2f MB)" "$count" "$dumps" "$total_mb"
+        if [[ $label == "/var/crash" ]]; then
+            echo -e "$older_than in ${label}"
+        else
+            echo -e "$older_than on ${label}"
+        fi
         total_count=$((total_count +count))
     #else
     #    echo -e "No core dumps to delete.\n"

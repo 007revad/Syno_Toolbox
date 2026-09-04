@@ -135,6 +135,16 @@ listvolumes)
     fi
     ;;
 
+listwoldevices)
+    run_privileged listwoldevices
+    if [ "$RUN_RC" -ne 0 ]; then
+        log "[ERROR] listwoldevices failed (rc=${RUN_RC}): ${RUN_OUT}"
+        json_response false "Could not list WOL devices" ""
+    else
+        json_response true "" "${RUN_OUT}"
+    fi
+    ;;
+
 listshares)
     run_privileged listshares
     if [ "$RUN_RC" -ne 0 ]; then
