@@ -69,6 +69,8 @@ case "$raw_result" in
 esac
 
 if [[ "$status" == "ok" ]]; then
+    nmblookup_cmd="$(which nmblookup)"
+
     if [[ "$UPS_MODE" == "slave" ]]; then
         echo "UPS server connection OK: $result"
     else
@@ -89,7 +91,7 @@ if [[ "$status" == "ok" ]]; then
             declare -A client_hostnames
             max_len=0
             for c in "${remote_clients[@]}"; do
-                hostname="$(/usr/local/bin/nmblookup -A "$c" | grep -v -e Looking -e WORKGROUP -e MAC | awk 'NF{print $1; exit}')"
+                hostname="$("$nmblookup_cmd" -A "$c" | grep -v -e Looking -e WORKGROUP -e MAC | awk 'NF{print $1; exit}')"
                 hostname="${hostname:-unknown}"
                 client_hostnames["$c"]="$hostname"
                 [[ "${#hostname}" -gt "$max_len" ]] && max_len="${#hostname}"

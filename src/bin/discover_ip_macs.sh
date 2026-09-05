@@ -42,7 +42,7 @@ fi
 localnet=()
 arch="$(uname -m)"
 
-echo "arch: $arch"
+echo "Using arch: $arch"
 if [[ ! -f /var/packages/Syno_Toolbox/target/bin/"$arch"/arp-scan ]]; then
     echo "/var/packages/Syno_Toolbox/target/bin/${arch}/arp-scan not found!"
     exit 1
@@ -76,18 +76,18 @@ for i in "${localnet[@]}"; do
 done
 localnet=("${filtered[@]}")
 
+nmblookup_cmd="$(which nmblookup)"
 for i in "${localnet[@]}"; do
     ip="${i%%$'\t'*}"
     mac="${i##*$'\t'}"
     (
-        h="$(timeout 2 /usr/local/bin/nmblookup -A "$ip" | grep -v -e Looking -e WORKGROUP -e MAC | awk 'NF{print $1; exit}')"
+        h="$(timeout 2 "$nmblookup_cmd" -A "$ip" | grep -v -e Looking -e WORKGROUP -e MAC | awk 'NF{print $1; exit}')"
         echo -e "$mac\t$ip\t$h" >> "$scanfile"
     ) &
 done
 wait
 
-echo -en "\nCount: "
-wc -l "$scanfile"
+echo -n "Found: " && wc -l < "$scanfile"
 echo ""
 
 # --- merge this run's results into the persistent store ---

@@ -118,10 +118,12 @@ fi
 #--------------------------------------------------------------------------
 # Copy backup to remote NAS
 
+nmblookup_cmd="$(which nmblookup)"
+
 # Remote backup
 if [[ $Remote_Backup == "yes" ]]; then
     # Get remote NAS hostname
-    Remote_Host=$(/usr/local/bin/nmblookup -A "$Remote_IP" | sed -n 2p | cut -d ' ' -f1)
+    Remote_Host=$("$nmblookup_cmd" -A "$Remote_IP" | sed -n 2p | cut -d ' ' -f1)
     Remote_Host="${Remote_Host:1}"
 
     if [[ $Remote_Host ]]; then
@@ -136,7 +138,7 @@ fi
 # 2nd remote backup
 if [[ $Remote2_Backup == "yes" ]]; then
     # Get remote NAS hostname
-    Remote2_Host=$(/usr/local/bin/nmblookup -A "$Remote2_IP" | sed -n 2p | cut -d ' ' -f1)
+    Remote2_Host=$("$nmblookup_cmd" -A "$Remote2_IP" | sed -n 2p | cut -d ' ' -f1)
     Remote2_Host="${Remote2_Host:1}"
 
     if [[ $Remote2_Host ]]; then

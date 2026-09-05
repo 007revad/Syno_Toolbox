@@ -115,6 +115,20 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-picker-path { align-self:flex-start; font-size:13px; color:#888; word-break:break-all; margin:8px 0; min-height:17px; }',
             '  .tb-picker-select { align-self:flex-end; padding:5px 18px; border:1px solid #1B8AED; background:#1B8AED; color:#fff; border-radius:4px; cursor:pointer; font-weight:bold; font-size:13px; }',
             '  .tb-picker-select:disabled { border-color:#ccc; background:#ccc; cursor:default; }',
+            '  .tb-wolset-backdrop { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }',
+            '  .tb-wolset-backdrop.open { display:flex; }',
+            '  .tb-wolset { position:relative; background:#fff; color:#222; width:480px; max-width:90%; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); display:flex; flex-direction:column; }',
+            '  .tb-wolset-header { padding:12px 16px; border-bottom:1px solid #eee; font-weight:bold; font-size:14px; display:flex; justify-content:space-between; align-items:center; }',
+            '  .tb-wolset-close { border:none; background:none; font-size:16px; cursor:pointer; color:#666; line-height:1; padding:4px; }',
+            '  .tb-wolset-close:hover { color:#000; }',
+            '  .tb-wolset-body { max-height:320px; overflow-y:auto; padding:6px 0; }',
+            '  .tb-wolset-item { display:block; padding:6px 16px; font-size:13px; cursor:pointer; }',
+            '  .tb-wolset-item:hover { background:#f0f6ff; }',
+            '  .tb-wolset-item input { margin-right:8px; }',
+            '  .tb-wolset-msg { padding:16px; color:#888; font-size:13px; }',
+            '  .tb-wolset-footer { padding:12px 16px 16px 16px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:12px; }',
+            '  .tb-wolset-hint { font-size:12px; color:#888; }',
+            '  .tb-wolset-save { padding:5px 18px; border:1px solid #1B8AED; background:#1B8AED; color:#fff; border-radius:4px; cursor:pointer; font-weight:bold; font-size:13px; flex:0 0 auto; }',
             '</style>',
             '<div class="tb-body">',
             '  <div class="tb-toolbar">',
@@ -136,6 +150,13 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '      <div class="tb-picker-header"><span>Select Folder</span><button type="button" class="tb-picker-close" aria-label="Close">\u00d7</button></div>',
             '      <div class="tb-picker-body"></div>',
             '      <div class="tb-picker-footer"><span class="tb-picker-path"></span><button type="button" class="tb-picker-select">Select This Folder</button></div>',
+            '    </div>',
+            '  </div>',
+            '  <div class="tb-wolset-backdrop">',
+            '    <div class="tb-wolset">',
+            '      <div class="tb-wolset-header"><span>Hidden Devices</span><button type="button" class="tb-wolset-close" aria-label="Close">\u00d7</button></div>',
+            '      <div class="tb-wolset-body"></div>',
+            '      <div class="tb-wolset-footer"><span class="tb-wolset-hint">Checked devices are hidden from the Send WOL list.</span><button type="button" class="tb-wolset-save">Save</button></div>',
             '    </div>',
             '  </div>',
             '</div>'
@@ -166,6 +187,14 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         Ext.fly(el.querySelector(".tb-picker-select")).on("click", this.pickerSelectCurrent, this);
         Ext.fly(this.pickerBackdrop).on("click", (function(ev) {
             if (ev.getTarget() === this.pickerBackdrop) { this.closeFolderPicker(); }
+        }).createDelegate(this));
+
+        this.wolsetBackdrop = el.querySelector(".tb-wolset-backdrop");
+        this.wolsetBody = el.querySelector(".tb-wolset-body");
+        Ext.fly(el.querySelector(".tb-wolset-close")).on("click", this.closeWolSettings, this);
+        Ext.fly(el.querySelector(".tb-wolset-save")).on("click", this.saveWolSettings, this);
+        Ext.fly(this.wolsetBackdrop).on("click", (function(ev) {
+            if (ev.getTarget() === this.wolsetBackdrop) { this.closeWolSettings(); }
         }).createDelegate(this));
 
         // DSM's desktop chrome suppresses the native right-click menu
@@ -412,10 +441,13 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                     (sec ? ' <label><input type="checkbox" class="tb-raid-f1"' + secChecked + '> ' + sec.label + '</label>' : "");
 
             case "toggle-wol-selector":
+                var hiddenMacs = (mod.current_fields && mod.current_fields.hidden_macs) || "[]";
                 return '<select class="tb-wol-mac" style="min-width:240px;"><option value="">Loading devices\u2026</option></select>' +
                     ' <button type="button" class="tb-send-wol">Send WOL</button>' +
+                    ' <button type="button" class="tb-wol-settings" title="Choose which devices to hide from the list">Settings</button>' +
                     ' <img class="tb-spinner tb-wol-spinner" src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="16" height="16" style="margin-left:6px;">' +
-                    ' <span class="tb-wol-status" style="color:#888;"></span>';
+                    ' <span class="tb-wol-status" style="color:#888;"></span>' +
+                    '<input type="hidden" class="tb-wol-hidden-macs" value="' + Ext.util.Format.htmlEncode(hiddenMacs) + '">';
 
             default:
                 return "";
@@ -530,6 +562,12 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 if (wolSelect) { this.populateWolDevices(wolSelect, mod); }
                 this.wireSendWolRow(rowEl, moduleId);
                 this.updateWolSpinner();
+                this.applyWolScanMessage();
+
+                var wolSettingsBtn = rowEl.querySelector(".tb-wol-settings");
+                if (wolSettingsBtn) {
+                    Ext.fly(wolSettingsBtn).on("click", (function() { this.openWolSettings(moduleId); }).createDelegate(this));
+                }
             }
         }, this);
     },
@@ -563,6 +601,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // ---------------------------------------------------------------
     startWolScanPolling: function() {
         this.wolScanInFlight = true;
+        this.wolScanResult = null;
         this.updateWolSpinner();
 
         var attempts = 0;
@@ -578,19 +617,19 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 this.wolScanInFlight = false;
                 this.updateWolSpinner();
 
-                var statusEl = this.toolsPanel && this.toolsPanel.querySelector(".tb-wol-status");
-                if (statusEl) {
-                    if (status === "error") {
-                        var rc = resp.result.rc;
-                        statusEl.textContent = "Device discovery failed" + (rc !== undefined ? " (exit code " + rc + ")" : "") + " - see toolbox.log";
-                    } else if (status === "running") {
-                        // hit maxAttempts while still running - not a
-                        // script failure, just longer than expected
-                        statusEl.textContent = "Device discovery is taking longer than expected";
-                    } else {
-                        statusEl.textContent = "";
-                    }
-                }
+                // Stored rather than written to the DOM directly here -
+                // a fast scan (like an immediate "arp-scan not found"
+                // failure) can reach this point before the page's own
+                // getstate()/renderList() has finished its first render,
+                // in which case the row (and .tb-wol-status) doesn't
+                // exist yet. A one-shot write would just be silently
+                // lost with nothing to retry it. Storing the result and
+                // having every row render reapply it (same pattern as
+                // updateWolSpinner/wolScanInFlight) means it shows up
+                // whenever the row actually exists, regardless of which
+                // finished first.
+                this.wolScanResult = { status: status, rc: resp && resp.result && resp.result.rc };
+                this.applyWolScanMessage();
 
                 var wolSelect = this.toolsPanel && this.toolsPanel.querySelector(".tb-wol-mac");
                 var mod = this.modules.filter(function(m) { return m.control === "toggle-wol-selector"; })[0];
@@ -600,16 +639,47 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         setTimeout(poll, 1500);
     },
 
+    applyWolScanMessage: function() {
+        var statusEl = this.toolsPanel && this.toolsPanel.querySelector(".tb-wol-status");
+        if (!statusEl || !this.wolScanResult) { return; }
+
+        var status = this.wolScanResult.status;
+        if (status === "error") {
+            var rc = this.wolScanResult.rc;
+            statusEl.textContent = "Device discovery failed" + (rc !== undefined ? " (exit code " + rc + ")" : "") + " - see toolbox.log";
+        } else if (status === "running") {
+            // hit maxAttempts while still running - not a script
+            // failure, just longer than expected
+            statusEl.textContent = "Device discovery is taking longer than expected";
+        } else {
+            statusEl.textContent = "";
+        }
+    },
+
     updateWolSpinner: function() {
         var spinnerEl = this.toolsPanel && this.toolsPanel.querySelector(".tb-wol-spinner");
         if (!spinnerEl) { return; }
         Ext.fly(spinnerEl)[this.wolScanInFlight ? "addClass" : "removeClass"]("show");
     },
 
+    getWolHiddenMacs: function() {
+        var el = this.toolsPanel && this.toolsPanel.querySelector(".tb-wol-hidden-macs");
+        if (!el || !el.value) { return []; }
+        try {
+            var parsed = JSON.parse(el.value);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    },
+
     // ---------------------------------------------------------------
     // Send WOL row: dropdown of previously-discovered devices (from
     // discover_ip_macs.sh's persistent store), populated via a
     // listwoldevices action - same shape as populateVolumes/listvolumes.
+    // Devices in the hidden-macs list (set via the Settings modal) are
+    // filtered out here; the Settings modal itself shows the full,
+    // unfiltered list so devices can be un-hidden again.
     // ---------------------------------------------------------------
     populateWolDevices: function(selectEl, mod) {
         SYNO.SDS.Syno_Toolbox.apiCall("listwoldevices", {}, (function(resp) {
@@ -617,8 +687,14 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 selectEl.innerHTML = '<option value="">No devices discovered yet</option>';
                 return;
             }
+            var hidden = this.getWolHiddenMacs();
+            var visible = resp.result.filter(function(dev) { return hidden.indexOf(dev.mac) === -1; });
+            if (!visible.length) {
+                selectEl.innerHTML = '<option value="">All discovered devices are hidden</option>';
+                return;
+            }
             var current = (mod.current_fields && mod.current_fields.mac) || "";
-            selectEl.innerHTML = resp.result.map(function(dev) {
+            selectEl.innerHTML = visible.map(function(dev) {
                 var label = dev.mac + (dev.host ? " - " + dev.host : "") + (dev.ip ? " (" + dev.ip + ")" : "");
                 var sel = dev.mac === current ? " selected" : "";
                 return '<option value="' + Ext.util.Format.htmlEncode(dev.mac) + '"' + sel + '>' +
@@ -672,6 +748,75 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                     }
                 }).createDelegate(this));
             }).createDelegate(this));
+        }).createDelegate(this));
+    },
+
+    // ---------------------------------------------------------------
+    // Settings modal: pick which discovered devices to hide from the
+    // Send WOL dropdown. Shows the full, unfiltered listwoldevices
+    // result (so a previously-hidden device can be found and
+    // un-hidden again) with checkboxes pre-checked from the row's
+    // current hidden-macs list.
+    // ---------------------------------------------------------------
+    openWolSettings: function(moduleId) {
+        this.wolsetModuleId = moduleId;
+        this.wolsetBody.innerHTML = '<div class="tb-wolset-msg">Loading\u2026</div>';
+        Ext.fly(this.wolsetBackdrop).addClass("open");
+
+        SYNO.SDS.Syno_Toolbox.apiCall("listwoldevices", {}, (function(resp) {
+            if (!resp || !resp.success || !resp.result || !resp.result.length) {
+                this.wolsetBody.innerHTML = '<div class="tb-wolset-msg">No devices discovered yet.</div>';
+                return;
+            }
+            var hidden = this.getWolHiddenMacs();
+            this.wolsetBody.innerHTML = resp.result.map(function(dev) {
+                var label = dev.mac + (dev.host ? " - " + dev.host : "") + (dev.ip ? " (" + dev.ip + ")" : "");
+                var checked = hidden.indexOf(dev.mac) !== -1 ? " checked" : "";
+                return '<label class="tb-wolset-item"><input type="checkbox" class="tb-wolset-check" value="' +
+                    Ext.util.Format.htmlEncode(dev.mac) + '"' + checked + '> ' +
+                    Ext.util.Format.htmlEncode(label) + '</label>';
+            }).join("");
+        }).createDelegate(this));
+    },
+
+    closeWolSettings: function() {
+        Ext.fly(this.wolsetBackdrop).removeClass("open");
+    },
+
+    // Same persistence pattern as Send WOL's own flow: write the
+    // chosen value into the row's hidden field, then go through the
+    // normal full-form save() rather than a partial one - a partial
+    // save missing other modules' _enabled keys risks the enable-diff
+    // loop reading them as "disabled". Refreshes the dropdown and
+    // closes the modal once saved.
+    saveWolSettings: function() {
+        var moduleId = this.wolsetModuleId;
+        var hiddenMacs = [];
+        Ext.each(this.wolsetBody.querySelectorAll(".tb-wolset-check:checked"), function(cb) {
+            hiddenMacs.push(cb.value);
+        });
+
+        var hiddenEl = this.toolsPanel && this.toolsPanel.querySelector(".tb-wol-hidden-macs");
+        if (!hiddenEl) { this.closeWolSettings(); return; }
+        hiddenEl.value = JSON.stringify(hiddenMacs);
+
+        var saveBtn = this.wolsetBackdrop.querySelector(".tb-wolset-save");
+        saveBtn.disabled = true;
+
+        var formData = this.collectFormJson();
+        SYNO.SDS.Syno_Toolbox.apiCall("save", { form_json: Ext.encode(formData) }, "POST", (function(saveResp) {
+            saveBtn.disabled = false;
+            if (!saveResp || !saveResp.success) {
+                var statusEl = this.toolsPanel && this.toolsPanel.querySelector(".tb-wol-status");
+                if (statusEl) { statusEl.textContent = (saveResp && saveResp.message) || "Failed to save hidden devices"; }
+                return;
+            }
+            this.setDirty(false);
+            this.closeWolSettings();
+
+            var wolSelect = this.toolsPanel && this.toolsPanel.querySelector(".tb-wol-mac");
+            var mod = this.modules.filter(function(m) { return m.id === moduleId; })[0];
+            if (wolSelect && mod) { this.populateWolDevices(wolSelect, mod); }
         }).createDelegate(this));
     },
 
@@ -815,6 +960,9 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
 
             var wolMacEl = rowEl.querySelector(".tb-wol-mac");
             if (wolMacEl) { form[id + "_mac"] = wolMacEl.value; }
+
+            var wolHiddenEl = rowEl.querySelector(".tb-wol-hidden-macs");
+            if (wolHiddenEl) { form[id + "_hidden_macs"] = wolHiddenEl.value; }
         });
         return form;
     },
