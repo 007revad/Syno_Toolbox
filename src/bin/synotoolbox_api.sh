@@ -67,7 +67,7 @@ tb_self_heal() {
             chown root:root "$f" 2>/dev/null
             chmod 555 "$f" 2>/dev/null
             echo "Syno_Toolbox: self-heal secured $f (was owned by $owner)" \
-                >> "${TOOLBOX_CONF%.conf}.log" 2>/dev/null
+                >> "$TOOLBOX_LOG" 2>/dev/null
         fi
     done
 
@@ -84,7 +84,7 @@ tb_self_heal() {
             chown root:root "$TOOLBOX_CONF" 2>/dev/null
             chmod 600 "$TOOLBOX_CONF" 2>/dev/null
             echo "Syno_Toolbox: self-heal secured $TOOLBOX_CONF (was owned by $owner)" \
-                >> "${TOOLBOX_CONF%.conf}.log" 2>/dev/null
+                >> "$TOOLBOX_LOG" 2>/dev/null
         fi
     fi
 }
@@ -239,11 +239,10 @@ listwoldevices)
     # Reads the persistent store discover_ip_macs.sh (send_wol's sibling
     # discovery script, run separately/on its own schedule) maintains via
     # arp-scan: mac\tip\thost\tseen, one device per line, "-" for host
-    # when no NetBIOS name resolved. Store lives alongside toolbox.conf -
-    # derived from $TOOLBOX_CONF's own directory (set by conf_lib.sh's
-    # tb_init) rather than re-deriving VAR_DIR a second time here, since
-    # TOOLBOX_CONF is the one path this script already has confirmed.
-    STORE="$(dirname "$TOOLBOX_CONF")/wol_devices.tsv"
+    # when no NetBIOS name resolved. Lives in $VAR_DIR alongside
+    # toolbox.conf/toolbox.log - both now exported directly by
+    # conf_lib.sh's tb_init, no derivation needed.
+    STORE="${VAR_DIR}/wol_devices.tsv"
     if [[ ! -f "$STORE" ]]; then
         echo '[]'
     else
@@ -258,6 +257,21 @@ listwoldevices)
     fi
     ;;
 
+wolscanstatus)
+    # Reports the status file discoverwol's setsid'd wrapper maintains:
+    # {"status":"running"} while a scan is in flight, {"status":"done"
+    # /"error","rc":N} once it finishes. {"status":"idle"} if no scan
+    # has ever run yet (file doesn't exist). Lets the frontend poll
+    # real completion state for the spinner instead of guessing on a
+    # fixed timer.
+    STATUS_FILE="${VAR_DIR}/wol_scan_status.json"
+    if [[ -f "$STATUS_FILE" ]]; then
+        cat "$STATUS_FILE"
+    else
+        echo '{"status": "idle"}'
+    fi
+    ;;
+
 discoverwol)
     # Launches discover_ip_macs.sh (the arp-scan that populates
     # wol_devices.tsv, ~4.5s) detached from this request entirely, so
@@ -266,18 +280,54 @@ discoverwol)
     # running (page reopened quickly, or overlapping with a scheduled
     # run once one exists), skip launching a second one rather than
     # stacking concurrent arp-scans against the same interfaces.
-    #
-    # ASSUMPTION (not confirmed by Dave): discover_ip_macs.sh is
-    # deployed at $BIN_DIR/discover_ip_macs.sh - alongside bin/, not
-    # inside bin/modules/, since it isn't a toggleable module in its
-    # own right. Confirm/adjust this path before relying on it.
     DISCOVER_SCRIPT="${BIN_DIR}/discover_ip_macs.sh"
     if [[ ! -x "$DISCOVER_SCRIPT" ]]; then
         echo '{"launched": false, "reason": "script not found or not executable"}'
     elif pgrep -f "$DISCOVER_SCRIPT" >/dev/null 2>&1; then
         echo '{"launched": false, "reason": "already running"}'
     else
-        nohup "$DISCOVER_SCRIPT" >/dev/null 2>>"${TOOLBOX_CONF%.conf}.log" &
+        # nohup+disown only stops SIGHUP reaching this and detaches it
+        # from bash's own job table - it does NOT move the process into
+        # a new session, so it stays in the same process group as this
+        # CGI request. DSM's web server almost certainly reaps that
+        # whole group once the request completes, killing this mid-scan
+        # before it ever writes the tsv - matching exactly what's been
+        # observed (works via a live SSH session, silently dies when
+        # triggered from the browser). setsid fully detaches into its
+        # own session, immune to that group's lifecycle.
+        #
+        # setsid has to wrap the *whole* start/run/finish sequence, not
+        # just the scan invocation - a wrapper that only setsid's the
+        # scan itself would still have its own START/FINISH-logging
+        # shell sitting in the original process group, just as exposed
+        # to the same reaping this is meant to escape. Passed via
+        # exported vars rather than string-substituting into the -c
+        # script, to avoid a quoting mess.
+        #
+        # discover_ip_macs.sh's own stdout/stderr lines aren't
+        # individually timestamped, and its parallel per-host lookups
+        # can interleave their output - these START/FINISH banners
+        # (with exit code) at least bound where one run begins and ends
+        # in the shared, otherwise timestamp-free log.
+        #
+        # Also maintains a small status file so the frontend (via the
+        # wolscanstatus action below) can poll real completion state -
+        # "running" while in flight, "done"/"error" (with rc) once
+        # finished - rather than guessing on a fixed timer.
+        STATUS_FILE="${VAR_DIR}/wol_scan_status.json"
+        export DISCOVER_SCRIPT TOOLBOX_LOG STATUS_FILE
+        setsid bash -c '
+            echo "[$(date "+%Y-%m-%d %H:%M:%S")] [INFO] discoverwol: START $DISCOVER_SCRIPT (detached via setsid)" >> "$TOOLBOX_LOG"
+            echo "{\"status\":\"running\",\"started\":$(date +%s)}" > "$STATUS_FILE"
+            "$DISCOVER_SCRIPT" </dev/null >> "$TOOLBOX_LOG" 2>&1
+            rc=$?
+            echo "[$(date "+%Y-%m-%d %H:%M:%S")] [INFO] discoverwol: FINISH rc=$rc" >> "$TOOLBOX_LOG"
+            if [[ $rc -eq 0 ]]; then
+                echo "{\"status\":\"done\",\"rc\":$rc,\"finished\":$(date +%s)}" > "$STATUS_FILE"
+            else
+                echo "{\"status\":\"error\",\"rc\":$rc,\"finished\":$(date +%s)}" > "$STATUS_FILE"
+            fi
+        ' &
         disown
         echo '{"launched": true}'
     fi
@@ -355,7 +405,7 @@ discovernas)
         exit 0
     fi
 
-    RESULT="$("$PYTHON_BIN" "$DISCOVER_SCRIPT" --json --timeout 3 2>>"${TOOLBOX_CONF%.conf}.log")"
+    RESULT="$("$PYTHON_BIN" "$DISCOVER_SCRIPT" --json --timeout 3 2>>"$TOOLBOX_LOG")"
     if [[ -z "$RESULT" ]]; then
         echo '{"success":false,"message":"No NAS found on the network"}'
     else
@@ -396,8 +446,8 @@ check)
     ;;
 
 save)
-    #date +%s.%N >> "${TOOLBOX_CONF%.conf}.log"   # start
-    #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] start save" >> "${TOOLBOX_CONF%.conf}.log"
+    #date +%s.%N >> "$TOOLBOX_LOG"   # start
+    #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] start save" >> "$TOOLBOX_LOG"
 
     JSON_BLOB="${1:-{\}}"
 
@@ -408,8 +458,8 @@ save)
         OLD_STATE["$id"]="$(tb_get "${id}_enabled" "no")"
     done
 
-    #echo "old_state done: $(date +%s.%N)" >> "${TOOLBOX_CONF%.conf}.log"
-    #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] old state done" >> "${TOOLBOX_CONF%.conf}.log"
+    #echo "old_state done: $(date +%s.%N)" >> "$TOOLBOX_LOG"
+    #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] old state done" >> "$TOOLBOX_LOG"
 
     # 2. Write every submitted key=value to conf.
     while IFS=$'\t' read -r key value; do
@@ -417,8 +467,8 @@ save)
         tb_set "$key" "$value"
     done < <(echo "$JSON_BLOB" | jq -r 'to_entries[] | "\(.key)\t\(.value)"')
 
-    #echo "tb_set loop done: $(date +%s.%N)" >> "${TOOLBOX_CONF%.conf}.log"
-    #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] tb_set loop done" >> "${TOOLBOX_CONF%.conf}.log"
+    #echo "tb_set loop done: $(date +%s.%N)" >> "$TOOLBOX_LOG"
+    #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] tb_set loop done" >> "$TOOLBOX_LOG"
 
     # 3. Diff enabled state per module, run apply/reverse as appropriate,
     #    capturing each module's stdout so the frontend can show it
@@ -434,21 +484,21 @@ save)
         new="$(tb_get "${id}_enabled" "no")"
 
         if [[ "$old" == "no" && "$new" == "yes" ]]; then
-            output="$(run_module_script "$id" run_args 2>>"${TOOLBOX_CONF%.conf}.log")"
+            output="$(run_module_script "$id" run_args 2>>"$TOOLBOX_LOG")"
             LOG+="enabled:${id} "
             RESULTS=$(echo "$RESULTS" | jq --arg k "$id" --arg v "$output" '. + {($k): $v}')
         elif [[ "$old" == "yes" && "$new" == "no" ]]; then
             disable_args="$(module_field "$i" disable_args)"
             if [[ "$disable_args" != "null" ]]; then
-                output="$(run_module_script "$id" disable_args 2>>"${TOOLBOX_CONF%.conf}.log")"
+                output="$(run_module_script "$id" disable_args 2>>"$TOOLBOX_LOG")"
                 LOG+="disabled:${id} "
                 RESULTS=$(echo "$RESULTS" | jq --arg k "$id" --arg v "$output" '. + {($k): $v}')
             fi
         fi
     done
 
-    #echo "diff loop done: $(date +%s.%N)" >> "${TOOLBOX_CONF%.conf}.log"
-    #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] diff loop done" >> "${TOOLBOX_CONF%.conf}.log"
+    #echo "diff loop done: $(date +%s.%N)" >> "$TOOLBOX_LOG"
+    #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] diff loop done" >> "$TOOLBOX_LOG"
 
     printf '{"success":true,"message":%s,"results":%s}\n' \
         "$(printf '%s' "$LOG" | jq -Rs .)" "$RESULTS"

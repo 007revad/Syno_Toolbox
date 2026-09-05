@@ -10,8 +10,8 @@
 
 set -u
 
-# ---- Resolve conf path by DSM major version --------------------------------
-resolve_conf_path() {
+# ---- Resolve VAR_DIR by DSM major version -----------------------------------
+_tb_resolve_var_dir() {
     local dsm_major
     dsm_major="$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)"
 
@@ -21,10 +21,23 @@ resolve_conf_path() {
     fi
 
     if (( dsm_major >= 7 )); then
-        echo "/var/packages/Syno_Toolbox/var/toolbox.conf"
+        echo "/var/packages/Syno_Toolbox/var"
     else
-        echo "/var/packages/Syno_Toolbox/etc/toolbox.conf"
+        echo "/var/packages/Syno_Toolbox/etc"
     fi
+}
+
+# Kept for anything that calls this directly rather than through tb_init.
+resolve_conf_path() {
+    local var_dir
+    var_dir="$(_tb_resolve_var_dir)" || return 1
+    echo "${var_dir}/toolbox.conf"
+}
+
+resolve_log_path() {
+    local var_dir
+    var_dir="$(_tb_resolve_var_dir)" || return 1
+    echo "${var_dir}/toolbox.log"
 }
 
 # tb_get <key> [default]
@@ -77,15 +90,15 @@ tb_is_enabled() {
 
 # ---- Ensure conf file + directory exist -------------------------------------
 tb_ensure_conf() {
-    local dir
-    dir="$(dirname "$TOOLBOX_CONF")"
-    [[ -d "$dir" ]] || mkdir -p "$dir"
+    [[ -d "$VAR_DIR" ]] || mkdir -p "$VAR_DIR"
     [[ -f "$TOOLBOX_CONF" ]] || : > "$TOOLBOX_CONF"
 }
 
 # ---- Init: call once near the top of any script that sources this ----------
 tb_init() {
-    TOOLBOX_CONF="$(resolve_conf_path)" || return 1
+    VAR_DIR="$(_tb_resolve_var_dir)" || return 1
+    TOOLBOX_CONF="${VAR_DIR}/toolbox.conf"
+    TOOLBOX_LOG="${VAR_DIR}/toolbox.log"
     tb_ensure_conf
-    export TOOLBOX_CONF
+    export VAR_DIR TOOLBOX_CONF TOOLBOX_LOG
 }

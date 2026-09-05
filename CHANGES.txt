@@ -1,4 +1,8 @@
-v1.0.21
+v1.0.22
+- 23rd beta release.
+- Improvements and bug fixes.
+
+- v1.0.21
 - 22nd beta release.
 - Updated back-end to pre-populate local mac addresses for send_wol module.
 

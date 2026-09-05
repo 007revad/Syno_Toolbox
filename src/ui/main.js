@@ -311,6 +311,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         // populated, once the backgrounded scan finishes.
         if (isInitial) {
             SYNO.SDS.Syno_Toolbox.apiCall("discoverwol", {}, function() {});
+            this.startWolScanPolling();
         }
 
         SYNO.SDS.Syno_Toolbox.apiCall("getstate", {}, (function(resp) {
@@ -413,6 +414,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             case "toggle-wol-selector":
                 return '<select class="tb-wol-mac" style="min-width:240px;"><option value="">Loading devices\u2026</option></select>' +
                     ' <button type="button" class="tb-send-wol">Send WOL</button>' +
+                    ' <img class="tb-spinner tb-wol-spinner" src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="16" height="16" style="margin-left:6px;">' +
                     ' <span class="tb-wol-status" style="color:#888;"></span>';
 
             default:
@@ -527,6 +529,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 var wolSelect = rowEl.querySelector(".tb-wol-mac");
                 if (wolSelect) { this.populateWolDevices(wolSelect, mod); }
                 this.wireSendWolRow(rowEl, moduleId);
+                this.updateWolSpinner();
             }
         }, this);
     },
@@ -549,6 +552,58 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 Ext.fly(cb).on("change", (function() { this.setDirty(true); }).createDelegate(this));
             }, this);
         }).createDelegate(this));
+    },
+
+    // ---------------------------------------------------------------
+    // Discovery spinner: polls wolscanstatus (the status file
+    // discoverwol's setsid'd wrapper maintains) until the scan is no
+    // longer "running", then refreshes the dropdown and hides the
+    // spinner - covers both a populated list and a script error, since
+    // either way the scan has stopped being "in flight".
+    // ---------------------------------------------------------------
+    startWolScanPolling: function() {
+        this.wolScanInFlight = true;
+        this.updateWolSpinner();
+
+        var attempts = 0;
+        var maxAttempts = 20; // ~30s at 1.5s/poll - generous safety cap over the ~5s scans seen so far
+        var poll = (function() {
+            attempts++;
+            SYNO.SDS.Syno_Toolbox.apiCall("wolscanstatus", {}, (function(resp) {
+                var status = resp && resp.success && resp.result && resp.result.status;
+                if (status === "running" && attempts < maxAttempts) {
+                    setTimeout(poll, 1500);
+                    return;
+                }
+                this.wolScanInFlight = false;
+                this.updateWolSpinner();
+
+                var statusEl = this.toolsPanel && this.toolsPanel.querySelector(".tb-wol-status");
+                if (statusEl) {
+                    if (status === "error") {
+                        var rc = resp.result.rc;
+                        statusEl.textContent = "Device discovery failed" + (rc !== undefined ? " (exit code " + rc + ")" : "") + " - see toolbox.log";
+                    } else if (status === "running") {
+                        // hit maxAttempts while still running - not a
+                        // script failure, just longer than expected
+                        statusEl.textContent = "Device discovery is taking longer than expected";
+                    } else {
+                        statusEl.textContent = "";
+                    }
+                }
+
+                var wolSelect = this.toolsPanel && this.toolsPanel.querySelector(".tb-wol-mac");
+                var mod = this.modules.filter(function(m) { return m.control === "toggle-wol-selector"; })[0];
+                if (wolSelect && mod) { this.populateWolDevices(wolSelect, mod); }
+            }).createDelegate(this));
+        }).createDelegate(this);
+        setTimeout(poll, 1500);
+    },
+
+    updateWolSpinner: function() {
+        var spinnerEl = this.toolsPanel && this.toolsPanel.querySelector(".tb-wol-spinner");
+        if (!spinnerEl) { return; }
+        Ext.fly(spinnerEl)[this.wolScanInFlight ? "addClass" : "removeClass"]("show");
     },
 
     // ---------------------------------------------------------------

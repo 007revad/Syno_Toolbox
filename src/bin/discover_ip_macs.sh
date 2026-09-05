@@ -80,7 +80,7 @@ for i in "${localnet[@]}"; do
     ip="${i%%$'\t'*}"
     mac="${i##*$'\t'}"
     (
-        h="$(timeout 2 nmblookup -A "$ip" | grep -v -e Looking -e WORKGROUP -e MAC | awk 'NF{print $1; exit}')"
+        h="$(timeout 2 /usr/local/bin/nmblookup -A "$ip" | grep -v -e Looking -e WORKGROUP -e MAC | awk 'NF{print $1; exit}')"
         echo -e "$mac\t$ip\t$h" >> "$scanfile"
     ) &
 done
