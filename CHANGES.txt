@@ -1,3 +1,9 @@
+v1.0.25
+- 2nd public beta release.
+- Added help pages.
+- Changed Frequency selection from hours to weeks.
+- Bug fix for armv7 spk files not installing on armada38x, alpine, alpine4k, monaco, armada370, armardaxp, armada375, armarda370 and comcerto2k.
+
 v1.0.24
 - 1st public beta release.
 - Now includes openSeaChest_Configure and openSeaChest_PowerControl binaries instead of the seagate_lowcurrentspinup module downloading them.

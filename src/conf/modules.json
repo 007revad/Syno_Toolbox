@@ -200,7 +200,7 @@
       "run_args": [],
       "disable_args": null,
       "check_args": null,
-      "schedule": { "default_repeat_hour": 24 },
+      "schedule": { "default_repeat_week": 1 },
       "note": "Script reads its own settings straight from toolbox.conf (config_backup_* keys) rather than taking CLI args - run_args stays empty. Conf keys mirror the script's own variable names: target_dir, remote_backup, remote_port, remote_ip, remote_dir, local_user, remote_user, and the same set prefixed remote2_/local2_ for the 2nd optional remote. Discover NAS is repurposed here to prefill Remote IP fields, not as a source-NAS list."
     },
     {

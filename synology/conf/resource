@@ -1,0 +1,9 @@
+{
+    "systemd-unit": {},
+	"indexdb": {
+		"help-index": {
+			"conf-relpath": "ui/helptoc.conf",
+			"db-relpath": "indexdb/helpindexdb"
+		}
+	}
+}

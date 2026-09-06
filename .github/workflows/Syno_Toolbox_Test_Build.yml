@@ -71,6 +71,19 @@ jobs:
           esac
           echo "label=$label" >> $GITHUB_OUTPUT
 
+      # NEW: what actually goes in INFO's arch= field
+      - name: Map arch to INFO install-arch list
+        id: install_arch
+        run: |
+          case "${{ matrix.arch }}" in
+            kvmx64) archlist="x86_x64" ;;
+            rtd1296) archlist="armv8" ;;
+            armada38x) archlist="alpine alpine4k armada370 armada375 armada38x armadaxp monaco comcerto2k" ;;
+            evansport) archlist="evansport" ;;
+            *) echo "::error::No install-arch list mapped for '${{ matrix.arch }}'"; exit 1 ;;
+          esac
+          echo "archlist=$archlist" >> $GITHUB_OUTPUT
+
       - name: Select matching openSeaChest_Configure binary
         run: |
           set -euo pipefail
@@ -146,6 +159,7 @@ jobs:
           esac
 
       - name: Synology Package Builder Github Action
+        #uses: tomgrv/synology-package-builder@v1.3.0
         uses: 007revad/synology-package-builder@main
         with:
           dsm: ${{ matrix.dsm }}
@@ -213,7 +227,7 @@ jobs:
           spk=$(ls ./dist/*.spk | head -n1)
           tmpdir=$(mktemp -d)
           tar -xf "$spk" -C "$tmpdir"
-          sed -i '/^arch=/s/.*/arch="${{ steps.arch_label.outputs.label }}"/' "$tmpdir/INFO"
+          sed -i '/^arch=/s/.*/arch="${{ steps.install_arch.outputs.archlist }}"/' "$tmpdir/INFO"
           tar -cf "$spk" -C "$tmpdir" $(ls "$tmpdir")
           rm -rf "$tmpdir"
 

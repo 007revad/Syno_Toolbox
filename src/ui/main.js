@@ -58,7 +58,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             cls: "syno-app-win toolbox-win",
             maximizable: true,
             minimizable: true,
-            showHelp: false,
+            showHelp: true,
             width: 720,
             height: 560,
             html: this.buildHtml(),
@@ -476,7 +476,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             ].join("");
         };
 
-        return this.renderHourSelect(mod.schedule && mod.schedule.default_repeat_hour, f.hour) +
+        return this.renderWeekSelect(mod.schedule && mod.schedule.default_repeat_week, f.week) +
             ' <label>Target dir:</label> <input type="text" class="tb-target-dir" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.target_dir || "") + '" style="width:160px;">' +
             ' <button type="button" class="tb-browse-target-dir">Browse\u2026</button>' +
             remoteBlock("remote_", "Remote backup") +
@@ -488,10 +488,22 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     renderHourSelect: function(defaultHour, currentHour) {
         var selectedHour = parseInt(currentHour, 10) || defaultHour || 6;
         var opts = "";
-        for (var h = 1; h <= 11; h++) {
+        for (var h = 1; h <= 12; h++) {
             opts += '<option value="' + h + '"' + (h === selectedHour ? " selected" : "") + '>Every ' + h + ' hour' + (h > 1 ? "s" : "") + '</option>';
         }
         return '<label>Frequency:</label> <select class="tb-hour">' + opts + '</select>';
+    },
+
+    // Week-based frequency picker (1-4 weeks), separate from renderHourSelect
+    // so modules that only need coarse weekly scheduling (currently just
+    // config_backup) don't share state/markup with the hour-based modules.
+    renderWeekSelect: function(defaultWeek, currentWeek) {
+        var selectedWeek = parseInt(currentWeek, 10) || defaultWeek || 1;
+        var opts = "";
+        for (var w = 1; w <= 4; w++) {
+            opts += '<option value="' + w + '"' + (w === selectedWeek ? " selected" : "") + '>Every ' + (w > 1 ? w + " weeks" : "week") + '</option>';
+        }
+        return '<label>Frequency:</label> <select class="tb-week">' + opts + '</select>';
     },
 
     // ---------------------------------------------------------------

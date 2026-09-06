@@ -1,0 +1,187 @@
+<!-- @format -->
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+        <title>{{ app.displayname }}</title>
+        <link
+            href="../../../../help/help.css"
+            type="text/css"
+            rel="stylesheet"
+        />
+        <link
+            href="../../../../help/scrollbar/flexcroll.css"
+            type="text/css"
+            rel="stylesheet"
+        />
+        <script
+            type="text/javascript"
+            src="../../../../help/scrollbar/flexcroll.js"
+        ></script>
+        <script
+            type="text/javascript"
+            src="../../../../help/scrollbar/initFlexcroll.js"
+        ></script>
+    </head>
+    <body>
+        <h1>Tools</h1>
+        <p>
+            The <strong>Tools</strong> tab gives you a set of optional
+            switches and one-off actions for your NAS. Each item below shows
+            its current status directly under its name — enable a switch to
+            turn that behavior on, and disable it to turn it back off.
+        </p>
+
+        <div class="section">
+            <h4>Send WOL</h4>
+            <p>
+                Sends a Wake-on-LAN packet to wake a sleeping device on your
+                local network.
+            </p>
+            <ol>
+                <li>
+                    Choose a device from the dropdown list, which is
+                    populated automatically from devices discovered on your
+                    local network.
+                </li>
+                <li>Click <strong>Send WOL</strong> to wake it.</li>
+                <li>
+                    Click <strong>Settings</strong> to open
+                    <strong>Hidden Devices</strong>, where you can tick
+                    devices you don't want cluttering the dropdown (e.g.
+                    devices that are always on) and click
+                    <strong>Save</strong> to hide them from the list.
+                </li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h4>Change Size Units to Binary</h4>
+            <p>
+                DSM normally displays file and storage sizes using decimal
+                units (GB, MB, etc). Enabling this switches DSM's displayed
+                size units to their binary equivalents (GiB, MiB, KiB, TiB)
+                for your current language.
+            </p>
+        </div>
+
+        <div class="section">
+            <h4>Cleanup Coredumps</h4>
+            <p>
+                Removes core dump files left behind by crashed processes,
+                freeing up disk space. The status line shows whether any
+                core dumps are currently present.
+            </p>
+        </div>
+
+        <div class="section">
+            <h4>Enable Seagate Low Current Spinup</h4>
+            <p>
+                Enables low current spinup for compatible Seagate Exos or
+                IronWolf Pro drives (16TB&ndash;38TB), which reduces the
+                inrush current when the drive spins up. Only applies if a
+                compatible drive is detected in your NAS.
+            </p>
+        </div>
+
+        <div class="section">
+            <h4>Uninstall Active Insight</h4>
+            <p>
+                Removes Synology Active Insight if it's installed. The
+                status line shows whether Active Insight is currently
+                present on your NAS.
+            </p>
+        </div>
+
+        <div class="section">
+            <h4>Check Connected to UPS Server</h4>
+            <p>
+                Periodically checks that your NAS is still connected to its
+                configured UPS server, at the interval you choose from the
+                <strong>Frequency</strong> dropdown.
+            </p>
+        </div>
+
+        <div class="section">
+            <h4>DSM Configuration Backup and Export</h4>
+            <p>
+                Automatically backs up your DSM configuration on a schedule.
+            </p>
+            <ol>
+                <li>
+                    Choose how often to back up from the
+                    <strong>Frequency</strong> dropdown.
+                </li>
+                <li>
+                    Set <strong>Target dir</strong> to where backups should
+                    be saved, using <strong>Browse&hellip;</strong> to pick a
+                    folder.
+                </li>
+                <li>
+                    Optionally tick <strong>Remote backup</strong> (and
+                    <strong>2nd remote backup</strong>) to also copy backups
+                    to another NAS. Click <strong>Discover NAS&hellip;</strong>
+                    to find one on your network, or enter its
+                    <strong>Remote IP</strong>, port, <strong>Remote dir</strong>,
+                    <strong>Local user</strong> and <strong>Remote user</strong>
+                    manually.
+                </li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h4>Backup Synoboot Image</h4>
+            <p>
+                Backs up your NAS's synoboot image to the folder set in
+                <strong>Backup destination path</strong>. Use
+                <strong>Browse&hellip;</strong> to choose the destination.
+            </p>
+        </div>
+
+        <div class="section">
+            <h4>Enable Sequential I/O for SSD Cache</h4>
+            <p>
+                Allows sequential I/O to be cached on the selected volume's
+                SSD cache, at the block size (in KB) set in
+                <strong>Sequential I/O (kb)</strong>. Tick the volume(s) you
+                want this applied to. Only available if your NAS has an SSD
+                cache configured; the status line shows whether one was
+                found.
+            </p>
+        </div>
+
+        <div class="section">
+            <h4>Switch between SHR and RAID Group or Enable RAID F1</h4>
+            <p>
+                Changes the underlying RAID type of your storage pool
+                between <strong>SHR</strong> and a standard
+                <strong>RAID Group</strong>, using the dropdown to choose the
+                target type. Tick <strong>RAID F1</strong> to enable RAID F1
+                mode, which requires 3 or more 2.5" SSDs, or 3 or more NVMe
+                drives, in the pool. The status line shows the pool's
+                current RAID type and whether RAID F1 is enabled.
+            </p>
+        </div>
+
+        <div class="section">
+            <h4>Restore RS3621 Fan Speed</h4>
+            <p>
+                Restores the expected fan speed behavior on RS3621-series
+                models. Not needed on other models &mdash; the status line
+                will indicate if the script isn't applicable to your NAS.
+            </p>
+        </div>
+
+        <div class="section">
+            <h4>Disable Reset Button</h4>
+            <p>
+                Disables your NAS's physical reset button, to prevent DSM
+                settings being reset by an accidental (or deliberate) button
+                press. The status line shows whether the reset button is
+                currently enabled or disabled.
+            </p>
+        </div>
+    </body>
+</html>
