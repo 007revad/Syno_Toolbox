@@ -11,7 +11,7 @@
 
 Synology package containing many 007revad scripts that are too small to have their own package.
 
-Available for DSM 7 and DSM 6.
+Available for DSM 7 and DSM 6. Supports x86_64, aarch64, armv7l and i686.
 
 ### How to install the package
 
@@ -37,15 +37,30 @@ There are 2 ways to install the package:
 
 <br>
 
-<!--- <p align="center">Description of image 2 goes here</p> --->
-<p align="center"><kbd><img src="/images/info_tab_20260812.png"></kbd></p>
+<p align="center">DS925+ Info (UPS client)</p>
+<p align="center"><kbd><img src="/images/info_ds925plus.png"></kbd></p>
 
 <br>
 
-<!--- <p align="center">Description of image 2 goes here</p> --->
-<p align="center"><kbd><img src="/images/tools_tab_20260812.png"></kbd></p>
+<p align="center">DS1821+ Info (UPS server)</p>
+<p align="center"><kbd><img src="/images/info_ds1821plus.png"></kbd></p>
 
 <br>
 
-<!--- <p align="center">Description of image 2 goes here</p> --->
-<!--- <p align="center"><kbd><img src="/images/IMAGE_NAME.png"></kbd></p> --->
+<p align="center">Tools</p>
+<p align="center"><kbd><img src="/images/tools_page1.png"></kbd></p>
+
+<br>
+
+<p align="center">More Tools</p>
+<p align="center"><kbd><img src="/images/tools_page2.png"></kbd></p>
+
+<br>
+
+<p align="center">Send WOL device selection</p>
+<p align="center"><kbd><img src="/images/tools_send_wol.png"></kbd></p>
+
+<br>
+
+<p align="center">Send WOL Settings</p>
+<p align="center"><kbd><img src="/images/tools_send_wol_settings.png"></kbd></p>
