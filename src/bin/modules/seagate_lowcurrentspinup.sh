@@ -26,8 +26,7 @@
 # https://www.perplexity.ai/search/my-synology-1821-wont-start-up-DCEWq2y5TvO4WoUsFli_sw
 #------------------------------------------------------------------------------
 
-# openSeaChest version
-vSeaChest=v24.08.1
+BIN_DIR="/var/packages/Syno_Toolbox/target/bin"
 
 # Get NAS model
 model=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/synoinfo.conf upnpmodelname 2>/dev/null)
@@ -47,15 +46,13 @@ fi
 
 # Check supported arches
 arch="$(uname -m)"
-supported_arches=("x86_64" "aarch64" "arm7l")
+supported_arches=("x86_64" "aarch64" "arm7l" "i686")
 if [[ ! ${supported_arches[*]} =~ $arch ]]; then
     echo -e "$model not supported"
     exit 
 fi
 
-archive="openSeaChest-v24.08.1-linux-${arch}-portable"
-
-scriptver="v1.0.2-toolbox"
+scriptver="v1.0.3-toolbox"
 script=Seagate_lowCurrentSpinup
 repo="007revad/Seagate_lowCurrentSpinup"
 scriptname=seagate_lowcurrentspinup
@@ -109,7 +106,7 @@ is_seagate(){
     fi
 }
 
-# Add drives to drives to skip installing openSeaChest if no Seagate drives
+# Add drives to drives array to skip installing openSeaChest if no Seagate drives
 for d in /sys/block/*; do
     # $d is /sys/block/sata1 etc
     case "$(basename -- "${d}")" in
@@ -137,64 +134,6 @@ if [[ ${#drives[@]} -lt 1 ]]; then
     exit
 fi
 
-# Download openSeaChest portable if needed
-if [[ ! -f /opt/openSeaChest_PowerControl ]] || [[ ! -f /opt/openSeaChest_Configure ]]; then
-    if [[ ! -f "/tmp/${archive}.tar.xz" ]]; then
-        echo -e "Downloading openSeaChest portable from Seagate"
-        wget -P /tmp/ https://github.com/Seagate/openSeaChest/releases/download/"${vSeaChest:?}/${archive:?}".tar.xz &>/dev/null
-    fi
-fi
-
-# Extract openSeaChest_PowerControl to /tmp if needed
-if [[ ! -d "/tmp/${archive:?}" ]] && [[ -f "/tmp/${archive}.tar.xz" ]]; then
-    echo -e "Extracting openSeaChest archive"
-    tar -xf "/tmp/${archive}.tar.xz" -C /tmp
-
-    # Delete downloaded archive
-    rm "/tmp/${archive}.tar.xz"
-    echo
-fi
-
-# Create /opt if needed
-if [[ ! -d /opt ]]; then
-    if mkdir /opt; then
-        chown root:root /opt
-        chmod 711 /opt
-    else
-        echo -e "Error: Failed to create /opt !"
-        exit 1
-    fi
-fi
-
-# Copy openSeaChest_PowerControl to /opt if needed
-if [[ ! -f /opt/openSeaChest_PowerControl ]]; then
-    if cp /tmp/"${archive:?}"/openSeaChest_PowerControl /opt/openSeaChest_PowerControl; then
-        # openSeaChest/releases/download/v24.08.1 needs owner:group set
-        chown root:root /opt/openSeaChest_PowerControl
-        chmod 755 /opt/openSeaChest_PowerControl
-    else
-        echo -e "Error: Failed to copy openSeaChest_PowerControl to /opt !"
-        exit 1
-    fi    
-fi
-
-# Copy openSeaChest_Configure to /opt if needed
-if [[ ! -f /opt/openSeaChest_Configure ]]; then
-    if cp /tmp/"${archive:?}"/openSeaChest_Configure /opt/openSeaChest_Configure; then
-        # openSeaChest/releases/download/v24.08.1 needs owner:group set
-        chown root:root /opt/openSeaChest_Configure
-        chmod 755 /opt/openSeaChest_Configure
-    else
-        echo -e "Error: Failed to copy openSeaChest_Configure to /opt !"
-        exit 1
-    fi    
-fi
-
-# Delete tmp extracted archive directory
-if [[ ! -d "/tmp/${archive:?}" ]]; then
-    rm -rf "/tmp/${archive:?}"
-fi
-
 
 set_puis(){ 
     # Set Power Up In Standby
@@ -209,15 +148,15 @@ set_puis(){
     #         Note: Not all products support this feature.
     #--------------------------------------------------------------------------
     # Check if PUIS is supported
-    if ! /opt/openSeaChest_PowerControl -d "$sg" --puisFeature info | grep -q 'PUIS is supported'; then
-        /opt/openSeaChest_PowerControl -d "$sg" --puisFeature info | tail +9
+    if ! "${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature info | grep -q 'PUIS is supported'; then
+        "${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature info | tail +9
     else
         if [[ $disable == "yes" ]]; then
             # Disable PUIS
-            /opt/openSeaChest_PowerControl -d "$sg" --puisFeature disable | tail +9 | head -n -1
+            "${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature disable | tail +9 | head -n -1
         else
             # Enable PUIS
-            /opt/openSeaChest_PowerControl -d "$sg" --puisFeature enable | tail +9 | head -n -1
+            "${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature enable | tail +9 | head -n -1
         fi
     fi
 }
@@ -233,9 +172,9 @@ set_lcs(){
     #         Note: Some products will support low, but not the ultra low current spinup mode.
     #--------------------------------------------------------------------------
     if [[ $disable == "yes" ]]; then
-        /opt/openSeaChest_Configure -d "$sg" --lowCurrentSpinup disable | tail +11
+        "${BIN_DIR}"/openSeaChest_Configure -d "$sg" --lowCurrentSpinup disable | tail +11
     else
-        /opt/openSeaChest_Configure -d "$sg" --lowCurrentSpinup low | tail +11
+        "${BIN_DIR}"/openSeaChest_Configure -d "$sg" --lowCurrentSpinup low | tail +11
     fi
 }
 
@@ -249,8 +188,8 @@ check_puis(){
     #             "PUIS is supported and enabled"
     #--------------------------------------------------------------------------
     local puis_info
-    header=$(/opt/openSeaChest_PowerControl -d "$sg" --puisFeature info | grep '/dev/sg')
-    puis_info=$(/opt/openSeaChest_PowerControl -d "$sg" --puisFeature info)
+    header=$("${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature info | grep '/dev/sg')
+    puis_info=$("${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature info)
 
     echo -e "\n$header"
     if echo "$puis_info" | grep -q 'PUIS is not supported'; then
@@ -271,7 +210,7 @@ check_lcs(){
     # a "Low Current Spinup:" line for Seagate SATA drives only.
     #--------------------------------------------------------------------------
     local lcs_line
-    lcs_line=$(/opt/openSeaChest_Configure -d "$sg" -i | grep 'Low Current Spinup:')
+    lcs_line=$("${BIN_DIR}"/openSeaChest_Configure -d "$sg" -i | grep 'Low Current Spinup:')
 
     if [[ -z $lcs_line ]]; then
         echo "Low Current Spinup: Not supported (not a Seagate SATA drive, or feature unavailable)"
@@ -283,7 +222,7 @@ check_lcs(){
 
 
 # Process SATA Seagate HDDs larger than 16TB
-IFS=$'\n' read -r -d '' -a array < <(/opt/openSeaChest_PowerControl --scan |\
+IFS=$'\n' read -r -d '' -a array < <("${BIN_DIR}"/openSeaChest_PowerControl --scan |\
     # Only Seagate SATA drives support PUIS
     # https://grep.js.org/  Online grep tester
     #grep -E '^ATA.*ST[2-4][0,9][0]{3,}')  # All Seagate 20TB and larger drives
@@ -310,10 +249,10 @@ if [[ "${#array[@]}" -gt "0" ]]; then
         for drive in "${array[@]}"; do
             #echo "$drive" | awk '{print $3, $4}'  # debug
             sg=$(echo "$drive" | awk '{print $2}')
-#            /opt/openSeaChest_PowerControl -d "$sg" --puisFeature enable
+#            "${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature enable
 
             # PUIS info
-#            /opt/openSeaChest_PowerControl -d "$sg" --puisFeature info | tail +9
+#            "${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature info | tail +9
             #echo
 
             set_puis

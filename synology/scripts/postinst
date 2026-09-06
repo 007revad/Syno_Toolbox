@@ -53,6 +53,8 @@ chmod 555 "$BIN_DIR"/aarch64/arp-scan 2>/dev/null          # Sets execute + bloc
 chmod 555 "$BIN_DIR"/arm7l/arp-scan 2>/dev/null            # Sets execute + blocks injection exploit
 chmod 555 "$BIN_DIR"/i686/arp-scan 2>/dev/null             # Sets execute + blocks injection exploit
 chmod 555 "$BIN_DIR"/x86_64/arp-scan 2>/dev/null           # Sets execute + blocks injection exploit
+chmod 555 "$BIN_DIR"/openSeaChest_Configure 2>/dev/null    # Sets execute + blocks injection exploit
+chmod 555 "$BIN_DIR"/openSeaChest_PowerControl 2>/dev/null # Sets execute + blocks injection exploit
 
 # Create toolbox.log if it doesn't exist yet (fresh install, or an
 # upgrade from a version that predates it). World-writable because

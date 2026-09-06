@@ -86,6 +86,84 @@ jobs:
           esac
           echo "label=$label" >> $GITHUB_OUTPUT
 
+      - name: Select matching openSeaChest_Configure binary
+        if: steps.check_assets.outputs.spk_count == '0'
+        run: |
+          set -euo pipefail
+          case "${{ matrix.arch }}" in
+            kvmx64)    asset="openSeaChest_Configure-x86_64" ;;
+            rtd1296)   asset="openSeaChest_Configure-aarch64" ;;
+            armada38x) asset="openSeaChest_Configure-armv7l" ;;
+            evansport) asset="openSeaChest_Configure-i686" ;;
+            *) echo "::error::No openSeaChest_Configure binary mapped for '${{ matrix.arch }}'"; exit 1 ;;
+          esac
+          cd src/bin
+          mv "$asset" openSeaChest_Configure
+          rm -f openSeaChest_Configure-x86_64 openSeaChest_Configure-aarch64 openSeaChest_Configure-armv7l openSeaChest_Configure-i686
+          chmod +x openSeaChest_Configure
+          ls -l .
+
+      - name: Verify correct openSeaChest_Configure selected
+        if: steps.check_assets.outputs.spk_count == '0'
+        run: |
+          set -euo pipefail
+          case "${{ matrix.arch }}" in
+            kvmx64)    expect_arch="x86-64" ;;
+            rtd1296)   expect_arch="ARM aarch64" ;;
+            armada38x) expect_arch="ARM" ;;
+            evansport) expect_arch="Intel 80386" ;;
+            *) echo "::error::No expected ELF arch mapped for '${{ matrix.arch }}'"; exit 1 ;;
+          esac
+          bin="src/bin/openSeaChest_Configure"
+          file_out=$(file -b "$bin")
+          echo "openSeaChest_Configure: $file_out"
+          case "$file_out" in
+            *"$expect_arch"*) echo "OK: matches expected arch '$expect_arch'" ;;
+            *)
+              echo "::error::openSeaChest_Configure doesn't look like '$expect_arch' (got: $file_out) - wrong binary was selected"
+              exit 1
+              ;;
+          esac
+
+      - name: Select matching openSeaChest_PowerControl binary
+        if: steps.check_assets.outputs.spk_count == '0'
+        run: |
+          set -euo pipefail
+          case "${{ matrix.arch }}" in
+            kvmx64)    asset="openSeaChest_PowerControl-x86_64" ;;
+            rtd1296)   asset="openSeaChest_PowerControl-aarch64" ;;
+            armada38x) asset="openSeaChest_PowerControl-armv7l" ;;
+            evansport) asset="openSeaChest_PowerControl-i686" ;;
+            *) echo "::error::No openSeaChest_PowerControl binary mapped for '${{ matrix.arch }}'"; exit 1 ;;
+          esac
+          cd src/bin
+          mv "$asset" openSeaChest_PowerControl
+          rm -f openSeaChest_PowerControl-x86_64 openSeaChest_PowerControl-aarch64 openSeaChest_PowerControl-armv7l openSeaChest_PowerControl-i686
+          chmod +x openSeaChest_PowerControl
+          ls -l .
+
+      - name: Verify correct openSeaChest_PowerControl selected
+        if: steps.check_assets.outputs.spk_count == '0'
+        run: |
+          set -euo pipefail
+          case "${{ matrix.arch }}" in
+            kvmx64)    expect_arch="x86-64" ;;
+            rtd1296)   expect_arch="ARM aarch64" ;;
+            armada38x) expect_arch="ARM" ;;
+            evansport) expect_arch="Intel 80386" ;;
+            *) echo "::error::No expected ELF arch mapped for '${{ matrix.arch }}'"; exit 1 ;;
+          esac
+          bin="src/bin/openSeaChest_PowerControl"
+          file_out=$(file -b "$bin")
+          echo "openSeaChest_PowerControl: $file_out"
+          case "$file_out" in
+            *"$expect_arch"*) echo "OK: matches expected arch '$expect_arch'" ;;
+            *)
+              echo "::error::openSeaChest_PowerControl doesn't look like '$expect_arch' (got: $file_out) - wrong binary was selected"
+              exit 1
+              ;;
+          esac
+
       - name: Synology Package Builder Github Action
         if: steps.check_assets.outputs.spk_count == '0'
         #uses: tomgrv/synology-package-builder@v1.3.0

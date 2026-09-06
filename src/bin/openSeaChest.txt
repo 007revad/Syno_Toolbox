@@ -1,0 +1,13 @@
+openSeaChest_PowerControl and openSeaChest_Configure
+
+These are unmodified prebuilt binaries from Seagate's openSeaChest project,
+included here in Executable Form.
+
+Version: v26.03.2
+Source code: https://github.com/Seagate/openSeaChest
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+Full license text: https://github.com/Seagate/openSeaChest/blob/develop/LICENSE.md

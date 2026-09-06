@@ -1,3 +1,11 @@
+v1.0.24
+- 1st public beta release.
+- Now includes openSeaChest_Configure and openSeaChest_PowerControl binaries instead of the seagate_lowcurrentspinup module downloading them.
+- Added i686 support to seagate_lowcurrentspinup module.
+- Set window minimum height and width.
+- DSM 6 bug fix for getting the other device's hostname in send_wol, ups_status and synology_config_backup modules.
+- Bug fix for NAS with 2 or 1 core CPUs failing to get other device's hostname.
+
 v1.0.23
 - 24th beta release.
 - Added settings window for Send WOL to hide unwanted devices from dropdown list.

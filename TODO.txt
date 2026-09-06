@@ -1,0 +1,23 @@
+Add help to explain what each tool does and explain their settings.
+
+Add translations.
+
+Add module to show packages that have updates available.
+
+Add module to add more than 5 UPS clients.
+
+Add module to set inotify watches.
+
+Finish adding Schedule support for the modules that need it.
+
+Change DSM Configuration Backup and Export's Frequency to weekly, 2 weekly, 3 weekly and 4 weekly.
+
+Cleanup Coredumps maybe add a schedule settings with --new option.
+
+Disable modules' on/off toggle for unsupported models or DSM versions.
+
+Disable Synoboot Backup for models that don't have a USB DOM.
+
+Maybe hide tools that aren't for the Synology model the package is running on.
+Or add a settings button to select which modules to hide.
+

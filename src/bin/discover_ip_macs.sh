@@ -76,12 +76,33 @@ for i in "${localnet[@]}"; do
 done
 localnet=("${filtered[@]}")
 
-nmblookup_cmd="$(which nmblookup)"
+cores=$(grep "core id" /proc/cpuinfo | sort -u | wc -l)
+if [[ -z "$cores" || "$cores" -eq 0 ]]; then
+    cores=$(nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo)
+fi
+if (( cores >= 4 )); then
+    nmblookup_timeout=2
+elif (( cores == 3 )); then
+    nmblookup_timeout=2
+elif (( cores == 2 )); then
+    nmblookup_timeout=3
+else
+    nmblookup_timeout=4
+fi
+
+echo "CPU cores: $cores"
+echo "Using timeout: $nmblookup_timeout"
+
+if [[ $dsm -ge 7 ]]; then
+    nmblookup_cmd="/usr/local/bin/nmblookup"
+else
+    nmblookup_cmd="/usr/bin/nmblookup"
+fi
 for i in "${localnet[@]}"; do
     ip="${i%%$'\t'*}"
     mac="${i##*$'\t'}"
     (
-        h="$(timeout 2 "$nmblookup_cmd" -A "$ip" | grep -v -e Looking -e WORKGROUP -e MAC | awk 'NF{print $1; exit}')"
+        h="$(timeout "$nmblookup_timeout" "$nmblookup_cmd" -A "$ip" | grep -v -e Looking -e WORKGROUP -e MAC | awk 'NF{print $1; exit}')"
         echo -e "$mac\t$ip\t$h" >> "$scanfile"
     ) &
 done
