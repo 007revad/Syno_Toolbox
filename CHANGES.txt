@@ -1,8 +1,13 @@
 v1.0.25
 - 2nd public beta release.
-- Added help pages.
-- Changed Frequency selection from hours to weeks.
+- Added new enable_ssh_root module.
+- Added window minimum width and height.
+- Added about tab and help tab.
+- Changed Frequency selection from hours to weeks for synology_config_backup module.
+- Bug fixes and improvements for seagate_lowcurrentspinup module.
+- Bug fix for nmblookup command not found in ups_status and synology_config_backup modules.
 - Bug fix for armv7 spk files not installing on armada38x, alpine, alpine4k, monaco, armada370, armardaxp, armada375, armarda370 and comcerto2k.
+- Bug fix for restore_rs3621_fan_speed module showing "Not needed for DSM $version" instead of "Not needed for $model" for other models running DSM 7.3.1 or older.
 
 v1.0.24
 - 1st public beta release.

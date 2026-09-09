@@ -35,6 +35,23 @@ if [[ $dsm -le 6 ]]; then
     log_message "Removed helper/synotoolbox-helper (only needed for DSM 7)"   
 fi
 
+# Add package version to About header
+if sed -i "s|>Syno Toolbox<|>Syno Toolbox ${SYNOPKG_PKGVER}<|" "${UI_DIR}/help/syno_toolbox_overview.html"; then
+    log_message "Set version ${SYNOPKG_PKGVER} in About header"
+else
+    log_message "WARNING: failed to set version in About header"
+fi
+# Also future lang specific About files
+shopt -s nullglob
+for html in "$UI_DIR"/help/*/syno_toolbox_overview.html; do
+    if sed -i "s|>Syno Toolbox<|>Syno Toolbox ${SYNOPKG_PKGVER}<|" "$html"; then
+    log_message "Set version ${SYNOPKG_PKGVER} in About header"
+    else
+        log_message "WARNING: failed to set version in About header"
+    fi
+done
+shopt -u nullglob
+
 # Set execute permissions
 chmod +x "$UI_DIR/api.cgi" 2>/dev/null
 log_message "Set execute permissions for api.cgi"

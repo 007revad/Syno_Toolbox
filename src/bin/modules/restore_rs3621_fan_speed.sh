@@ -12,20 +12,12 @@
 # Change second pwm_duty_low to 100 only if it is currently 120
 #<pwm_config name="pwm2" sensor_type="allinput" high_freq="yes" pwm_duty_low="120" pwm_duty_high="220"></pwm_config>
 
-scriptver="1.0.0-toolbox"
+scriptver="1.0.1-toolbox"
 
 # Check script is running as root
 if [[ $( whoami ) != "root" ]]; then
     echo -e "Error: This script must be run as sudo or root"
     exit 1
-fi
-
-# Check DSM version needs script
-dsm_version=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION productversion)
-buildnumber=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION buildnumber)
-if [[ $buildnumber -lt "86009" ]]; then
-    echo "Not needed for DSM ${dsm_version}-$buildnumber"
-    exit
 fi
 
 # Get NAS model
@@ -47,7 +39,15 @@ fi
 # Check correct Synology model
 supported_models=("RS3621xs+" "RS3621RPxs")
 if [[ ! ${supported_models[*]} =~ $model ]]; then
-    echo -e "Script not needed for $model"
+    echo -e "Not needed for $model"
+    exit
+fi
+
+# Check DSM version needs script
+dsm_version=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION productversion)
+buildnumber=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION buildnumber)
+if [[ $buildnumber -lt "86009" ]]; then
+    echo "Not needed for DSM ${dsm_version}-$buildnumber"
     exit
 fi
 

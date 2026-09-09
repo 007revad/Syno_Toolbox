@@ -5,10 +5,10 @@
 
 scriptver="1.0.1-toolbox"
 
-DSM_VER="$(synogetkeyvalue /etc.defaults/VERSION majorversion)"
+dsm="$(synogetkeyvalue /etc.defaults/VERSION majorversion)"
 
 # Get UPS server's IP address
-if [[ "$DSM_VER" -ge "7" ]]; then
+if [[ "$dsm" -ge "7" ]]; then
     # DSM 7
     # Get UPS mode
     UPS_MODE="$(synogetkeyvalue /usr/syno/etc/ups/synoups.conf ups_mode)"
@@ -69,7 +69,11 @@ case "$raw_result" in
 esac
 
 if [[ "$status" == "ok" ]]; then
-    nmblookup_cmd="$(which nmblookup)"
+    if [[ $dsm -ge 7 ]]; then
+        nmblookup_cmd="/usr/local/bin/nmblookup"
+    else
+        nmblookup_cmd="/usr/bin/nmblookup"
+    fi
 
     if [[ "$UPS_MODE" == "slave" ]]; then
         echo "UPS server connection OK: $result"
@@ -81,11 +85,6 @@ if [[ "$status" == "ok" ]]; then
         readarray -t remote_clients < <(printf '%s\n' "${ups_clients[@]}" | grep -v '^127\.0\.0\.1$')
         if [[ "${#remote_clients[@]}" -gt 0 ]]; then
             echo "Connected UPS clients:"
-            #for c in "${remote_clients[@]}"; do
-            #    nmblookup_cmd="/usr/local/bin/nmblookup"
-            #    hostname="$($nmblookup_cmd -A "$c" | grep -v -e Looking -e WORKGROUP -e MAC | awk 'NF{print $1; exit}')"
-            #    echo "    ${hostname:-unknown} - ${c}"
-            #done
 
             # First pass: resolve hostnames and track the longest one
             declare -A client_hostnames

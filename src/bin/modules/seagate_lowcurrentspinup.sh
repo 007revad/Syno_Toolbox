@@ -98,8 +98,8 @@ is_seagate(){
     if [[ -z $DEVICE ]]; then
         DEVICE=$(smartctl -A -i /dev/"$1" | awk -F ' ' '/Product/{print $2}')
     fi
-#    if echo "$DEVICE" | grep -qE '^ATA.*ST(1[68]|[2-5][02468])[0]{3,}N[T|E|M|G]'; then  # All Seagate Exos and Ironwolf Pro 16TB to 58TB
-    if echo "$DEVICE" | grep -qE '^ATA.*ST[1-4][0-9][0]{3,}'; then  # debug with smaller Seagate Ironwolf drives
+    if echo "$DEVICE" | grep -qE '^ST(1[68]|[2-5][02468])[0]{3,}N[T|E|M|G]'; then  # All Seagate Exos and Ironwolf Pro 16TB to 58TB
+    #if echo "$DEVICE" | grep -qE '^ST[1-4][0-9][0]{3,}'; then  # debug with smaller Seagate Ironwolf drives
         return 0
     else
         return 1
@@ -130,7 +130,7 @@ for d in /sys/block/*; do
 done
 
 if [[ ${#drives[@]} -lt 1 ]]; then
-    echo -e "No Seagate Exos or Ironwolf Pro 16TB to 38TB HDDs found"
+    echo -e "No Seagate Exos or Ironwolf Pro 16TB or larger HDDs found"
     exit
 fi
 
@@ -147,17 +147,26 @@ set_puis(){
     #             disable - disable the PUIS feature using setfeatures command
     #         Note: Not all products support this feature.
     #--------------------------------------------------------------------------
+    local output header trimmed
+
     # Check if PUIS is supported
     if ! "${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature info | grep -q 'PUIS is supported'; then
         "${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature info | tail +9
     else
         if [[ $disable == "yes" ]]; then
             # Disable PUIS
-            "${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature disable | tail +9 | head -n -1
+            output="$("${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature disable | tail +9 | head -n -1)"
         else
             # Enable PUIS
-            "${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature enable | tail +9 | head -n -1
+            output="$("${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature enable | tail +9 | head -n -1)"
         fi
+
+        header="$(head -n 1 <<< "$output")"
+        trimmed="${header#*- }"
+        trimmed="${trimmed% - *}"
+
+        echo "$trimmed"
+        tail -n +2 <<< "$output"
     fi
 }
 
@@ -191,7 +200,9 @@ check_puis(){
     header=$("${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature info | grep '/dev/sg')
     puis_info=$("${BIN_DIR}"/openSeaChest_PowerControl -d "$sg" --puisFeature info)
 
-    echo -e "\n$header"
+    trimmed="${header#*- }"
+    trimmed="${trimmed% - *}"
+    echo "$trimmed"
     if echo "$puis_info" | grep -q 'PUIS is not supported'; then
         echo "PUIS: Not supported"
     elif echo "$puis_info" | grep -q 'PUIS is supported and enabled'; then
@@ -213,7 +224,7 @@ check_lcs(){
     lcs_line=$("${BIN_DIR}"/openSeaChest_Configure -d "$sg" -i | grep 'Low Current Spinup:')
 
     if [[ -z $lcs_line ]]; then
-        echo "Low Current Spinup: Not supported (not a Seagate SATA drive, or feature unavailable)"
+        echo "Low Current Spinup is not supported (not a Seagate SATA drive, or feature unavailable)"
     else
         # Trim leading tab/whitespace, e.g. "	Low Current Spinup: Enabled"
         echo "${lcs_line#"${lcs_line%%[![:space:]]*}"}"
@@ -225,17 +236,22 @@ check_lcs(){
 IFS=$'\n' read -r -d '' -a array < <("${BIN_DIR}"/openSeaChest_PowerControl --scan |\
     # Only Seagate SATA drives support PUIS
     # https://grep.js.org/  Online grep tester
-    #grep -E '^ATA.*ST[2-4][0,9][0]{3,}')  # All Seagate 20TB and larger drives
-    #grep -E '^ATA.*ST[1-4][0-9][0]{3,}N[T|E|M|G]')  # All Seagate Exos and Ironwolf Pro drives 10TB and larger
-#    grep -E '^ATA.*ST(1[68]|[2-5][02468])[0]{3,}N[T|E|M|G]')  # All Seagate Exos and Ironwolf Pro 16TB to 58TB
-    grep -E '^ATA.*ST[1-4][0-9][0]{3,}')  # debug with smaller Seagate Ironwolf drives
+    #grep -E '^(ATA|SCSI).*ST[2-4][0,9][0]{3,}')  # All Seagate 20TB and larger drives
+    #grep -E '^(ATA|SCSI).*ST[1-4][0-9][0]{3,}N[T|E|M|G]')  # All Seagate Exos and Ironwolf Pro drives 10TB and larger
+    grep -E '^(ATA|SCSI).*ST(1[68]|[2-5][02468])[0]{3,}N[T|E|M|G]')  # All Seagate Exos and Ironwolf Pro 16TB to 58TB
+    #grep -E '^(ATA|SCSI).*ST[1-4][0-9][0]{3,}')  # debug with smaller Seagate Ironwolf drives
 IFS=
 
 if [[ "${#array[@]}" -gt "0" ]]; then
     if [[ $check == "yes" ]]; then
+        first=1
         for drive in "${array[@]}"; do
-            #echo "$drive" | awk '{print $3, $4}'  # debug
             sg=$(echo "$drive" | awk '{print $2}')
+            if [[ $first -eq 1 ]]; then
+                first=0
+            else
+                echo
+            fi
             check_puis
             check_lcs
         done

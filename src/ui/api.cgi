@@ -106,6 +106,17 @@ run_privileged() {
     RUN_RC=$?
 }
 
+run_privileged_stdin() {
+    # Send password via stdin so the password is not visible via ps
+    local pw="$1"; shift
+    if [[ "$dsm" -ge 7 ]]; then
+        RUN_OUT=$(printf '%s' "$pw" | "$HELPER" "$@" 2>>"${LOG_FILE}")
+    else
+        RUN_OUT=$(printf '%s' "$pw" | bash "$API_SCRIPT" "$@" 2>>"${LOG_FILE}")
+    fi
+    RUN_RC=$?
+}
+
 # --------- 5. Action processing ---------------------------------
 
 case "${ACTION}" in
@@ -198,7 +209,16 @@ discovernas)
 
 run)
     MODULE_ID="${PARAM[module_id]}"
-    run_privileged run "$MODULE_ID"
+    if [[ "$MODULE_ID" == "enable_ssh_root" ]]; then
+        ADMIN_PW="${PARAM[admin_password]}"
+        if [[ -z "$ADMIN_PW" ]]; then
+            json_response false "Admin password required" ""
+            exit 0
+        fi
+        run_privileged_stdin "$ADMIN_PW" run "$MODULE_ID"
+    else
+        run_privileged run "$MODULE_ID"
+    fi
     if [ "$RUN_RC" -ne 0 ] || [ -z "$RUN_OUT" ]; then
         log "[ERROR] run ${MODULE_ID} failed (rc=${RUN_RC}): ${RUN_OUT}"
         json_response false "Failed to run ${MODULE_ID}" ""

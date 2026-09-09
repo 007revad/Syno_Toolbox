@@ -15,6 +15,19 @@
       "check_args": []
     },
     {
+      "id": "ups_connected",
+      "category": "info",
+      "name": "UPS Status",
+      "control": "toggle-display",
+      "script": "bin/modules/ups_status.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": [],
+      "result_style": "monospace"
+    },
+    {
       "id": "eth_speed",
       "category": "info",
       "name": "LAN port connected speed",
@@ -49,19 +62,6 @@
       "run_args": [],
       "disable_args": null,
       "check_args": []
-    },
-    {
-      "id": "ups_connected",
-      "category": "info",
-      "name": "UPS Status",
-      "control": "toggle-display",
-      "script": "bin/modules/ups_status.sh",
-      "trigger": "boot",
-      "live": true,
-      "run_args": [],
-      "disable_args": null,
-      "check_args": [],
-      "result_style": "monospace"
     },
     {
       "id": "system_partition_info",
@@ -125,7 +125,7 @@
       "run_args": ["{mac}"],
       "disable_args": null,
       "check_args": null,
-      "note": "No real 'enabled' state - this is a one-shot action fired by its own Send button, not by Save's enable-diff or boot. trigger stays on_save purely so run_boot_modules.sh never auto-fires it; the toggle checkbox is hidden in the UI and never flips, so that diff path never actually runs. run_args' {mac} placeholder is filled from current_fields.mac, which the Send button persists via save() immediately before calling run - same placeholder-from-saved-conf-field mechanism as seq_io's {volumes}/{kb}, just never previously exercised via a manual button click. NEEDS DAVE'S CONFIRMATION: (1) that synotoolbox_api.sh's run_module_script() resolver re-reads {mac} from conf's send_wol_mac key at run time, the same way it presumably does for seq_io's {volumes}/{kb} - that path has only ever been exercised via Save's enable-diff before, never via a standalone button click straight after a save, so it's unverified for this flow; (2) requires a new listwoldevices action added to synotoolbox_api.sh that reads wol_devices.tsv and returns [{mac,ip,host}] - modelled on discovernas' response shape but not yet implemented."
+      "note": "No real 'enabled' state - this is a one-shot action fired by its own Send button, not by Save's enable-diff or boot. trigger stays on_save purely so run_boot_modules.sh never auto-fires it; the toggle checkbox is hidden in the UI and never flips, so that diff path never actually runs. run_args' {mac} placeholder is filled from current_fields.mac, which the Send button persists via save() immediately before calling run - same placeholder-from-saved-conf-field mechanism as seq_io's {volumes}/{kb}."
     },
     {
       "id": "fix_size_units",
@@ -160,7 +160,7 @@
       "trigger": "boot",
       "live": false,
       "run_args": [],
-      "disable_args": null,
+      "disable_args": ["disable"],
       "check_args": ["check"]
     },
     {
@@ -262,6 +262,35 @@
       "run_args": [],
       "disable_args": null,
       "check_args": ["check"]
+    },
+    {
+      "id": "enable_ssh_root",
+      "category": "tools",
+      "name": "Enable root SSH Login",
+      "control": "toggle-password-prompt",
+      "script": "bin/modules/enable_ssh_root.sh",
+      "trigger": "on_save",
+      "live": false,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": ["--check"],
+      "secret_input": true,
+      "companion_id": "disable_ssh_root",
+      "note": "Password never persisted to toolbox.conf and never passed as a CLI arg. api.cgi's run case special-cases this module id: reads admin_password from the POST body, pipes it via stdin through the helper -> synotoolbox_api.sh -> run_module_script -> enable_ssh_root.sh, which reads it with `read -rs pwd`. run_args stays empty; run_module_script's normal {field}-from-conf substitution is bypassed entirely for this module."
+    },
+    {
+      "id": "disable_ssh_root",
+      "category": "tools",
+      "name": "Disable root SSH Login",
+      "control": "hidden-companion",
+      "script": "bin/modules/enable_ssh_root.sh",
+      "trigger": "on_save",
+      "live": false,
+      "run_args": ["--disable"],
+      "disable_args": null,
+      "check_args": null,
+      "hidden_row": true,
+      "note": "Companion to enable_ssh_root, same script. --disable needs no secret, so it goes through the ordinary run_module_script/run_args path unmodified. hidden_row keeps it out of renderList's own row; main.js's Disable button (rendered inside enable_ssh_root's row via companion_id) calls run against this module id directly."
     },
     {
       "id": "toggle_reset_button",

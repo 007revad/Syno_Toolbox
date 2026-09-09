@@ -15,6 +15,7 @@ Ext.define("SYNO.SDS._ThirdParty.App.Syno_Toolbox", {
 // Shared API helper (ported unchanged from CPUTemp's pattern)
 // -----------------------------------------------------------------
 SYNO.SDS.Syno_Toolbox.API_PATH = "/webman/3rdparty/Syno_Toolbox/api.cgi";
+SYNO.SDS.Syno_Toolbox.APP_PATH = "/webman/3rdparty/Syno_Toolbox/";
 
 SYNO.SDS.Syno_Toolbox.apiCall = function(action, params, method, callback) {
     // 4-arg form: apiCall(action, params, method, cb)
@@ -58,9 +59,11 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             cls: "syno-app-win toolbox-win",
             maximizable: true,
             minimizable: true,
-            showHelp: true,
+            showHelp: false,
             width: 720,
             height: 560,
+            minWidth: 720,
+            minHeight: 560,
             html: this.buildHtml(),
             listeners: {
                 afterrender: { fn: this.onAfterRender, scope: this }
@@ -84,14 +87,15 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-tab:hover { color:#1B8AED; }',
             '  .tb-tab.tb-tab-active { color:#1B8AED; border-bottom-color:#1B8AED; }',
             '  .tb-list { flex:1 1 auto; overflow:auto; border:1px solid #e0e0e0; border-top:none; border-radius:0 0 4px 4px; }',
-            '  .tb-panel { display:none; }',
+            '  .tb-panel { display:none; height:100%; }',
             '  .tb-panel.tb-panel-active { display:block; }',
+            '  .tb-iframe { width:100%; height:100%; min-height:400px; border:none; display:block; }',
             '  .tb-row { display:flex; align-items:flex-start; gap:12px; padding:10px 12px; border-bottom:1px solid #eee; }',
             '  .tb-row:last-child { border-bottom:none; }',
             '  .tb-row-main { flex:1 1 auto; }',
             '  .tb-row-name { font-weight:bold; font-size:13px; }',
             '  .tb-row-controls { margin-top:6px; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:#555; }',
-            '  .tb-row-controls input[type=text], .tb-row-controls input[type=number], .tb-row-controls select { padding:3px 5px; font-size:12px; border:1px solid #ccc; border-radius:3px; }',
+            '  .tb-row-controls input[type=text], .tb-row-controls input[type=number], .tb-row-controls input[type=password], .tb-row-controls select { padding:3px 5px; font-size:12px; border:1px solid #ccc; border-radius:3px; }',
             '  .tb-row-result { margin-top:6px; font-family:Verdana,Arial,sans-serif; font-size:11px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
             '  .tb-row-result-monospace { margin-top:6px; font-family:Consolas,Monaco,"Courier New",monospace; font-size:11px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
             '  .tb-toggle { width:38px; height:20px; position:relative; display:inline-block; flex:0 0 auto; }',
@@ -140,10 +144,14 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  <div class="tb-tabs">',
             '    <button type="button" class="tb-tab tb-tab-active" data-category="info">Info</button>',
             '    <button type="button" class="tb-tab" data-category="tools">Tools</button>',
+            '    <button type="button" class="tb-tab" data-category="help">Help</button>',
+            '    <button type="button" class="tb-tab" data-category="about">About</button>',
             '  </div>',
             '  <div class="tb-list">',
             '    <div class="tb-panel tb-panel-active" data-panel="info"><div style="padding:20px;color:#999;">Loading&hellip;</div></div>',
             '    <div class="tb-panel" data-panel="tools"></div>',
+            '    <div class="tb-panel" data-panel="help"></div>',
+            '    <div class="tb-panel" data-panel="about"></div>',
             '  </div>',
             '  <div class="tb-picker-backdrop">',
             '    <div class="tb-picker">',
@@ -168,6 +176,8 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         this.listEl = el.querySelector(".tb-list");
         this.infoPanel = el.querySelector('.tb-panel[data-panel="info"]');
         this.toolsPanel = el.querySelector('.tb-panel[data-panel="tools"]');
+        this.helpPanel = el.querySelector('.tb-panel[data-panel="help"]');
+        this.aboutPanel = el.querySelector('.tb-panel[data-panel="about"]');
         this.statusEl = el.querySelector(".tb-status");
         this.spinnerEl = el.querySelector(".tb-spinner");
         this.saveBtn = el.querySelector(".tb-save");
@@ -219,8 +229,26 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         Ext.each(el.querySelectorAll(".tb-tab"), function(tabBtn) {
             Ext.fly(tabBtn)[tabBtn.getAttribute("data-category") === category ? "addClass" : "removeClass"]("tb-tab-active");
         });
-        Ext.fly(this.infoPanel)[category === "info" ? "addClass" : "removeClass"]("tb-panel-active");
-        Ext.fly(this.toolsPanel)[category === "tools" ? "addClass" : "removeClass"]("tb-panel-active");
+        Ext.each(el.querySelectorAll(".tb-panel"), function(panelEl) {
+            Ext.fly(panelEl)[panelEl.getAttribute("data-panel") === category ? "addClass" : "removeClass"]("tb-panel-active");
+        });
+        if (category === "help") { this.ensureHelpLoaded(); }
+        if (category === "about") { this.ensureAboutLoaded(); }
+    },
+
+    // Help/About just embed the package's static HTML docs in an iframe.
+    // Loaded lazily on first visit to the tab rather than at open, since
+    // most sessions never click them.
+    ensureHelpLoaded: function() {
+        if (this.helpPanel.firstChild) { return; }
+        this.helpPanel.innerHTML = '<iframe class="tb-iframe" src="' +
+            SYNO.SDS.Syno_Toolbox.APP_PATH + 'help/syno_toolbox_tools_help.html"></iframe>';
+    },
+
+    ensureAboutLoaded: function() {
+        if (this.aboutPanel.firstChild) { return; }
+        this.aboutPanel.innerHTML = '<iframe class="tb-iframe" src="' +
+            SYNO.SDS.Syno_Toolbox.APP_PATH + 'help/syno_toolbox_overview.html"></iframe>';
     },
 
     // ---------------------------------------------------------------
@@ -359,8 +387,8 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
 
     renderList: function() {
         var self = this;
-        var infoMods = this.modules.filter(function(m) { return m.category !== "tools"; });
-        var toolsMods = this.modules.filter(function(m) { return m.category === "tools"; });
+        var infoMods = this.modules.filter(function(m) { return m.category !== "tools" && !m.hidden_row; });
+        var toolsMods = this.modules.filter(function(m) { return m.category === "tools" && !m.hidden_row; });
 
         var infoHtml = infoMods.map(this.renderRow, this).join("");
         var toolsHtml = toolsMods.map(this.renderRow, this).join("");
@@ -387,7 +415,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         // toggle-wol-selector is the same story for a different reason:
         // it's a one-shot "send now" action fired by its own button, not
         // a persistent enabled/disabled state, so the toggle is unused.
-        var toggleHiddenClass = ((mod.live === true && hasCheckArgs) || mod.control === "toggle-wol-selector") ? " tb-toggle-hidden" : "";
+        var toggleHiddenClass = ((mod.live === true && hasCheckArgs) || mod.control === "toggle-wol-selector" || mod.control === "toggle-password-prompt") ? " tb-toggle-hidden" : "";
 
         return [
             '<div class="tb-row" data-module-id="' + mod.id + '">',
@@ -418,7 +446,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             case "toggle-filepicker":
                 return '<label>' + (mod.filepicker && mod.filepicker.label || "Path") + ':</label> ' +
                     '<input type="text" class="tb-path" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.path || "") + '">' +
-                    ' <button type="button" class="tb-browse">Browse\u2026</button>';
+                    ' <button type="button" class="tb-browse">Browse</button>';
 
             case "toggle-volume-numeric":
                 var def = (mod.numeric && mod.numeric.default) || 1024;
@@ -449,6 +477,13 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                     ' <span class="tb-wol-status" style="color:#888;"></span>' +
                     '<input type="hidden" class="tb-wol-hidden-macs" value="' + Ext.util.Format.htmlEncode(hiddenMacs) + '">';
 
+            case "toggle-password-prompt":
+                return '<label>Enter your admin password:</label> ' +
+                    '<input type="password" class="tb-admin-password" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore="true" style="width:160px;">' +
+                    ' <button type="button" class="tb-enable-ssh-root">Enable</button>' +
+                    (mod.companion_id ? ' <button type="button" class="tb-disable-ssh-root" data-companion-id="' + mod.companion_id + '">Disable</button>' : '') +
+                    ' <span class="tb-ssh-status" style="color:#888;"></span>';
+
             default:
                 return "";
         }
@@ -470,7 +505,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 '    <input type="text" class="tb-remote-dir" placeholder="Remote dir" value="' + Ext.util.Format.htmlEncode(f[prefix + "dir"] || "") + '" style="width:130px;">',
                 '    <input type="text" class="tb-local-user" placeholder="Local user" value="' + Ext.util.Format.htmlEncode(f["local_user" + (prefix === "remote2_" ? "2" : "")] || "") + '" style="width:90px;">',
                 '    <input type="text" class="tb-remote-user" placeholder="Remote user" value="' + Ext.util.Format.htmlEncode(f[prefix + "user"] || "") + '" style="width:90px;">',
-                '    <button type="button" class="tb-discover-remote">Discover NAS\u2026</button>',
+                '    <button type="button" class="tb-discover-remote">Discover NAS</button>',
                 '  </div>',
                 '</div>'
             ].join("");
@@ -478,7 +513,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
 
         return this.renderWeekSelect(mod.schedule && mod.schedule.default_repeat_week, f.week) +
             ' <label>Target dir:</label> <input type="text" class="tb-target-dir" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.target_dir || "") + '" style="width:160px;">' +
-            ' <button type="button" class="tb-browse-target-dir">Browse\u2026</button>' +
+            ' <button type="button" class="tb-browse-target-dir">Browse</button>' +
             remoteBlock("remote_", "Remote backup") +
             remoteBlock("remote2_", "2nd remote backup") +
             '<div class="tb-discover-status" style="width:100%;color:#888;margin-top:4px;"></div>' +
@@ -580,6 +615,10 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 if (wolSettingsBtn) {
                     Ext.fly(wolSettingsBtn).on("click", (function() { this.openWolSettings(moduleId); }).createDelegate(this));
                 }
+            }
+
+            if (mod && mod.control === "toggle-password-prompt") {
+                this.wireEnableSshRootRow(rowEl, moduleId);
             }
         }, this);
     },
@@ -759,6 +798,66 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                             : this.safeResultHtml("Error: " + ((runResp && runResp.message) || "unknown"));
                     }
                 }).createDelegate(this));
+            }).createDelegate(this));
+        }).createDelegate(this));
+    },
+
+    // One-shot action, independent of Save and of collectFormJson() -
+    // unlike send_wol's mac, the password must never enter toolbox.conf
+    // or run_args' {field} substitution (both land it in a config file
+    // and/or a privileged process's argv - see enable_ssh_root's note
+    // in modules.json). Posted directly to `run` as its own field;
+    // synotoolbox_api.sh's run case special-cases this module id to pipe
+    // it via stdin instead of resolving it through run_module_script.
+    wireEnableSshRootRow: function(rowEl, moduleId) {
+        var btn = rowEl.querySelector(".tb-enable-ssh-root");
+        var pwField = rowEl.querySelector(".tb-admin-password");
+        var statusEl = rowEl.querySelector(".tb-ssh-status");
+        var resultEl = rowEl.querySelector('[data-result-for="' + moduleId + '"]');
+        if (!btn || !pwField) { return; }
+
+        var disableBtn = rowEl.querySelector(".tb-disable-ssh-root");
+        if (disableBtn) {
+            Ext.fly(disableBtn).on("click", (function() {
+                var companionId = disableBtn.getAttribute("data-companion-id");
+                disableBtn.disabled = true;
+                if (statusEl) { statusEl.textContent = "Disabling\u2026"; }
+                if (resultEl) { resultEl.textContent = ""; }
+
+                SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: companionId }, "POST", (function(resp) {
+                    disableBtn.disabled = false;
+                    if (statusEl) { statusEl.textContent = ""; }
+                    if (resultEl) {
+                        resultEl.innerHTML = resp && resp.success
+                            ? this.safeResultHtml(resp.result || "(no output)")
+                            : this.safeResultHtml("Error: " + ((resp && resp.message) || "unknown"));
+                    }
+                }).createDelegate(this));
+            }).createDelegate(this));
+        }
+
+
+        Ext.fly(btn).on("click", (function() {
+            var pw = pwField.value;
+            if (statusEl) { statusEl.textContent = ""; }
+            if (resultEl) { resultEl.textContent = ""; }
+            if (!pw) {
+                if (statusEl) { statusEl.textContent = "Enter the admin password first"; }
+                return;
+            }
+            btn.disabled = true;
+            if (statusEl) { statusEl.textContent = "Enabling\u2026"; }
+            if (resultEl) { resultEl.textContent = ""; }
+
+            SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: moduleId, admin_password: pw }, "POST", (function(resp) {
+                btn.disabled = false;
+                if (statusEl) { statusEl.textContent = ""; }
+                pwField.value = "";
+                if (resultEl) {
+                    resultEl.innerHTML = resp && resp.success
+                        ? this.safeResultHtml(resp.result || "(no output)")
+                        : this.safeResultHtml("Error: " + ((resp && resp.message) || "unknown"));
+                }
             }).createDelegate(this));
         }).createDelegate(this));
     },

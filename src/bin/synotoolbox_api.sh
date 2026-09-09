@@ -419,7 +419,26 @@ run)
         echo '{"success":false,"message":"No module id given"}'
         exit 1
     fi
-    RESULT="$(run_module_script "$MODULE_ID" run_args 2>&1)"
+
+    idx="$(find_module_index "$MODULE_ID")" || { echo '{"success":false,"message":"Unknown module id"}'; exit 1; }
+    secret_input="$(module_field "$idx" secret_input)"
+
+    if [[ "$secret_input" == "true" ]]; then
+        # Password arrives on our own stdin (piped by api.cgi's
+        # run_privileged_stdin) - forward it via --pwd instead of
+        # routing through run_module_script's run_args/{field}-from-conf
+        # substitution, which would require persisting it to
+        # toolbox.conf first (never do that for a secret).
+        script="$(module_field "$idx" script)"
+        script_path="${PKG_DEST}/${script}"
+        if [[ ! -x "$script_path" ]]; then
+            echo '{"success":false,"message":"Module script missing or not executable"}'
+            exit 1
+        fi
+        RESULT="$("$script_path" --pwd 2>&1)"
+    else
+        RESULT="$(run_module_script "$MODULE_ID" run_args 2>&1)"
+    fi
     RC=$?
     if [[ $RC -eq 0 ]]; then
         printf '{"success":true,"result":%s}\n' "$(printf '%s' "$RESULT" | jq -Rs .)"

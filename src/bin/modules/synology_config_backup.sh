@@ -118,7 +118,11 @@ fi
 #--------------------------------------------------------------------------
 # Copy backup to remote NAS
 
-nmblookup_cmd="$(which nmblookup)"
+if [[ $dsm -ge 7 ]]; then
+    nmblookup_cmd="/usr/local/bin/nmblookup"
+else
+    nmblookup_cmd="/usr/bin/nmblookup"
+fi
 
 # Remote backup
 if [[ $Remote_Backup == "yes" ]]; then
