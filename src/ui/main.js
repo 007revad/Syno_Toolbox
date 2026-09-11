@@ -61,9 +61,9 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             minimizable: true,
             showHelp: false,
             width: 720,
-            height: 560,
+            height: 570,
             minWidth: 720,
-            minHeight: 560,
+            minHeight: 570,
             html: this.buildHtml(),
             listeners: {
                 afterrender: { fn: this.onAfterRender, scope: this }
@@ -144,12 +144,14 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  <div class="tb-tabs">',
             '    <button type="button" class="tb-tab tb-tab-active" data-category="info">Info</button>',
             '    <button type="button" class="tb-tab" data-category="tools">Tools</button>',
+            '    <button type="button" class="tb-tab" data-category="packages">Packages</button>',
             '    <button type="button" class="tb-tab" data-category="help">Help</button>',
             '    <button type="button" class="tb-tab" data-category="about">About</button>',
             '  </div>',
             '  <div class="tb-list">',
             '    <div class="tb-panel tb-panel-active" data-panel="info"><div style="padding:20px;color:#999;">Loading&hellip;</div></div>',
             '    <div class="tb-panel" data-panel="tools"></div>',
+            '    <div class="tb-panel" data-panel="packages"></div>',
             '    <div class="tb-panel" data-panel="help"></div>',
             '    <div class="tb-panel" data-panel="about"></div>',
             '  </div>',
@@ -176,6 +178,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         this.listEl = el.querySelector(".tb-list");
         this.infoPanel = el.querySelector('.tb-panel[data-panel="info"]');
         this.toolsPanel = el.querySelector('.tb-panel[data-panel="tools"]');
+        this.packagesPanel = el.querySelector('.tb-panel[data-panel="packages"]');
         this.helpPanel = el.querySelector('.tb-panel[data-panel="help"]');
         this.aboutPanel = el.querySelector('.tb-panel[data-panel="about"]');
         this.statusEl = el.querySelector(".tb-status");
@@ -232,8 +235,41 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         Ext.each(el.querySelectorAll(".tb-panel"), function(panelEl) {
             Ext.fly(panelEl)[panelEl.getAttribute("data-panel") === category ? "addClass" : "removeClass"]("tb-panel-active");
         });
+        if (category === "packages") { this.ensurePackagesLoaded(); }
         if (category === "help") { this.ensureHelpLoaded(); }
         if (category === "about") { this.ensureAboutLoaded(); }
+    },
+
+    // Packages shows the live pkg_updates.html written by pkg_updates.sh
+    // (run when the window opens and again on every Refresh - see
+    // loadState below; nothing runs it at package start anymore).
+    // Unlike Help/About's static docs, this content goes stale, so first
+    // visit just shows whatever was last generated; reloadPackagesPanel()
+    // is what forces a fresh iframe load, called again once that run
+    // completes.
+    ensurePackagesLoaded: function() {
+        if (this.packagesPanel.firstChild) { return; }
+        this.reloadPackagesPanel();
+    },
+
+    // Shown immediately on Refresh, before the run's response comes
+    // back - see loadState. Same spinner image as the toolbar's own
+    // "Loading..." indicator (.tb-spinner), rather than a second,
+    // differently-styled spinner just for this panel.
+    showPackagesLoading: function() {
+        this.packagesPanel.innerHTML =
+            '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:13px;">' +
+            '<img src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="28" height="28" style="margin-right:10px;">' +
+            'Loading&hellip;</div>';
+    },
+
+    // Loads api.cgi's pkgupdateshtml action directly as the iframe
+    // document - that action sends a real text/html header (see
+    // api.cgi), unlike every other action's JSON envelope, since an
+    // iframe needs an actual HTML document, not JSON to parse.
+    reloadPackagesPanel: function() {
+        this.packagesPanel.innerHTML = '<iframe class="tb-iframe" src="' +
+            SYNO.SDS.Syno_Toolbox.API_PATH + '?action=pkgupdateshtml&_ts=' + new Date().getTime() + '"></iframe>';
     },
 
     // Help/About just embed the package's static HTML docs in an iframe.
@@ -360,16 +396,33 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     loadState: function(isInitial) {
         this.setStatus("Loading\u2026", true);
 
-        // Only on package open, not on a manual Refresh - the arp-scan
-        // behind this takes ~4.5s, so Refresh (meant to feel instant)
-        // never triggers it. Fire-and-forget: we don't wait on its
-        // response or let it hold up getstate's own render below: the
-        // WOL dropdown just picks up fresher results next time it's
-        // populated, once the backgrounded scan finishes.
+        // discoverwol: only on package open, not on a manual Refresh -
+        // the arp-scan behind this takes ~4.5s, so Refresh (meant to
+        // feel instant) never triggers it. Fire-and-forget: we don't
+        // wait on its response or let it hold up getstate's own render
+        // below - the WOL dropdown just picks up fresher results next
+        // time it's populated, once the backgrounded scan finishes.
         if (isInitial) {
             SYNO.SDS.Syno_Toolbox.apiCall("discoverwol", {}, function() {});
             this.startWolScanPolling();
         }
+
+        // Regenerates pkg_updates.html for the Packages tab - runs both
+        // when the window opens and on every explicit Refresh, since
+        // nothing at package start generates it anymore (modules.json's
+        // pkg_updates trigger is "on_save", not "boot"). On a manual
+        // Refresh, show the loading placeholder right away if the tab's
+        // already been visited, so a slow update check (curling 3
+        // endpoints per package) doesn't just leave the old table
+        // sitting there looking frozen until it's done. Skipped on
+        // initial open - nothing's rendered yet for firstChild to be
+        // stale.
+        if (!isInitial && this.packagesPanel && this.packagesPanel.firstChild) {
+            this.showPackagesLoading();
+        }
+        SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: "pkg_updates" }, (function() {
+            if (this.packagesPanel && this.packagesPanel.firstChild) { this.reloadPackagesPanel(); }
+        }).createDelegate(this));
 
         SYNO.SDS.Syno_Toolbox.apiCall("getstate", {}, (function(resp) {
             if (!resp || !resp.success) {
@@ -387,7 +440,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
 
     renderList: function() {
         var self = this;
-        var infoMods = this.modules.filter(function(m) { return m.category !== "tools" && !m.hidden_row; });
+        var infoMods = this.modules.filter(function(m) { return m.category === "info" && !m.hidden_row; });
         var toolsMods = this.modules.filter(function(m) { return m.category === "tools" && !m.hidden_row; });
 
         var infoHtml = infoMods.map(this.renderRow, this).join("");
@@ -445,7 +498,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
 
             case "toggle-filepicker":
                 return '<label>' + (mod.filepicker && mod.filepicker.label || "Path") + ':</label> ' +
-                    '<input type="text" class="tb-path" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.path || "") + '">' +
+                    '<input type="text" class="tb-path" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.path || "") + '" style="width:200px;">' +
                     ' <button type="button" class="tb-browse">Browse</button>';
 
             case "toggle-volume-numeric":
@@ -512,7 +565,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         };
 
         return this.renderWeekSelect(mod.schedule && mod.schedule.default_repeat_week, f.week) +
-            ' <label>Target dir:</label> <input type="text" class="tb-target-dir" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.target_dir || "") + '" style="width:160px;">' +
+            ' <label>Target dir:</label> <input type="text" class="tb-target-dir" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.target_dir || "") + '" style="width:200px;">' +
             ' <button type="button" class="tb-browse-target-dir">Browse</button>' +
             remoteBlock("remote_", "Remote backup") +
             remoteBlock("remote2_", "2nd remote backup") +

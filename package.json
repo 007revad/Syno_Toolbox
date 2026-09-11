@@ -1,8 +1,8 @@
 {
   "package": "Syno_Toolbox",
   "name": "Syno_Toolbox",
-  "version": "1.0.25",
-  "description": "Package containing many 007revad scripts that are too small to have their own package",
+  "version": "1.0.26",
+  "description": "Package containing many 007revad scripts that are too small to have their own package, as well as new ones that were never released as a script",
   "target": "./src",
   "install_type": "package",
   "install_dep_packages": "",

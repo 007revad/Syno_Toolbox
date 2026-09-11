@@ -31,15 +31,10 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "${LOG_FILE}"
 }
 
-# --------- 2. HTTP header output --------------------------------
-
-echo "Content-Type: application/json; charset=utf-8"
-echo "Access-Control-Allow-Origin: *"
-echo "Access-Control-Allow-Methods: GET, POST"
-echo "Access-Control-Allow-Headers: Content-Type"
-echo ""
-
-# --------- 3. Parsing URL-encoded parameters --------------------
+# --------- 2. Parsing URL-encoded parameters --------------------
+# (Moved ahead of header output - which action we're serving now
+# decides which Content-Type header goes out in step 3, so ACTION
+# has to be known first. Nothing here changed, only its position.)
 
 urldecode() { : "${*//+/ }"; echo -e "${_//%/\\x}"; }
 declare -A PARAM
@@ -69,6 +64,8 @@ GET)
     ;;
 *)
     log "Unsupported METHOD: ${REQUEST_METHOD}"
+    echo "Content-Type: application/json; charset=utf-8"
+    echo ""
     echo '{"success":false,"message":"Unsupported METHOD","result":null}'
     exit 0
     ;;
@@ -76,6 +73,22 @@ esac
 
 ACTION="${PARAM[action]}"
 log "Request: ACTION=${ACTION}"
+
+# --------- 3. HTTP header output --------------------------------
+# pkgupdateshtml loads straight into an iframe (main.js's Packages tab),
+# so it needs a real text/html document, not the JSON envelope every
+# other action returns - everything else keeps the original header set.
+
+if [[ "$ACTION" == "pkgupdateshtml" ]]; then
+    echo "Content-Type: text/html; charset=utf-8"
+    echo ""
+else
+    echo "Content-Type: application/json; charset=utf-8"
+    echo "Access-Control-Allow-Origin: *"
+    echo "Access-Control-Allow-Methods: GET, POST"
+    echo "Access-Control-Allow-Headers: Content-Type"
+    echo ""
+fi
 
 # --------- 4. JSON utility functions -----------------------------
 
@@ -204,6 +217,31 @@ discovernas)
         json_response false "Discovery failed" ""
     else
         echo "$RUN_OUT"
+    fi
+    ;;
+
+pkgupdateshtml)
+    # Read directly rather than through run_privileged/the helper - this
+    # is a plain file read, not a privileged operation, as long as
+    # pkg_updates.sh leaves the file world-readable (see its chmod after
+    # writing PKG_UPDATES_HTML). Loaded straight into main.js's Packages
+    # tab iframe, so on any problem this echoes a plain HTML fallback
+    # instead of the usual JSON error envelope - an iframe can't parse
+    # JSON as its document.
+    PKG_UPDATES_HTML="${VAR_DIR}/pkg_updates.html"
+    if [[ -r "$PKG_UPDATES_HTML" ]]; then
+        cat "$PKG_UPDATES_HTML"
+    else
+        # Same spinner as main.js's own loading indicators (toolbar
+        # status and the Refresh-triggered placeholder in the Packages
+        # panel), so this doesn't look like a different, unrelated
+        # loading state.
+        log "[ERROR] pkgupdateshtml: ${PKG_UPDATES_HTML} missing or unreadable"
+        echo '<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+body {font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; color: #888; font-size: 13px;}
+img {margin-right: 10px;}
+</style></head>
+<body><img src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="28" height="28">Loading&hellip;</body></html>'
     fi
     ;;
 

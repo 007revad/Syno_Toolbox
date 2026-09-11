@@ -15,6 +15,19 @@
       "check_args": []
     },
     {
+      "id": "hardware_info",
+      "category": "info",
+      "name": "Hardware Information",
+      "control": "toggle-display",
+      "script": "bin/modules/hardware_info.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": [],
+      "result_style": "monospace"
+    },
+    {
       "id": "ups_connected",
       "category": "info",
       "name": "UPS Status",
@@ -213,7 +226,20 @@
       "live": false,
       "run_args": [],
       "disable_args": null,
-      "check_args": null,
+      "check_args": ["check"],
+      "filepicker": { "label": "Backup destination path" }
+    },
+    {
+      "id": "mtd_backup",
+      "category": "tools",
+      "name": "Backup MTD Image",
+      "control": "toggle-filepicker",
+      "script": "bin/modules/mtd_backup.sh",
+      "trigger": "boot",
+      "live": false,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": ["check"],
       "filepicker": { "label": "Backup destination path" }
     },
     {
@@ -304,6 +330,20 @@
       "disable_args": ["enable"],
       "check_args": ["check"],
       "note": "single script, 3 modes (enable/disable/check) verified by Dave - not separate files"
+    },
+    {
+      "id": "pkg_updates",
+      "category": "packages",
+      "name": "Packages",
+      "control": "toggle-display",
+      "script": "bin/modules/pkg_updates.sh",
+      "trigger": "on_save",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": [],
+      "hidden_row": true,
+      "note": "Drives the Packages tab's pkg_updates.html, not a rendered row - hidden_row keeps it out of renderList. trigger:on_save (like send_wol) is purely to keep run_boot_modules.sh from auto-firing this at package start - nothing about it is actually save-driven. main.js's loadState runs it via the ordinary run/module_id API on window open and on every Refresh, then reloads the tab's iframe."
     }
   ]
 }

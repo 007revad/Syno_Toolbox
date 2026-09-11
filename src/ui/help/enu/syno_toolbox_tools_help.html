@@ -117,9 +117,24 @@
         <div class="section">
             <h4 style="color:#1B8AED;">Backup Synoboot Image</h4>
             <p>
-                Backs up your NAS's synoboot image to the folder set in
-                <strong>Backup destination path</strong>. Click
-                <strong>Browse</strong> to choose the destination.
+                Backs up your Synology's synoboot USB DOM image to the folder 
+                set in <strong>Backup destination path</strong>. 
+                Click <strong>Browse</strong> to choose the destination.
+                If enabled it runs when the package starts and only backs up
+                synoboot and it's partitions once for each DSM version.<br>
+                The tool's status area shows if a backup exists for the current DSM version.
+            </p>
+        </div>
+
+        <div class="section">
+            <h4 style="color:#1B8AED;">Backup MTD Image</h4>
+            <p>
+                Backs up Value and Junior model's MTD flash image to the folder 
+                set in <strong>Backup destination path</strong>. 
+                Click <strong>Browse</strong> to choose the destination.
+                If enabled it runs when the package starts and only backs up
+                the MTD and it's partitions once for each DSM version.<br>
+                The tool's status area shows if a backup exists for the current DSM version.
             </p>
         </div>
 

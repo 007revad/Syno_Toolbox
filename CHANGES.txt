@@ -1,3 +1,10 @@
+v1.0.26
+- 3rd public beta release.
+- Added a new Packages tab and pkg_updates module.
+- Added new hardware_info module.
+- Added new mtd_backup module (for Synology models that don't have a USB DOM containing synoboot).
+- Updated synoboot_backup module.
+
 v1.0.25
 - 2nd public beta release.
 - Added new enable_ssh_root module.

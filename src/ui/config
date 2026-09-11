@@ -3,7 +3,7 @@
     "SYNO.SDS._ThirdParty.App.Syno_Toolbox": {
       "type": "app",
       "title": "Syno Toolbox",
-      "desc": "Package containing many 007revad scripts that are too small to have their own package",
+      "desc": "Package containing many 007revad scripts that are too small to have their own package, as well as new ones that were never released as a script",
       "icon": "images/icon_{0}.png",
       "appWindow": "SYNO.SDS.Syno_Toolbox.MainWindow",
       "allowMultiInstance": false,
