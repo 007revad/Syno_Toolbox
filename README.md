@@ -9,7 +9,7 @@
 
 ### Description
 
-Synology package containing many 007revad scripts that are too small to have their own package.
+Synology package containing many 007revad scripts that are too small to have their own package, as well as new ones that were never released as a script.
 
 Available for DSM 7 and DSM 6. Supports x86_64, aarch64, armv7l and i686.
 
