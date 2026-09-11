@@ -64,3 +64,8 @@ There are 2 ways to install the package:
 
 <p align="center">Send WOL Settings</p>
 <p align="center"><kbd><img src="/images/tools_send_wol_settings.png"></kbd></p>
+
+<br>
+
+<p align="center">Packages</p>
+<p align="center"><kbd><img src="/images/packages2.png"></kbd></p>
