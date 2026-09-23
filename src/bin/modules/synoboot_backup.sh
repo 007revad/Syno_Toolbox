@@ -167,7 +167,7 @@ if [[ ! -f ${bakpath}/${imgname}.img ]]; then
     echo -e "Backing up ${Cyan}${imgname}.img${Off}" |& tee -a "$TOOLBOX_LOG"
     dd if=/dev/synoboot of="${bakpath:?}/${imgname:?}".img
 else
-    echo -e "synoboot backup already exists: \n${imgname}.img" |& tee -a "$TOOLBOX_LOG"
+    echo -e "synoboot backup already exists: ${imgname}.img" |& tee -a "$TOOLBOX_LOG"
 fi
 
 
@@ -176,10 +176,10 @@ imgname="${model}_${serial}_${productversion}-${buildnumber}${smallfix}_synoboot
 
 # Backup USB DOM synoboot1 partition
 if [[ ! -f ${bakpath}/${imgname}.img ]]; then
-    echo -e "\nBacking up ${Cyan}${imgname}.img${Off}" |& tee -a "$TOOLBOX_LOG"
+    echo -e "Backing up ${Cyan}${imgname}.img${Off}" |& tee -a "$TOOLBOX_LOG"
     dd if=/dev/synoboot1 of="${bakpath:?}/${imgname:?}".img
 else
-    echo -e "\nsynoboot1 backup already exists: \n${imgname}.img" |& tee -a "$TOOLBOX_LOG"
+    echo -e "synoboot1 backup already exists: ${imgname}.img" |& tee -a "$TOOLBOX_LOG"
 fi
 
 
@@ -188,10 +188,10 @@ imgname="${model}_${serial}_${productversion}-${buildnumber}${smallfix}_synoboot
 
 # Backup USB DOM synoboot2 partition
 if [[ ! -f ${bakpath}/${imgname}.img ]]; then
-    echo -e "\nBacking up ${Cyan}${imgname}.img${Off}" |& tee -a "$TOOLBOX_LOG"
+    echo -e "Backing up ${Cyan}${imgname}.img${Off}" |& tee -a "$TOOLBOX_LOG"
     dd if=/dev/synoboot2 of="${bakpath:?}/${imgname:?}".img
 else
-    echo -e "\nsynoboot2 backup already exists: \n${imgname}.img" |& tee -a "$TOOLBOX_LOG"
+    echo -e "synoboot2 backup already exists: ${imgname}.img" |& tee -a "$TOOLBOX_LOG"
 fi
 
 #echo -e "\nFinished\n"

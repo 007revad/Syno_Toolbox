@@ -133,6 +133,27 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-wolset-footer { padding:12px 16px 16px 16px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:12px; }',
             '  .tb-wolset-hint { font-size:12px; color:#888; }',
             '  .tb-wolset-save { padding:5px 18px; border:1px solid #1B8AED; background:#1B8AED; color:#fff; border-radius:4px; cursor:pointer; font-weight:bold; font-size:13px; flex:0 0 auto; }',
+            '  .tb-wolset-save:disabled { opacity:0.5; cursor:default; }',
+            '  .tb-cpu-header { align-items:center; flex:0 0 auto; }',
+            '  .tb-cpu-header .tb-row-main { display:flex; align-items:center; }',
+            '  .tb-cpu-settings { padding:5px 14px; border:1px solid #ccc; background:#fff; border-radius:4px; cursor:pointer; font-size:12px; flex:0 0 auto; margin-left:auto; }',
+            '  .tb-cpu-frame-wrap { flex:1 1 auto; min-height:0; }',
+            '  .tb-cpu-disabled-msg { display:flex; align-items:center; justify-content:center; height:100%; color:#999; font-size:13px; padding:0 24px; text-align:center; }',
+            '  .tb-panel[data-panel="cpu_usage"] { display:none; flex-direction:column; height:100%; }',
+            '  .tb-panel[data-panel="cpu_usage"].tb-panel-active { display:flex; }',
+            '  .tb-cpuset-backdrop { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }',
+            '  .tb-cpuset-backdrop.open { display:flex; }',
+            '  .tb-cpuset { position:relative; background:#fff; color:#222; width:420px; max-width:90%; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); display:flex; flex-direction:column; }',
+            '  .tb-cpuset-header { padding:12px 16px; border-bottom:1px solid #eee; font-weight:bold; font-size:14px; display:flex; justify-content:space-between; align-items:center; }',
+            '  .tb-cpuset-close { border:none; background:none; font-size:16px; cursor:pointer; color:#666; line-height:1; padding:4px; }',
+            '  .tb-cpuset-close:hover { color:#000; }',
+            '  .tb-cpuset-body { padding:10px; font-size:13px; }',
+            '  .tb-cpuset-hint { font-size:12px; color:#888; margin-top:10px; }',
+            '  .tb-cpuset-footer { padding:10px 10px 10px 10px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; }',
+            '  .tb-cpuset-savestatus { display:flex; align-items:center; gap:6px; font-size:13px; color:#888; }',
+            '  .tb-cpuset-spinner { margin-right:0; }',
+            '  .tb-cpuset-save { padding:5px 18px; border:1px solid #1B8AED; background:#1B8AED; color:#fff; border-radius:4px; cursor:pointer; font-weight:bold; font-size:13px; }',
+            '  .tb-cpuset-save:disabled { opacity:0.5; cursor:default; }',
             '</style>',
             '<div class="tb-body">',
             '  <div class="tb-toolbar">',
@@ -145,6 +166,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '    <button type="button" class="tb-tab tb-tab-active" data-category="info">Info</button>',
             '    <button type="button" class="tb-tab" data-category="tools">Tools</button>',
             '    <button type="button" class="tb-tab" data-category="packages">Packages</button>',
+            '    <button type="button" class="tb-tab" data-category="cpu_usage">CPU Usage</button>',
             '    <button type="button" class="tb-tab" data-category="help">Help</button>',
             '    <button type="button" class="tb-tab" data-category="about">About</button>',
             '  </div>',
@@ -152,6 +174,20 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '    <div class="tb-panel tb-panel-active" data-panel="info"><div style="padding:20px;color:#999;">Loading&hellip;</div></div>',
             '    <div class="tb-panel" data-panel="tools"></div>',
             '    <div class="tb-panel" data-panel="packages"></div>',
+            '    <div class="tb-panel" data-panel="cpu_usage">',
+            '      <div class="tb-row tb-cpu-header" data-module-id="cpu_usage">',
+            '        <label class="tb-toggle">',
+            '          <input type="checkbox" class="tb-enabled">',
+            '          <span class="tb-slider"></span>',
+            '        </label>',
+            '        <div class="tb-row-main">',
+            '          <div class="tb-row-name">CPU Usage</div>',
+            '        </div>',
+            '        <button type="button" class="tb-cpu-settings">Settings</button>',
+            '        <input type="hidden" class="tb-cpu-interval">',
+            '      </div>',
+            '      <div class="tb-cpu-frame-wrap"></div>',
+            '    </div>',
             '    <div class="tb-panel" data-panel="help"></div>',
             '    <div class="tb-panel" data-panel="about"></div>',
             '  </div>',
@@ -166,7 +202,23 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '    <div class="tb-wolset">',
             '      <div class="tb-wolset-header"><span>Hidden Devices</span><button type="button" class="tb-wolset-close" aria-label="Close">\u00d7</button></div>',
             '      <div class="tb-wolset-body"></div>',
-            '      <div class="tb-wolset-footer"><span class="tb-wolset-hint">Checked devices are hidden from the Send WOL list.</span><button type="button" class="tb-wolset-save">Save</button></div>',
+            '      <div class="tb-wolset-footer"><span class="tb-wolset-hint">Checked devices are hidden from the Send WOL list</span><button type="button" class="tb-wolset-save">Save</button></div>',
+            '    </div>',
+            '  </div>',
+            '  <div class="tb-cpuset-backdrop">',
+            '    <div class="tb-cpuset">',
+            '      <div class="tb-cpuset-header"><span>CPU Usage Settings</span><button type="button" class="tb-cpuset-close" aria-label="Close">\u00d7</button></div>',
+            '      <div class="tb-cpuset-body">',
+            '        <label>Sample every:</label> <select class="tb-cpuset-minute"></select>',
+            '        <div class="tb-cpuset-hint">Changing this and clicking Save updates the DSM Task Scheduler entry to match.</div>',
+            '      </div>',
+            '      <div class="tb-cpuset-footer">',
+            '        <span class="tb-cpuset-savestatus">',
+            '          <img class="tb-spinner tb-cpuset-spinner" src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="16" height="16">',
+            '          <span class="tb-cpuset-status"></span>',
+            '        </span>',
+            '        <button type="button" class="tb-cpuset-save">Save</button>',
+            '      </div>',
             '    </div>',
             '  </div>',
             '</div>'
@@ -179,6 +231,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         this.infoPanel = el.querySelector('.tb-panel[data-panel="info"]');
         this.toolsPanel = el.querySelector('.tb-panel[data-panel="tools"]');
         this.packagesPanel = el.querySelector('.tb-panel[data-panel="packages"]');
+        this.cpuUsagePanel = el.querySelector('.tb-panel[data-panel="cpu_usage"]');
         this.helpPanel = el.querySelector('.tb-panel[data-panel="help"]');
         this.aboutPanel = el.querySelector('.tb-panel[data-panel="about"]');
         this.statusEl = el.querySelector(".tb-status");
@@ -210,6 +263,34 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             if (ev.getTarget() === this.wolsetBackdrop) { this.closeWolSettings(); }
         }).createDelegate(this));
 
+        this.cpuFrameWrap = el.querySelector(".tb-cpu-frame-wrap");
+        this.cpuEnabledCheckbox = el.querySelector('.tb-row[data-module-id="cpu_usage"] .tb-enabled');
+        Ext.fly(this.cpuEnabledCheckbox).on("change", (function() {
+            this.setDirty(true);
+            this.refreshCPUUsageDisplay();
+        }).createDelegate(this));
+        this.cpusetBackdrop = el.querySelector(".tb-cpuset-backdrop");
+        this.cpusetStatusEl = el.querySelector(".tb-cpuset-status");
+        this.cpusetSpinnerEl = el.querySelector(".tb-cpuset-spinner");
+        this.cpusetMinuteSelect = el.querySelector(".tb-cpuset-minute");
+        // DSM's own Task Scheduler UI only offers these 7 values for a
+        // minute-repeat schedule (confirmed on both DSM6 and DSM7) -
+        // matching that exactly rather than an arbitrary 1-60 range,
+        // since task_setup.sh's --interval-type=minute rejects anything
+        // outside this set too.
+        [1, 5, 10, 15, 20, 25, 30].forEach((function(m) {
+            var opt = document.createElement("option");
+            opt.value = m;
+            opt.textContent = m + (m === 1 ? " minute" : " minutes");
+            this.cpusetMinuteSelect.appendChild(opt);
+        }).bind(this));
+        Ext.fly(el.querySelector(".tb-cpu-settings")).on("click", this.openCPUUsageSettings, this);
+        Ext.fly(el.querySelector(".tb-cpuset-close")).on("click", this.closeCPUUsageSettings, this);
+        Ext.fly(el.querySelector(".tb-cpuset-save")).on("click", this.saveCPUUsageSettings, this);
+        Ext.fly(this.cpusetBackdrop).on("click", (function(ev) {
+            if (ev.getTarget() === this.cpusetBackdrop) { this.closeCPUUsageSettings(); }
+        }).createDelegate(this));
+
         // DSM's desktop chrome suppresses the native right-click menu
         // globally (likely a document-level listener, same instinct as
         // the user-select:none override above). Stopping propagation
@@ -236,8 +317,17 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             Ext.fly(panelEl)[panelEl.getAttribute("data-panel") === category ? "addClass" : "removeClass"]("tb-panel-active");
         });
         if (category === "packages") { this.ensurePackagesLoaded(); }
+        if (category === "cpu_usage") { this.refreshCPUUsageDisplay(); }
         if (category === "help") { this.ensureHelpLoaded(); }
         if (category === "about") { this.ensureAboutLoaded(); }
+
+        // .tb-list's overflow:auto is needed for tabs like Info/Tools
+        // that can have more rows than fit - but CPU Usage always
+        // exactly fills its space by design (flexbox), so any
+        // scrollbar there is a sub-pixel rounding artifact, never
+        // legitimate overflow. Force it off specifically for this tab
+        // instead of chasing an exact zero-overflow layout.
+        this.listEl.style.overflow = (category === "cpu_usage") ? "hidden" : "";
     },
 
     // Packages shows the live pkg_updates.html written by pkg_updates.sh
@@ -270,6 +360,91 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     reloadPackagesPanel: function() {
         this.packagesPanel.innerHTML = '<iframe class="tb-iframe" src="' +
             SYNO.SDS.Syno_Toolbox.API_PATH + '?action=pkgupdateshtml&_ts=' + new Date().getTime() + '"></iframe>';
+    },
+
+    // Syncs the toggle + hidden interval field from getstate's fresh
+    // module data - called after every renderList() (initial open,
+    // Refresh, and post-save), mirroring what renderRow() would do for
+    // a normal row's initial checked/value state.
+    applyCPUUsageState: function() {
+        var mod = this.findModule("cpu_usage");
+        if (!mod || !this.cpuEnabledCheckbox) { return; }
+        this.cpuEnabledCheckbox.checked = mod.current_enabled === "yes";
+        var intervalEl = this.body.dom.querySelector(".tb-cpu-interval");
+        if (intervalEl) {
+            intervalEl.value = (mod.current_fields && mod.current_fields.minute) ||
+                (mod.schedule && mod.schedule.default_repeat_minute) || 5;
+        }
+        this.refreshCPUUsageDisplay();
+    },
+
+    // CPU Usage shows the static cpu_chart.html written by
+    // generate_cpu_chart.sh, which cpu_usage.sh's own Task Scheduler
+    // task keeps up to date on its own - unlike Packages, nothing here
+    // ever needs a privileged "run" call from the UI, since the file's
+    // freshness doesn't depend on this window being open. Because of
+    // that, cpu_usage is special-cased out of wireRows'/refreshAfterSave's
+    // generic live-module run-on-toggle logic (see those functions) -
+    // toggling this checkbox should only show/hide the frame locally,
+    // never trigger a sample.
+    //
+    // Reads the checkbox's own current DOM state rather than a cached
+    // JS variable, so it's always correct regardless of whether it was
+    // just toggled, just loaded from getstate, or just saved.
+    refreshCPUUsageDisplay: function() {
+        if (!this.cpuFrameWrap || !this.cpuEnabledCheckbox) { return; }
+        if (this.cpuEnabledCheckbox.checked) {
+            this.cpuFrameWrap.innerHTML = '<iframe class="tb-iframe" src="' +
+                SYNO.SDS.Syno_Toolbox.API_PATH + '?action=cpuusagehtml&_ts=' + new Date().getTime() + '"></iframe>';
+        } else {
+            this.cpuFrameWrap.innerHTML =
+                '<div class="tb-cpu-disabled-msg">CPU usage logging is turned off. Enable it and click Save to start logging CPU usage.</div>';
+        }
+    },
+
+    // ---------------------------------------------------------------
+    // CPU Usage Settings modal - same persistence pattern as the WOL
+    // Settings modal (saveWolSettings): write the chosen value into a
+    // hidden field on the row, then go through the normal full-form
+    // save() rather than a partial one. Persists to toolbox.conf via
+    // cpu_usage_minute, which synotoolbox_api.sh's save action reads
+    // (via the generic sync_scheduled_task) to create/update the real
+    // DSM Task Scheduler entry - confirmed working on both DSM6/7.
+    // ---------------------------------------------------------------
+    openCPUUsageSettings: function() {
+        var intervalEl = this.body.dom.querySelector(".tb-cpu-interval");
+        var current = (intervalEl && parseInt(intervalEl.value, 10)) || 5;
+        this.cpusetMinuteSelect.value = current;
+        if (this.cpusetStatusEl) { this.cpusetStatusEl.textContent = ""; }
+        Ext.fly(this.cpusetBackdrop).addClass("open");
+    },
+
+    closeCPUUsageSettings: function() {
+        Ext.fly(this.cpusetBackdrop).removeClass("open");
+    },
+
+    saveCPUUsageSettings: function() {
+        var intervalEl = this.body.dom.querySelector(".tb-cpu-interval");
+        if (!intervalEl) { this.closeCPUUsageSettings(); return; }
+        intervalEl.value = this.cpusetMinuteSelect.value;
+
+        var saveBtn = this.cpusetBackdrop.querySelector(".tb-cpuset-save");
+        saveBtn.disabled = true;
+        if (this.cpusetStatusEl) { this.cpusetStatusEl.textContent = "Saving\u2026"; }
+        if (this.cpusetSpinnerEl) { Ext.fly(this.cpusetSpinnerEl).addClass("show"); }
+
+        var formData = this.collectFormJson();
+        SYNO.SDS.Syno_Toolbox.apiCall("save", { form_json: Ext.encode(formData) }, "POST", (function(saveResp) {
+            saveBtn.disabled = false;
+            if (this.cpusetSpinnerEl) { Ext.fly(this.cpusetSpinnerEl).removeClass("show"); }
+            if (!saveResp || !saveResp.success) {
+                if (this.cpusetStatusEl) { this.cpusetStatusEl.textContent = (saveResp && saveResp.message) || "Failed to save"; }
+                return;
+            }
+            if (this.cpusetStatusEl) { this.cpusetStatusEl.textContent = ""; }
+            this.setDirty(false);
+            this.closeCPUUsageSettings();
+        }).createDelegate(this));
     },
 
     // Help/About just embed the package's static HTML docs in an iframe.
@@ -432,7 +607,9 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 return;
             }
             this.modules = resp.result || [];
+            this.dsmBuild = parseInt(resp.dsm_build, 10) || 0;
             this.renderList();
+            this.applyCPUUsageState();
             this.setStatus("");
             this.setDirty(false);
         }).createDelegate(this));
@@ -564,7 +741,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             ].join("");
         };
 
-        return this.renderWeekSelect(mod.schedule && mod.schedule.default_repeat_week, f.week) +
+        return this.renderFrequencySelect(mod.schedule && mod.schedule.default_frequency, f.frequency) +
             ' <label>Target dir:</label> <input type="text" class="tb-target-dir" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.target_dir || "") + '" style="width:200px;">' +
             ' <button type="button" class="tb-browse-target-dir">Browse</button>' +
             remoteBlock("remote_", "Remote backup") +
@@ -582,16 +759,34 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         return '<label>Frequency:</label> <select class="tb-hour">' + opts + '</select>';
     },
 
-    // Week-based frequency picker (1-4 weeks), separate from renderHourSelect
-    // so modules that only need coarse weekly scheduling (currently just
-    // config_backup) don't share state/markup with the hour-based modules.
-    renderWeekSelect: function(defaultWeek, currentWeek) {
-        var selectedWeek = parseInt(currentWeek, 10) || defaultWeek || 1;
-        var opts = "";
-        for (var w = 1; w <= 4; w++) {
-            opts += '<option value="' + w + '"' + (w === selectedWeek ? " selected" : "") + '>Every ' + (w > 1 ? w + " weeks" : "week") + '</option>';
+    // Simple Weekly/Monthly choice for config_backup - DSM's own Task
+    // Scheduler has no "every N weeks/months" concept (Daily/Weekly/
+    // Monthly are the only repeat modes, each just picking day(s)/
+    // ordinal, not a count), so this is an either/or rather than a
+    // numeric interval like renderHourSelect. Both options run at a
+    // fixed time (Monday 00:00, or the first occurrence of the month)
+    // with no further configuration, per Dave's "keep it simple" spec
+    // confirmed 2026-09-13 - see task_setup.sh's build_schedule.
+    //
+    // "Monthly" is only offered on build 64570+ - DSM 6, 7.0, and 7.1
+    // (all below that build) have no monthly repeat mode in Task
+    // Scheduler at all, confirmed 2026-09-13. If a previously-saved
+    // value is "month" but this build doesn't support it, the browser
+    // just falls back to the first rendered option ("week") since
+    // nothing in the list matches - self-correcting on the next save.
+    renderFrequencySelect: function(defaultFrequency, currentFrequency) {
+        var selected = currentFrequency || defaultFrequency || "week";
+        var opts = [
+            { value: "week", label: "Weekly (Monday at 00:00)" },
+            { value: "month", label: "Monthly (First Monday at 00:00)" }
+        ];
+        if ((this.dsmBuild || 0) < 64570) {
+            opts = opts.filter(function(o) { return o.value !== "month"; });
         }
-        return '<label>Frequency:</label> <select class="tb-week">' + opts + '</select>';
+        var optsHtml = opts.map(function(o) {
+            return '<option value="' + o.value + '"' + (o.value === selected ? " selected" : "") + '>' + o.label + '</option>';
+        }).join("");
+        return '<label>Frequency:</label> <select class="tb-frequency">' + optsHtml + '</select>';
     },
 
     // ---------------------------------------------------------------
@@ -601,6 +796,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         var rows = this.listEl.querySelectorAll(".tb-row");
         Ext.each(rows, function(rowEl) {
             var moduleId = rowEl.getAttribute("data-module-id");
+            if (moduleId === "cpu_usage") { return; } // wired once in onAfterRender + applyCPUUsageState - see refreshCPUUsageDisplay's comment for why it opts out of the generic live-module run-on-toggle logic below
             var mod = this.findModule(moduleId);
             var checkbox = rowEl.querySelector(".tb-enabled");
             var hasCheckArgs = !!(mod && mod.check_args && mod.check_args !== null);
@@ -1085,6 +1281,9 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             var hourEl = rowEl.querySelector(".tb-hour");
             if (hourEl) { form[id + "_hour"] = hourEl.value; }
 
+            var frequencyEl = rowEl.querySelector(".tb-frequency");
+            if (frequencyEl) { form[id + "_frequency"] = frequencyEl.value; }
+
             if (rowEl.getAttribute("data-module-id") === "config_backup" ||
                 rowEl.querySelector(".tb-target-dir")) {
                 var targetDirEl = rowEl.querySelector(".tb-target-dir");
@@ -1127,6 +1326,9 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
 
             var wolHiddenEl = rowEl.querySelector(".tb-wol-hidden-macs");
             if (wolHiddenEl) { form[id + "_hidden_macs"] = wolHiddenEl.value; }
+
+            var cpuIntervalEl = rowEl.querySelector(".tb-cpu-interval");
+            if (cpuIntervalEl) { form[id + "_minute"] = cpuIntervalEl.value; }
         });
         return form;
     },
@@ -1178,8 +1380,27 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             this.setDirty(false);
             if (!resp || !resp.success) { return; }
             this.modules = resp.result || [];
+            this.dsmBuild = parseInt(resp.dsm_build, 10) || 0;
+
+            var cpuMod = this.findModule("cpu_usage");
+            var cpuNewlyEnabled = changedIds.indexOf("cpu_usage") !== -1 &&
+                cpuMod && cpuMod.current_enabled === "yes";
+
+            if (cpuNewlyEnabled) {
+                // Seed one 0.0 point before the iframe reload inside
+                // applyCPUUsageState, so the first load already shows
+                // it instead of the "waiting for first sample"
+                // fallback - see seedcpuusage in api.cgi and
+                // cpu_usage.sh's "seed" arg.
+                SYNO.SDS.Syno_Toolbox.apiCall("seedcpuusage", {}, (function() {
+                    this.applyCPUUsageState();
+                }).createDelegate(this));
+            } else {
+                this.applyCPUUsageState();
+            }
 
             changedIds.forEach(function(id) {
+                if (id === "cpu_usage") { return; } // handled by applyCPUUsageState above - no backend run needed, see refreshCPUUsageDisplay's comment
                 var rowEl = this.listEl.querySelector('.tb-row[data-module-id="' + id + '"]');
                 var mod = this.findModule(id);
                 if (!rowEl || !mod) { return; }

@@ -102,6 +102,30 @@
       "check_args": []
     },
     {
+      "id": "btrfs_scrub_status_and_errors",
+      "category": "info",
+      "name": "Btrfs Scrub Results",
+      "control": "toggle-display",
+      "script": "bin/modules/btrfs_scrub_status_and_errors.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": []
+    },
+    {
+      "id": "memtest_results",
+      "category": "info",
+      "name": "Memory Test Results",
+      "control": "toggle-display",
+      "script": "bin/modules/memtest_results.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": []
+    },
+    {
       "id": "created_date",
       "category": "info",
       "name": "Synology Created Date",
@@ -344,6 +368,21 @@
       "check_args": [],
       "hidden_row": true,
       "note": "Drives the Packages tab's pkg_updates.html, not a rendered row - hidden_row keeps it out of renderList. trigger:on_save (like send_wol) is purely to keep run_boot_modules.sh from auto-firing this at package start - nothing about it is actually save-driven. main.js's loadState runs it via the ordinary run/module_id API on window open and on every Refresh, then reloads the tab's iframe."
+    },
+    {
+      "id": "cpu_usage",
+      "category": "cpu_usage",
+      "name": "CPU Usage",
+      "control": "toggle-display",
+      "script": "bin/modules/cpu_usage.sh",
+      "trigger": "on_save",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": null,
+      "hidden_row": true,
+      "schedule": { "default_repeat_minute": 5 },
+      "note": "Drives the CPU Usage tab's cpu_usage.html/cpu_chart.html, not a rendered row via the generic renderRow path - hidden_row keeps it out of renderList, but main.js hand-builds its own .tb-row (toggle + Settings button) directly inside the cpu_usage panel, reusing the .tb-enabled/save() conventions. check_args is null (not []) so main.js's generic wireRows/refreshAfterSave live-module logic doesn't auto-invoke a backend run - see main.js's explicit id==='cpu_usage' special-cases, since cpu_usage.sh's own Task Scheduler task (interval configurable via the Settings modal - not yet wired to an actual scheduled-task update, see main.js) is the only thing that should ever trigger a sample."
     }
   ]
 }

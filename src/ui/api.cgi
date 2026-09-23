@@ -12,6 +12,7 @@ PKG_NAME="Syno_Toolbox"
 PKG_ROOT="/var/packages/${PKG_NAME}"
 TARGET_DIR="${PKG_ROOT}/target"
 BIN_DIR="${TARGET_DIR}/bin"
+UI_DIR="${TARGET_DIR}/ui"
 
 dsm=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)
 if [[ $dsm -ge 7 ]]; then
@@ -79,7 +80,7 @@ log "Request: ACTION=${ACTION}"
 # so it needs a real text/html document, not the JSON envelope every
 # other action returns - everything else keeps the original header set.
 
-if [[ "$ACTION" == "pkgupdateshtml" ]]; then
+if [[ "$ACTION" == "pkgupdateshtml" || "$ACTION" == "cpuusagehtml" ]]; then
     echo "Content-Type: text/html; charset=utf-8"
     echo ""
 else
@@ -145,7 +146,20 @@ getstate)
         log "[ERROR] getstate failed (rc=${RUN_RC}): ${RUN_OUT}"
         json_response false "Could not read module state" ""
     else
-        json_response true "" "${RUN_OUT}"
+        # dsm_build is a sibling to "result", not part of it - so this
+        # bypasses json_response's generic shape (message/result only)
+        # rather than smuggling it into synotoolbox_api.sh's own
+        # getstate output, which would double-wrap once json_response
+        # nests that under "result" too. Lets main.js gate config_backup's
+        # "Monthly" Frequency option - DSM only gained a separate
+        # Monthly repeat mode in Task Scheduler from build 64570 onward
+        # (see task_setup.sh's header). Falls back to 0 (treated as
+        # unsupported - the safer default) if this key isn't where
+        # expected - ASSUMPTION not independently confirmed the way
+        # majorversion is.
+        DSM_BUILD="$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION buildnumber 2>/dev/null)"
+        [[ "$DSM_BUILD" =~ ^[0-9]+$ ]] || DSM_BUILD=0
+        echo "{\"success\":true, \"message\":\"\", \"result\":${RUN_OUT}, \"dsm_build\":${DSM_BUILD}}"
     fi
     ;;
 
@@ -228,7 +242,7 @@ pkgupdateshtml)
     # tab iframe, so on any problem this echoes a plain HTML fallback
     # instead of the usual JSON error envelope - an iframe can't parse
     # JSON as its document.
-    PKG_UPDATES_HTML="${VAR_DIR}/pkg_updates.html"
+    PKG_UPDATES_HTML="${UI_DIR}/pkg_updates.html"
     if [[ -r "$PKG_UPDATES_HTML" ]]; then
         cat "$PKG_UPDATES_HTML"
     else
@@ -242,6 +256,47 @@ body {font-family: sans-serif; display: flex; align-items: center; justify-conte
 img {margin-right: 10px;}
 </style></head>
 <body><img src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="28" height="28">Loading&hellip;</body></html>'
+    fi
+    ;;
+
+cpuusagehtml)
+    # Read directly rather than through run_privileged/the helper - same
+    # reasoning as pkgupdateshtml: a plain file read, not a privileged
+    # operation. Unlike pkg_updates.html (which lives in the world-
+    # writable VAR_DIR and is only ever read here), cpu_chart.html lives
+    # under TARGET_DIR specifically so it isn't sitting in a directory
+    # any local account can write to - see cpu_usage.sh/generate_cpu_chart.sh
+    # for that reasoning. Loaded straight into main.js's CPU Usage tab
+    # iframe, so on any problem this echoes a plain HTML fallback instead
+    # of the usual JSON error envelope - an iframe can't parse JSON as
+    # its document.
+    #
+    # main.js only requests this action when cpu_usage is enabled (see
+    # its id==='cpu_usage' special-casing), so the only case reaching
+    # this "else" branch is: enabled, but cpu_usage.sh's Task Scheduler
+    # task hasn't produced a first sample yet. Nothing on this page ever
+    # triggers that sample itself, so the fallback says so plainly
+    # instead of showing a spinner that implies something is about to
+    # resolve on its own.
+    CPU_CHART_HTML="${TARGET_DIR}/ui/cpu_chart.html"
+    if [[ -r "$CPU_CHART_HTML" ]]; then
+        cat "$CPU_CHART_HTML"
+    else
+        log "[INFO] cpuusagehtml: ${CPU_CHART_HTML} not yet generated"
+        echo '<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+body {font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; color: #888; font-size: 13px; text-align: center; padding: 0 24px;}
+</style></head>
+<body>No CPU usage data yet - waiting for the first scheduled sample.</body></html>'
+    fi
+    ;;
+
+seedcpuusage)
+    run_privileged run cpu_usage_seed
+    if [ "$RUN_RC" -ne 0 ] || [ -z "$RUN_OUT" ]; then
+        log "[ERROR] seedcpuusage failed (rc=${RUN_RC}): ${RUN_OUT}"
+        json_response false "Failed to seed CPU usage log" ""
+    else
+        echo "$RUN_OUT"
     fi
     ;;
 

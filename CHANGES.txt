@@ -1,3 +1,12 @@
+v1.0.27
+- 3rd public beta release.
+- Added new btrfs scrub results module.
+- Added new CPU Usage tab and module with a graphic chart for the last 30 hours.
+- Added new memtest_results module to show the results of the last, recent, Memory Test.
+- Added broken packages table to pkg_updates module (only shown if there are broken packages).
+- Updated speed of pkg_updates module to be 40 to 78% faster.
+  - 78% faster for old models with slow CPUs like Intel Atom.
+
 v1.0.26
 - 3rd public beta release.
 - Added a new Packages tab and pkg_updates module.

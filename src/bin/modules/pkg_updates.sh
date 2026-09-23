@@ -7,6 +7,7 @@
 
 PKG_NAME="Syno_Toolbox"
 PKG_ROOT="/var/packages/${PKG_NAME}"
+UI_DIR="${PKG_ROOT}/target/ui"
 
 if [[ "$1" == "check" ]]; then
     check=yes
@@ -20,9 +21,8 @@ else
 fi
 TOOLBOX_CONF="${VAR_DIR}/toolbox.conf"
 TOOLBOX_LOG="${VAR_DIR}/toolbox.log"
-PKG_UPDATES_HTML="${VAR_DIR}/pkg_updates.html"
+PKG_UPDATES_HTML="${UI_DIR}/pkg_updates.html"
 
-#EXCLUSION='AvrLogger|Changepanelsize|DskMsg'
 EXCLUSION=$(/usr/syno/bin/synogetkeyvalue $TOOLBOX_CONF pkg_updates_exclude)
 
 #------------------------------------------------------------------------------
@@ -70,10 +70,48 @@ for p in "${PACKAGES_TMP[@]}"; do
     fi
 done
 
-# Email header
+# html header
 MESSAGE='<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Package versions</title>
 <style>body {font-family: Verdana, Arial, sans-serif; font-size: 13px; color: #333} table {text-align: left; border-collapse: collapse; table-layout: auto; width: 100%;} thead {color: white;background-color: navy;} th,td {padding: 0.3em 0.8em;} th {border: 2px solid black;} tbody td {border: 1px solid gray;} tbody tr:nth-child(even) td {background-color: #f3f3f3;} tfoot td {border: 1px solid black;} .upd {font-weight: bold;}</style></head>
-<body><style>.no-wrap {white-space: nowrap;} .notes {overflow-wrap: break-word; word-break: break-word;}</style><table>
+<body><style>.no-wrap {white-space: nowrap;} .notes {overflow-wrap: break-word; word-break: break-word;}</style>'
+
+
+#------------------------------------------------------------------------------
+# Check for broken packages
+
+# Broken packages table head
+MESSAGE_A+='<table>
+<thead><tr><th>Broken Packages</th><th>Version</th><th class="notes">Reason</th></tr></thead>
+<tbody>'
+
+count=0
+for pkg in /var/packages/*; do
+    PKG_ID="$(basename "$pkg")"
+    PACKAGE_NAME="$(/usr/syno/bin/synogetkeyvalue "${pkg}/INFO" displayname)"
+    PACKAGE_VERSION="$(/usr/syno/bin/synogetkeyvalue "${pkg}/INFO" version)"
+    if [[ -f "${pkg}/startFailed" ]]; then
+        STATUS_JSON="$(synopkg status "$PKG_ID" 2>/dev/null || true)"
+        REASON="$(jq -r '.aspect.error.status_description // .aspect.active.status_description // "unknown reason"' <<< "$STATUS_JSON")"
+        echo "$PACKAGE_NAME $PACKAGE_VERSION $REASON"
+        MESSAGE_A+='<tr><td class="no-wrap">'"$PACKAGE_NAME"'</td><td class="no-wrap">'"$PACKAGE_VERSION"'</td></td><td class="notes">'"$REASON"'</td></tr>'
+        count=$((count +1))
+    fi
+done
+
+# Broken packages table close
+MESSAGE_A+='</tbody></table><p>'
+
+# If broken packages found
+if [[ "$count" -gt 0 ]]; then
+    MESSAGE+="$MESSAGE_A"
+fi
+
+
+#------------------------------------------------------------------------------
+# Check for packages with updates available
+
+# Packages table
+MESSAGE_B+='<table>
 <thead><tr><th>Package</th><th>Installed</th><th>Available</th><th class="notes">Release Notes</th></tr></thead>
 <tbody>'
 
@@ -97,7 +135,10 @@ done < <(curl -s "https://spkrepo.007daver.workers.dev/?package_update_channel=$
 
 count=0
 for PACKAGE in "${PACKAGES[@]}"; do
-    INSTALLED=$(synopkg version "$PACKAGE")
+    # 'synopkg version' takes 0.3 seconds longer than `synogetkeyvalue "/var/packages/${PKG}/INFO" version`
+    # For 48 packages (on a DS1812+) that's 14 seconds longer!
+    #INSTALLED=$(synopkg version "$PACKAGE")
+    INSTALLED=$(synogetkeyvalue "/var/packages/${PACKAGE}/INFO" version)
     PACKAGE_NAME="$(synogetkeyvalue "/var/packages/${PACKAGE}/INFO" displayname)"
     [[ -z "$PACKAGE_NAME" ]] && PACKAGE_NAME="$PACKAGE"
 
@@ -118,24 +159,27 @@ for PACKAGE in "${PACKAGES[@]}"; do
         if [[ "$(printf '%s\n' "$VERSION" "$INSTALLED" | sort -V | head -n1)" != "$VERSION" ]]; then
             LINK=$(jq -r '.link' <<< "$ROW")
             CHANGELOG=$(jq -r '.changelog' <<< "$ROW")
-            MESSAGE+='<tr><td class="no-wrap">'"$PACKAGE_NAME"'</td><td class="no-wrap">'"$INSTALLED"'</td><td class="no-wrap"><a href="'"$LINK"'">'"$VERSION"'</a></td><td class="notes">'"$CHANGELOG"'</td></tr>'
+            MESSAGE_B+='<tr><td class="no-wrap">'"$PACKAGE_NAME"'</td><td class="no-wrap">'"$INSTALLED"'</td><td class="no-wrap"><a href="'"$LINK"'">'"$VERSION"'</a></td><td class="notes">'"$CHANGELOG"'</td></tr>'
             count=$((count +1))
         fi
     fi
 done
 
-# Email footer
-MESSAGE+='</tbody></table></body></html>'
-
-if [[ ! "$count" -ge 1 ]]; then
-    MESSAGE='<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Package versions</title>
-<style>body {font-family: Verdana, Arial, sans-serif; font-size: 13px; color: #333} table {text-align: left; border-collapse: collapse; table-layout: auto; width: 100%;} thead {color: white;background-color: navy;} th,td {padding: 0.3em 0.8em;} th {border: 2px solid black;} tbody td {border: 1px solid gray;} tbody tr:nth-child(even) td {background-color: #f3f3f3;} tfoot td {border: 1px solid black;} .upd {font-weight: bold;}</style></head>
-<body><style>.no-wrap {white-space: nowrap;} .notes {overflow-wrap: break-word; word-break: break-word;}</style>
-No package updatess found.
-</body></html>'
+# If packages with updates found
+if [[ "$count" -gt 0 ]]; then
+    MESSAGE+="$MESSAGE_B"
+else
+    # No updates found
+    MESSAGE+='No package updatess found.'
 fi
 
-#echo "$MESSAGE" > /volume1/github/Repositories/_packages/Syno_Toolbox/src/bin/modules/pkg_updates.html
+
+#------------------------------------------------------------------------------
+
+# html footer
+MESSAGE+='</tbody></table></body></html>'
+
+
 echo "$MESSAGE" > "$PKG_UPDATES_HTML"
 chmod 644 "$PKG_UPDATES_HTML"
 

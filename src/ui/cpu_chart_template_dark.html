@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CPU Usage — 24 Hour Log</title>
+<style>
+  :root {
+    --bg: #1c1f26;
+    --panel: #23272f;
+    --grid: #333844;
+    --text: #c9ced8;
+    --muted: #7d8494;
+    --accent-1: #4fb3ff;
+    --accent-2: #ff9f4f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 10px;
+  }
+  .panel {
+    background: var(--panel);
+    border-radius: 6px;
+    padding: 16px 10px 8px 10px;
+  }
+  .legend {
+    display: flex;
+    gap: 18px;
+    font-size: 12px;
+    margin-bottom: 6px;
+    padding-left: 46px;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+  }
+  .legend i {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+  canvas {
+    display: block;
+  }
+  .tooltip {
+    position: absolute;
+    background: #101318;
+    border: 1px solid var(--grid);
+    padding: 6px 9px;
+    font-size: 12px;
+    border-radius: 4px;
+    pointer-events: none;
+    display: none;
+    white-space: nowrap;
+  }
+  .wrap { position: relative; }
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <div class="legend" id="legend"></div>
+  <div class="wrap">
+    <canvas id="chart" width="920" height="320"></canvas>
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+</div>
+
+<script>
+/* ---------------------------------------------------------------
+   1. DATA
+   __CPU_DATA__ is replaced by generate_cpu_chart.sh at file-write
+   time with a real JSON array, e.g.:
+
+     [{"name":"Oscar","points":[{"t":"2026-09-12T09:00:00","v":3.1}, ...]},
+      {"name":"Webber","points":[{"t":"2026-09-12T09:00:00","v":6.0}, ...]}]
+
+   This file is a TEMPLATE — don't open it directly and expect data;
+   run generate_cpu_chart.sh to produce the real cpu_chart.html.
+--------------------------------------------------------------- */
+
+const PALETTE = ["#4fb3ff", "#ff9f4f", "#7fdc7f", "#e06ce0", "#ffd54f"];
+
+const rawSeries = __CPU_DATA__;
+
+const series = rawSeries.map((s, i) => ({
+  name: s.name,
+  color: PALETTE[i % PALETTE.length],
+  points: s.points.map(p => ({ t: new Date(p.t), v: p.v }))
+}));
+
+/* ---------------------------------------------------------------
+   2. RENDER
+--------------------------------------------------------------- */
+
+const canvas = document.getElementById("chart");
+const ctx = canvas.getContext("2d");
+const tooltip = document.getElementById("tooltip");
+const legendEl = document.getElementById("legend");
+const panel = document.querySelector(".panel");
+const wrap = document.querySelector(".wrap");
+
+const PAD = { left: 46, right: 16, top: 12, bottom: 28 };
+
+// Matches the CSS values above exactly - kept as constants here since
+// layout() computes pixel sizes directly rather than relying on CSS
+// to do it (see layout()'s own comment for why).
+const BODY_PADDING = 10;
+const PANEL_PAD_TOP = 16, PANEL_PAD_RIGHT = 10, PANEL_PAD_BOTTOM = 8, PANEL_PAD_LEFT = 10;
+const LEGEND_MARGIN_BOTTOM = 6;
+
+function drawLegend() {
+  legendEl.innerHTML = series.map(s =>
+    `<span><i style="background:${s.color}"></i>${s.name}</span>`
+  ).join("");
+}
+
+// Sets explicit pixel dimensions on .panel/.wrap/canvas computed
+// directly from window.innerWidth/innerHeight, instead of relying on
+// CSS flexbox percentage-height cascading down to a replaced element
+// (canvas) to do it. That CSS approach didn't reliably update on
+// resize - confirmed even when this file is opened standalone in its
+// own browser tab, outside the Syno_Toolbox iframe entirely, ruling
+// out an iframe-specific cause. This sidesteps that uncertainty by
+// using only window.innerWidth/innerHeight and getBoundingClientRect,
+// the most basic and universally-supported sizing primitives
+// available, rather than depending on a specific CSS layout mechanism
+// actually working in whatever browser/webview renders this.
+//
+// drawLegend() must run before this, since legendEl's real height is
+// measured here (and would read as 0 on an empty legend).
+function layout() {
+  const availableW = window.innerWidth - BODY_PADDING * 2;
+  const availableH = window.innerHeight - BODY_PADDING * 2;
+
+  panel.style.width = availableW + "px";
+  panel.style.height = availableH + "px";
+
+  const legendH = legendEl.getBoundingClientRect().height;
+  const wrapW = Math.max(availableW - PANEL_PAD_LEFT - PANEL_PAD_RIGHT, 100);
+  const wrapH = Math.max(
+    availableH - PANEL_PAD_TOP - PANEL_PAD_BOTTOM - legendH - LEGEND_MARGIN_BOTTOM,
+    100
+  );
+
+  wrap.style.width = wrapW + "px";
+  wrap.style.height = wrapH + "px";
+  canvas.style.width = wrapW + "px";
+  canvas.style.height = wrapH + "px";
+
+  render();
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth || 920;
+  const cssH = canvas.clientHeight || 320;
+  canvas.width = cssW * dpr;
+  canvas.height = cssH * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  const allPoints = series.flatMap(s => s.points);
+  if (allPoints.length === 0) return;
+
+  const tMin = Math.min(...allPoints.map(p => p.t.getTime()));
+  const tMax = Math.max(...allPoints.map(p => p.t.getTime()));
+  const vMax = Math.min(100, Math.max(10, ...allPoints.map(p => p.v)) * 1.15);
+
+  const x0 = PAD.left, x1 = cssW - PAD.right;
+  const y0 = PAD.top,  y1 = cssH - PAD.bottom;
+
+  const xScale = t => x0 + ((t - tMin) / (tMax - tMin || 1)) * (x1 - x0);
+  const yScale = v => y1 - (v / vMax) * (y1 - y0);
+
+  // grid + y-axis labels
+  ctx.strokeStyle = "#333844";
+  ctx.fillStyle = "#7d8494";
+  ctx.font = "11px -apple-system, sans-serif";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  const ySteps = 5;
+  for (let i = 0; i <= ySteps; i++) {
+    const v = (vMax / ySteps) * i;
+    const y = yScale(v);
+    ctx.beginPath();
+    ctx.moveTo(x0, y);
+    ctx.lineTo(x1, y);
+    ctx.globalAlpha = i === 0 ? 1 : 0.5;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillText(v.toFixed(0) + "%", x0 - 8, y);
+  }
+
+  // x-axis time labels (roughly hourly)
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  const hourMs = 60 * 60 * 1000;
+  for (let t = Math.ceil(tMin / hourMs) * hourMs; t <= tMax; t += hourMs) {
+    const x = xScale(t);
+    ctx.fillText(
+      String(new Date(t).getHours()).padStart(2, "0"),
+      x, y1 + 8
+    );
+  }
+
+  // series lines
+  series.forEach(s => {
+    if (s.points.length === 0) return;
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    s.points.forEach((p, i) => {
+      const x = xScale(p.t.getTime());
+      const y = yScale(p.v);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+
+  canvas._plot = { xScale, yScale, x0, x1, y0, y1, tMin, tMax };
+}
+
+// simple nearest-point tooltip on hover
+canvas.addEventListener("mousemove", e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  if (!canvas._plot) return;
+  const { xScale, tMin, tMax } = canvas._plot;
+  const hoveredT = tMin + ((mx - PAD.left) / (rect.width - PAD.left - PAD.right)) * (tMax - tMin);
+
+  let best = null, bestDist = Infinity, bestSeries = null;
+  series.forEach(s => {
+    s.points.forEach(p => {
+      const d = Math.abs(p.t.getTime() - hoveredT);
+      if (d < bestDist) { bestDist = d; best = p; bestSeries = s; }
+    });
+  });
+  if (!best) { tooltip.style.display = "none"; return; }
+
+  tooltip.style.display = "block";
+  tooltip.innerHTML =
+    `<strong style="color:${bestSeries.color}">${bestSeries.name}</strong><br>` +
+    `${best.t.toLocaleTimeString()} — ${best.v.toFixed(1)}%`;
+
+  // Flip to the left of the cursor when there isn't enough room on the
+  // right - measured after setting innerHTML above, since the
+  // tooltip's width depends on its content (e.g. longer series names).
+  const GAP = 14;
+  const tooltipWidth = tooltip.offsetWidth;
+  const spaceRight = rect.width - mx;
+  let left;
+  if (spaceRight < tooltipWidth + GAP) {
+    left = mx - tooltipWidth - GAP;
+    if (left < 0) { left = 0; } // clamp rather than run off the left edge too
+  } else {
+    left = mx + GAP;
+  }
+  tooltip.style.left = left + "px";
+  tooltip.style.top = (e.clientY - rect.top - 10) + "px";
+});
+canvas.addEventListener("mouseleave", () => tooltip.style.display = "none");
+
+// window's own "resize" event only reliably fires for actual browser/
+// OS-level window resizing - it does NOT reliably fire just because
+// this iframe's box size changed due to the PARENT page's flexbox
+// layout (e.g. maximizing the Syno Toolbox window), which is a known
+// cross-browser inconsistency. ResizeObserver watches document.documentElement
+// (the <html> root) rather than canvas - canvas's own size is now set
+// by layout() itself, so observing it directly would create a
+// feedback loop; documentElement purely reflects the iframe's/tab's
+// actual viewport size, unaffected by anything this script does.
+window.addEventListener("resize", layout);
+new ResizeObserver(layout).observe(document.documentElement);
+drawLegend();
+layout();
+</script>
+</body>
+</html>
