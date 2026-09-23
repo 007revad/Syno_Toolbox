@@ -1,5 +1,5 @@
 v1.0.27
-- 3rd public beta release.
+- 4th public beta release.
 - Added new btrfs scrub results module.
 - Added new CPU Usage tab and module with a graphic chart for the last 30 hours.
 - Added new memtest_results module to show the results of the last, recent, Memory Test.
