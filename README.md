@@ -35,25 +35,25 @@ There are 2 ways to install the package:
 <!--- <p align="center">Description of image 1 goes here</p> --->
 <p align="center"><kbd><img src="/images/installed.png"></kbd></p>
 
+<!--- <br> --->
+
+<!--- <p align="center">DS925+ Info (UPS client)</p> --->
+<!--- <p align="center"><kbd><img src="/images/info_ds925plus.png"></kbd></p> --->
+
 <br>
 
-<p align="center">DS925+ Info (UPS client)</p>
-<p align="center"><kbd><img src="/images/info_ds925plus.png"></kbd></p>
-
-<br>
-
-<p align="center">DS1821+ Info (UPS server)</p>
-<p align="center"><kbd><img src="/images/info_ds1821plus.png"></kbd></p>
+<p align="center">Info</p>
+<p align="center"><kbd><img src="/images/info_tab.png"></kbd></p>
 
 <br>
 
 <p align="center">Tools</p>
-<p align="center"><kbd><img src="/images/tools_page1.png"></kbd></p>
+<p align="center"><kbd><img src="/images/tools_page1-2.png"></kbd></p>
 
 <br>
 
 <p align="center">More Tools</p>
-<p align="center"><kbd><img src="/images/tools_page2.png"></kbd></p>
+<p align="center"><kbd><img src="/images/tools_page2-2.png"></kbd></p>
 
 <br>
 
@@ -69,3 +69,13 @@ There are 2 ways to install the package:
 
 <p align="center">Packages</p>
 <p align="center"><kbd><img src="/images/packages2.png"></kbd></p>
+
+<br>
+
+<p align="center">CPU Usage</p>
+<p align="center"><kbd><img src="/images/cpu_usage.png"></kbd></p>
+
+<br>
+
+<p align="center">Help</p>
+<p align="center"><kbd><img src="/images/help_tab.png"></kbd></p>
