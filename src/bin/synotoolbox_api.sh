@@ -337,6 +337,13 @@ getstate)
             while IFS='=' read -r key raw_val; do
                 [[ "$key" == "${id}_"* ]] || continue
                 suffix="${key#"${id}"_}"
+                # Never echo a secret back to the browser - getstate's
+                # result feeds main.js's field prefill directly, and a
+                # write-only credential (e.g. config_backup_shared_secret)
+                # must stay that way. Matched generically by suffix so any
+                # future "<id>_..._secret" field is covered without a
+                # per-field allowlist here.
+                [[ "$suffix" == *secret* ]] && continue
                 val="${raw_val%\"}"; val="${val#\"}"
                 fields_json=$(echo "$fields_json" | jq --arg k "$suffix" --arg v "$val" '. + {($k): $v}')
             done < "$TOOLBOX_CONF"
@@ -542,6 +549,103 @@ discovernas)
     fi
     ;;
 
+discovertoolboxnas)
+    # Broadcast-discover all Synology NAS (same syno_discover.py as
+    # discovernas above), then probe each one's own api.cgi to find
+    # which are actually running Syno_Toolbox with a reachable admin
+    # port - syno_discover.py finds ANY Synology, this narrows it down
+    # for config_backup's remote-target dropdowns. Read-only probe
+    # (pingtoolbox action), no shared secret involved - only
+    # receive_backup itself is secret-gated.
+    DISCOVER_SCRIPT="/var/packages/Syno_Toolbox/target/bin/syno_discover.py"
+    PROBE_SCRIPT="${BIN_DIR}/probe_toolbox_nas.py"
+    if [[ ! -f "$DISCOVER_SCRIPT" || ! -f "$PROBE_SCRIPT" ]]; then
+        echo '{"success":false,"message":"Discovery scripts missing from this package build"}'
+        exit 0
+    fi
+
+    PYTHON_BIN="$(command -v python3 || command -v python)"
+    if [[ -z "$PYTHON_BIN" ]]; then
+        echo '{"success":false,"message":"No python interpreter found on this NAS"}'
+        exit 0
+    fi
+
+    RAW="$("$PYTHON_BIN" "$DISCOVER_SCRIPT" --json --timeout 3 2>>"$TOOLBOX_LOG")"
+    if [[ -z "$RAW" ]]; then
+        echo '{"success":true,"result":[]}'
+        exit 0
+    fi
+
+    PROBED="$(echo "$RAW" | "$PYTHON_BIN" "$PROBE_SCRIPT" --timeout 3 2>>"$TOOLBOX_LOG")"
+    [[ -z "$PROBED" ]] && PROBED="[]"
+    printf '{"success":true,"result":%s}\n' "$PROBED"
+    ;;
+
+receive_backup)
+    # Called only via api.cgi's raw-body intercept, itself invoked
+    # through run_privileged_stdin - the presented secret arrives on
+    # our own stdin (never argv/ps, same pattern as enable_ssh_root's
+    # --pwd), FILENAME and the CGI-user-written temp file path arrive
+    # as normal args. Verifying the secret needs root: toolbox.conf is
+    # chmod 600 root-owned (see tb_self_heal above), unreadable to the
+    # unprivileged CGI user that wrote TMP_FILE. Writing the final file
+    # into TARGET_DIR needs root too, same as the local export's own
+    # `chown admin:administrators` step.
+    FILENAME="${1:-}"
+    TMP_FILE="${2:-}"
+    read -r PRESENTED_SECRET
+
+    cleanup_tmp() { [[ -n "$TMP_FILE" ]] && rm -f "$TMP_FILE" 2>/dev/null; }
+
+    STORED_SECRET="$(tb_get "config_backup_shared_secret" "")"
+    if [[ -z "$STORED_SECRET" ]]; then
+        echo '{"success":false,"message":"No shared secret configured on this NAS"}'
+        cleanup_tmp
+        exit 1
+    fi
+    if [[ -z "$PRESENTED_SECRET" || "$PRESENTED_SECRET" != "$STORED_SECRET" ]]; then
+        echo '{"success":false,"message":"Invalid shared secret"}'
+        cleanup_tmp
+        exit 1
+    fi
+
+    # Plain filename only - no path separators, no leading dot. Same
+    # defensive style as listfolder's TARGET_PATH check above, applied
+    # to a bare filename instead of a /volumeN/... path.
+    if [[ -z "$FILENAME" || ! "$FILENAME" =~ ^[A-Za-z0-9._-]+$ || "$FILENAME" == .* ]]; then
+        echo '{"success":false,"message":"Invalid filename"}'
+        cleanup_tmp
+        exit 1
+    fi
+    if [[ -z "$TMP_FILE" || ! -f "$TMP_FILE" ]]; then
+        echo '{"success":false,"message":"Upload temp file missing"}'
+        exit 1
+    fi
+
+    TARGET_DIR="$(tb_get "config_backup_target_dir" "")"
+    if [[ -z "$TARGET_DIR" || ! -d "$TARGET_DIR" ]]; then
+        echo '{"success":false,"message":"No valid backup target dir configured on this NAS"}'
+        cleanup_tmp
+        exit 1
+    fi
+
+    DEST="${TARGET_DIR}/${FILENAME}"
+    if [[ -e "$DEST" ]]; then
+        echo '{"success":false,"message":"A backup with that filename already exists on this NAS"}'
+        cleanup_tmp
+        exit 1
+    fi
+
+    if ! mv "$TMP_FILE" "$DEST"; then
+        echo '{"success":false,"message":"Failed to move upload into place"}'
+        cleanup_tmp
+        exit 1
+    fi
+    chown admin:administrators "$DEST" 2>/dev/null
+
+    echo '{"success":true,"message":"Backup received"}'
+    ;;
+
 run)
     MODULE_ID="${1:-}"
     if [[ -z "$MODULE_ID" ]]; then
@@ -627,6 +731,16 @@ save)
     # 2. Write every submitted key=value to conf.
     while IFS=$'\t' read -r key value; do
         [[ -z "$key" ]] && continue
+        # A "*_secret" field arriving blank means "leave it as-is", not
+        # "clear it" - the browser never gets to see the stored value
+        # (see getstate's fields_json filter above), so an unrelated
+        # save (e.g. flipping some other module's toggle) always submits
+        # this field empty and must not wipe out a previously-set
+        # secret. Only a real, non-empty value from the Settings modal
+        # actually updates it.
+        if [[ "$key" == *secret* && -z "$value" ]]; then
+            continue
+        fi
         tb_set "$key" "$value"
     done < <(echo "$JSON_BLOB" | jq -r 'to_entries[] | "\(.key)\t\(.value)"')
 

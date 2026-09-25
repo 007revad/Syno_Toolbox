@@ -44,10 +44,11 @@ fi
 # Also future lang specific About files
 shopt -s nullglob
 for html in "$UI_DIR"/help/*/syno_toolbox_overview.html; do
+    lang_folder=$(basename "$(dirname "$path")")
     if sed -i "s|>Syno Toolbox<|>Syno Toolbox ${SYNOPKG_PKGVER}<|" "$html"; then
-    log_message "Set version ${SYNOPKG_PKGVER} in About header"
+    log_message "Set version ${SYNOPKG_PKGVER} in $lang_folder About header"
     else
-        log_message "WARNING: failed to set version in About header"
+        log_message "WARNING: failed to set version in $lang_folder About header"
     fi
 done
 shopt -u nullglob

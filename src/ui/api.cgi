@@ -50,48 +50,13 @@ parse_kv() {
     done
 }
 
-case "$REQUEST_METHOD" in
-POST)
-    CONTENT_LENGTH=${CONTENT_LENGTH:-0}
-    if [ "$CONTENT_LENGTH" -gt 0 ]; then
-        read -r -n "$CONTENT_LENGTH" POST_DATA
-    else
-        POST_DATA=""
-    fi
-    parse_kv "${POST_DATA}"
-    ;;
-GET)
-    parse_kv "${QUERY_STRING}"
-    ;;
-*)
-    log "Unsupported METHOD: ${REQUEST_METHOD}"
-    echo "Content-Type: application/json; charset=utf-8"
-    echo ""
-    echo '{"success":false,"message":"Unsupported METHOD","result":null}'
-    exit 0
-    ;;
-esac
-
-ACTION="${PARAM[action]}"
-log "Request: ACTION=${ACTION}"
-
-# --------- 3. HTTP header output --------------------------------
-# pkgupdateshtml loads straight into an iframe (main.js's Packages tab),
-# so it needs a real text/html document, not the JSON envelope every
-# other action returns - everything else keeps the original header set.
-
-if [[ "$ACTION" == "pkgupdateshtml" || "$ACTION" == "cpuusagehtml" ]]; then
-    echo "Content-Type: text/html; charset=utf-8"
-    echo ""
-else
-    echo "Content-Type: application/json; charset=utf-8"
-    echo "Access-Control-Allow-Origin: *"
-    echo "Access-Control-Allow-Methods: GET, POST"
-    echo "Access-Control-Allow-Headers: Content-Type"
-    echo ""
-fi
-
-# --------- 4. JSON utility functions -----------------------------
+# --------- 2a. JSON/privilege helpers ----------------------------
+# Moved ahead of the REQUEST_METHOD case below (they used to live
+# further down, after header output) - receive_backup's raw-body
+# intercept inside that case needs run_privileged_stdin and
+# json_response available before it runs, since it has to act on the
+# POST body before the generic (unsafe-for-binary) read touches it.
+# Nothing about these functions changed, only their position.
 
 json_response() {
     local ok="$1" msg="$2" data="$3"
@@ -131,7 +96,99 @@ run_privileged_stdin() {
     RUN_RC=$?
 }
 
-# --------- 5. Action processing ---------------------------------
+case "$REQUEST_METHOD" in
+POST)
+    # receive_backup is intercepted here, before the generic POST_DATA
+    # read below - `read -r -n "$CONTENT_LENGTH"` is fine for
+    # URL-encoded form fields, but bash's `read` corrupts embedded NUL
+    # bytes, which a binary .dss backup file will contain. This action
+    # is detected from QUERY_STRING specifically (not the body) so it
+    # can be handled before the body is touched at all: it streams
+    # stdin straight to a temp file via `head -c`, untouched by `read`.
+    # filename/action arrive via QUERY_STRING, the shared secret via a
+    # custom header (X-Toolbox-Secret) rather than a form field - same
+    # reasoning, kept out of anything that assumes URL-encoded text.
+    if [[ "$QUERY_STRING" == *"action=receive_backup"* ]]; then
+        parse_kv "${QUERY_STRING}"
+        ACTION="${PARAM[action]}"
+        FILENAME="${PARAM[filename]}"
+        SECRET="${HTTP_X_TOOLBOX_SECRET:-}"
+
+        log "Request: ACTION=${ACTION} filename=${FILENAME}"
+        echo "Content-Type: application/json; charset=utf-8"
+        echo ""
+
+        if [[ -z "$FILENAME" || ! "$FILENAME" =~ ^[A-Za-z0-9._-]+$ || "$FILENAME" == .* ]]; then
+            json_response false "Invalid filename" ""
+            exit 0
+        fi
+        if [[ -z "$SECRET" ]]; then
+            json_response false "Missing shared secret" ""
+            exit 0
+        fi
+
+        CONTENT_LENGTH=${CONTENT_LENGTH:-0}
+        if [[ "$CONTENT_LENGTH" -le 0 ]]; then
+            json_response false "Empty upload" ""
+            exit 0
+        fi
+
+        TMP_FILE="$(mktemp "${VAR_DIR}/recv_XXXXXX.tmp")"
+        head -c "$CONTENT_LENGTH" > "$TMP_FILE"
+
+        run_privileged_stdin "$SECRET" receive_backup "$FILENAME" "$TMP_FILE"
+        rm -f "$TMP_FILE" 2>/dev/null  # belt-and-braces - receive_backup itself moves/removes it
+
+        if [ "$RUN_RC" -ne 0 ]; then
+            log "[ERROR] receive_backup ${FILENAME} failed (rc=${RUN_RC}): ${RUN_OUT}"
+            json_response false "${RUN_OUT:-Failed to receive backup}" ""
+        else
+            echo "$RUN_OUT"
+        fi
+        exit 0
+    fi
+
+    CONTENT_LENGTH=${CONTENT_LENGTH:-0}
+    if [ "$CONTENT_LENGTH" -gt 0 ]; then
+        read -r -n "$CONTENT_LENGTH" POST_DATA
+    else
+        POST_DATA=""
+    fi
+    parse_kv "${POST_DATA}"
+    ;;
+GET)
+    parse_kv "${QUERY_STRING}"
+    ;;
+*)
+    log "Unsupported METHOD: ${REQUEST_METHOD}"
+    echo "Content-Type: application/json; charset=utf-8"
+    echo ""
+    echo '{"success":false,"message":"Unsupported METHOD","result":null}'
+    exit 0
+    ;;
+esac
+
+ACTION="${PARAM[action]}"
+log "Request: ACTION=${ACTION}"
+
+# --------- 3. HTTP header output --------------------------------
+# pkgupdateshtml loads straight into an iframe (main.js's Packages tab),
+# so it needs a real text/html document, not the JSON envelope every
+# other action returns - everything else keeps the original header set.
+
+if [[ "$ACTION" == "pkgupdateshtml" || "$ACTION" == "cpuusagehtml" ]]; then
+    echo "Content-Type: text/html; charset=utf-8"
+    echo ""
+else
+    echo "Content-Type: application/json; charset=utf-8"
+    echo "Access-Control-Allow-Origin: *"
+    echo "Access-Control-Allow-Methods: GET, POST"
+    echo "Access-Control-Allow-Headers: Content-Type"
+    echo ""
+fi
+
+# --------- 4. Action processing ----------------------------------
+
 
 case "${ACTION}" in
 init)
@@ -228,6 +285,27 @@ discovernas)
     run_privileged discovernas
     if [ "$RUN_RC" -ne 0 ] || [ -z "$RUN_OUT" ]; then
         log "[ERROR] discovernas failed (rc=${RUN_RC}): ${RUN_OUT}"
+        json_response false "Discovery failed" ""
+    else
+        echo "$RUN_OUT"
+    fi
+    ;;
+
+pingtoolbox)
+    # Unauthenticated identity probe - answered by any NAS running
+    # Syno_Toolbox so other instances' discovertoolboxnas can find it.
+    # Deliberately read-only and unauthenticated (like discovernas/
+    # wolscanstatus): reveals nothing beyond "this package is installed
+    # and reachable here", never gated behind the shared secret - that
+    # only guards receive_backup's actual write.
+    HOST_JSON="$(hostname 2>/dev/null | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))')"
+    echo "{\"success\":true,\"toolbox\":true,\"hostname\":${HOST_JSON}}"
+    ;;
+
+discovertoolboxnas)
+    run_privileged discovertoolboxnas
+    if [ "$RUN_RC" -ne 0 ] || [ -z "$RUN_OUT" ]; then
+        log "[ERROR] discovertoolboxnas failed (rc=${RUN_RC}): ${RUN_OUT}"
         json_response false "Discovery failed" ""
     else
         echo "$RUN_OUT"

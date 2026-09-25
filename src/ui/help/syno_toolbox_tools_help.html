@@ -106,7 +106,9 @@
         <div class="section">
             <h4 style="color:#1B8AED;">DSM Configuration Backup and Export</h4>
             <p>
-                Automatically backs up your DSM configuration on a schedule.
+                Automatically backs up your DSM configuration on a schedule,
+                and optionally sends a copy to up to two other NAS running
+                Syno Toolbox.
             </p>
             <ol>
                 <li>
@@ -117,15 +119,31 @@
                     Set <strong>Target dir</strong> to where backups should
                     be saved, using <strong>Browse</strong> to pick a
                     folder.
+                    <ul><li>Set this even on a NAS you only ever intend to
+                    <em>receive</em> backups on - it's where incoming
+                    backups from other NAS are saved too, whether or not
+                    this NAS's own scheduled backup is turned on.</li></ul>
+                </li>
+                <li>
+                    Click <strong>Settings</strong> to set the
+                    <strong>shared secret</strong> used to authenticate
+                    transfers between NAS. Set the same secret on every NAS
+                    involved, on both the sending and receiving side. Once
+                    saved, the secret is never shown again - leave the field
+                    blank and click <strong>Save</strong> to keep the
+                    secret already stored on this NAS unchanged.
                 </li>
                 <li>
                     Optionally tick <strong>Remote backup</strong> (and
-                    <strong>2nd remote backup</strong>) to also copy backups
-                    to another NAS. Click <strong>Discover NAS</strong>
-                    to find one on your network, or enter its
-                    <strong>Remote IP</strong>, port, <strong>Remote dir</strong>,
-                    <strong>Local user</strong> and <strong>Remote user</strong>
-                    manually.
+                    <strong>2nd remote backup</strong>) to also send backups
+                    to another NAS, then choose it from the dropdown. The
+                    dropdown lists other NAS on your network that are
+                    running Syno Toolbox, found automatically - no need to
+                    enter an IP address by hand.
+                    <ul><li>A previously-selected NAS that isn't found in
+                    the current scan (e.g. it's offline) stays selected
+                    rather than being cleared, so you don't lose the
+                    destination just because it didn't answer once.</li></ul>
                 </li>
             </ol>
         </div>

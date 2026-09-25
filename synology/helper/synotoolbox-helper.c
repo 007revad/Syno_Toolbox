@@ -21,8 +21,9 @@
 
 int main(int argc, char *argv[])
 {
-    const char *no_arg[]  = { "getstate", "listvolumes", "listwoldevices", "discoverwol", "wolscanstatus", "listshares", "discovernas", "selfheal", "runboot", NULL };
+    const char *no_arg[]  = { "getstate", "listvolumes", "listwoldevices", "discoverwol", "wolscanstatus", "listshares", "discovernas", "discovertoolboxnas", "selfheal", "runboot", NULL };
     const char *one_arg[] = { "run", "check", "save", "listfolder", NULL };
+    const char *two_arg[] = { "receive_backup", NULL };
 
     if (argc < 2) {
         fprintf(stderr, "synotoolbox-helper: missing subcommand\n");
@@ -30,14 +31,17 @@ int main(int argc, char *argv[])
     }
     const char *cmd = argv[1];
 
-    int is_no_arg = 0, is_one_arg = 0;
+    int is_no_arg = 0, is_one_arg = 0, is_two_arg = 0;
     for (int i = 0; no_arg[i] != NULL; i++)
         if (strcmp(cmd, no_arg[i]) == 0) { is_no_arg = 1; break; }
     for (int i = 0; one_arg[i] != NULL; i++)
         if (strcmp(cmd, one_arg[i]) == 0) { is_one_arg = 1; break; }
+    for (int i = 0; two_arg[i] != NULL; i++)
+        if (strcmp(cmd, two_arg[i]) == 0) { is_two_arg = 1; break; }
 
     if ((is_no_arg && argc != 2) || (is_one_arg && argc != 3) ||
-        (!is_no_arg && !is_one_arg)) {
+        (is_two_arg && argc != 4) ||
+        (!is_no_arg && !is_one_arg && !is_two_arg)) {
         fprintf(stderr, "synotoolbox-helper: rejected '%s' with %d argument(s)\n",
                 cmd, argc - 2);
         return 1;
@@ -60,8 +64,10 @@ int main(int argc, char *argv[])
 
     if (argc == 2) {
         execl(TARGET_SCRIPT, TARGET_SCRIPT, cmd, (char *)NULL);
-    } else {
+    } else if (argc == 3) {
         execl(TARGET_SCRIPT, TARGET_SCRIPT, cmd, argv[2], (char *)NULL);
+    } else {
+        execl(TARGET_SCRIPT, TARGET_SCRIPT, cmd, argv[2], argv[3], (char *)NULL);
     }
 
     perror("synotoolbox-helper: execl failed");

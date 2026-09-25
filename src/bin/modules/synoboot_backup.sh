@@ -28,27 +28,11 @@ TOOLBOX_CONF="${VAR_DIR}/toolbox.conf"
 TOOLBOX_LOG="${VAR_DIR}/toolbox.log"
 
 # Set bakpath to suit the location to backup to
-#bakpath=/volume1/backups/synoboot
 bakpath="$(/usr/syno/bin/synogetkeyvalue $TOOLBOX_CONF synoboot_backup_path)"
 
-# Get volume $backupshare is currently located on
-backupshare=$(echo -n "$bakpath" | cut -d"/" -f3)
-buildnumber=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION buildnumber)
-if [[ $buildnumber -gt "64570" ]]; then
-    # DSM 7.2.1 and later
-    # synoshare --get-real-path is case insensitive
-    vol=$(/usr/syno/sbin/synoshare --get-real-path "$backupshare")
-else
-    # DSM 7.2 and earlier
-    # synoshare --getmap is case insensitive
-    vol=$(/usr/syno/sbin/synoshare --getmap "$backupshare" | grep volume | cut -d"[" -f2 | cut -d"]" -f1)
-    # I could also have used:
-    # vol=$(/usr/syno/sbin/synoshare --get "$backupshare" | tr '[]' '\n' | sed -n "9p")
-fi
-# Set current volume where shared folder is located
-#if [[ ! $vol =~ $bakpath ]]; then
-#    
-#fi
+# Check backpath volume is still correct - and fix if share has moved to another volume
+"$PKG_ROOT/target/bin/check_share_volume.sh" --key=synoboot_backup_path --path="${bakpath:?}"
+bakpath="$(/usr/syno/bin/synogetkeyvalue $TOOLBOX_CONF synoboot_backup_path)"
 
 scriptver="v1.0.4-toolbox"
 script=Synoboot_backup

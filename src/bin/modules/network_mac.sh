@@ -20,7 +20,7 @@ if [[ $( whoami ) != "root" ]]; then
 fi
 
 eth_to_lan(){ 
-    local num eth
+    local eth num
     eth="$1"
     num="${eth#eth}"
     lan="LAN $((num +1))"
@@ -30,7 +30,7 @@ readarray -t ethports <<< "$(ls /sys/class/net/ | grep '^eth')"
 
 for p in "${ethports[@]}"; do
     eth_to_lan "$p"
-    mac="$(ip link show eth0 | grep 'ether' | awk '{print $2}')"
+    mac="$(ip link show "$p" | grep 'ether' | awk '{print $2}')"
     if [[ "${speed,,}" =~ "unknown" ]]; then
         noconnect=" (not connected)"
     fi

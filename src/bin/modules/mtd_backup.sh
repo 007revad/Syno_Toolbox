@@ -44,7 +44,10 @@ TOOLBOX_CONF="${VAR_DIR}/toolbox.conf"
 TOOLBOX_LOG="${VAR_DIR}/toolbox.log"
 
 # Set bakpath to suit the location to backup to
-#bakpath=/volume1/backups/mtd
+bakpath="$(/usr/syno/bin/synogetkeyvalue $TOOLBOX_CONF mtd_backup_path)"
+
+# Check backpath volume is still correct - and fix if share has moved to another volume
+"$PKG_ROOT/target/bin/check_share_volume.sh" --key=mtd_backup_path --path="${bakpath:?}"
 bakpath="$(/usr/syno/bin/synogetkeyvalue $TOOLBOX_CONF mtd_backup_path)"
 
 # Get volume $backupshare is currently located on

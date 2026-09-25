@@ -307,12 +307,31 @@ build_schedule() {
         return 1
     fi
 
+    # Fixed "run all day, every N hours" shape - start_hour/start_minute
+    # are intentionally ignored (always 0/0), same treatment the
+    # minute-type branch above already gives those two params, for the
+    # same reason (no case here needs a partial-day window either).
+    #
+    # last_work_hour:23 mirrors the minute-type branch's already-
+    # confirmed "whole day" value (real DSM task read-back, 2026-09-13).
+    # The previous last_work_hour:0 here was never independently
+    # verified for hour-type the way 23 was for minute-type, and a live
+    # test on 2026-09-25/26 (Dave, schedule_ups_connected, start 11:00,
+    # repeat every 6h) only ran twice (11:00, 13:00) before an unrelated
+    # Edit-task-dialog interaction reset the schedule's stored
+    # hour/last_work_hour fields mid-test - inconclusive on whether
+    # last_work_hour:0 would have left a dead window before the next
+    # day's start time, but not worth re-risking when 23 is the shape
+    # that's actually confirmed. Re-verify by deleting and recreating
+    # the task hands-off (no Edit-dialog interaction) and watching a
+    # full 24h, including across midnight, if this ever needs re-
+    # checking.
     if [[ "$API_VER" -eq 4 ]]; then
-        printf '{"date_type":0,"hour":%s,"minute":%s,"repeat_hour":%s,"repeat_min":0,"repeat_date":1001,"week_day":"0,1,2,3,4,5,6","monthly_week":[],"last_work_hour":0,"version":4}' \
-            "$start_hour" "$start_minute" "$interval"
+        printf '{"date_type":0,"hour":0,"minute":0,"repeat_hour":%s,"repeat_min":0,"repeat_date":1001,"week_day":"0,1,2,3,4,5,6","monthly_week":[],"last_work_hour":23,"version":4}' \
+            "$interval"
     else
-        printf '{"date_type":0,"hour":%s,"minute":%s,"repeat_hour":%s,"repeat_date":0,"week_day":"0,1,2,3,4,5,6","last_work_hour":0}' \
-            "$start_hour" "$start_minute" "$interval"
+        printf '{"date_type":0,"hour":0,"minute":0,"repeat_hour":%s,"repeat_date":0,"week_day":"0,1,2,3,4,5,6","last_work_hour":23}' \
+            "$interval"
     fi
 }
 
@@ -454,15 +473,29 @@ print(json.dumps({
     SCHEDULE_VER="$(schedule_api_version "$INTERVAL_TYPE")"
 
     if [[ -n "$EXISTING_ID" ]]; then
-        # UNVERIFIED: assumes method=set takes the same shape as create + id
-        synowebapi $WEBAPI_FLAG --exec api=SYNO.Core.TaskScheduler method=set version="$SCHEDULE_VER" \
-            id="$EXISTING_ID" name="$TASK_NAME" owner="root" enable=true type="script" \
-            schedule="$SCHEDULE" extra="$EXTRA"
-    else
-        synowebapi $WEBAPI_FLAG --exec api=SYNO.Core.TaskScheduler method=create version="$SCHEDULE_VER" \
-            name="$TASK_NAME" owner="root" enable=true type="script" \
-            schedule="$SCHEDULE" extra="$EXTRA"
+        # method=set was previously UNVERIFIED for taking the full
+        # create-style schedule payload, and is now confirmed NOT to
+        # work that way: Dave, 2026-09-26, changing an already-enabled
+        # hourly task's interval (1h -> 4h) via this path silently
+        # returned success but left the real DSM task half-configured
+        # (start reset to next-hour, "Continue running within the same
+        # day" unchecked, repeat effectively 0) instead of applying the
+        # new schedule. Deleting and recreating instead, reusing the
+        # exact delete call already confirmed reliable on both DSM
+        # versions by the "remove" action below, rather than guessing
+        # at a corrected method=set shape.
+        if [[ "$dsm" -ge 7 ]]; then
+            synowebapi $WEBAPI_FLAG --exec api=SYNO.Core.TaskScheduler method=delete version=2 \
+                tasks="[{\"id\":${EXISTING_ID},\"real_owner\":\"root\"}]" >/dev/null
+        else
+            synowebapi --exec api=SYNO.Core.TaskScheduler method=delete version=1 \
+                task="${EXISTING_ID}" >/dev/null
+        fi
     fi
+
+    synowebapi $WEBAPI_FLAG --exec api=SYNO.Core.TaskScheduler method=create version="$SCHEDULE_VER" \
+        name="$TASK_NAME" owner="root" enable=true type="script" \
+        schedule="$SCHEDULE" extra="$EXTRA"
     ;;
 
 remove)
