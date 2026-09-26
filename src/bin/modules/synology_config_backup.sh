@@ -7,7 +7,7 @@
 # Works on DMS 7 and DSM 6
 #
 # Author: 007revad
-# Date/Version: 2024-10-24 v1.1.6
+# Date/Version: 2026-09-26 v1.1.8
 #
 # Github: https://github.com/007revad/Synology_Config_Backup
 # Script verified at https://www.shellcheck.net/
@@ -29,9 +29,14 @@ else
 fi
 TOOLBOX_CONF="${VAR_DIR}/toolbox.conf"
 
-
 # Set where to save the exported configuration file
 Target_DIR="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_target_dir)"
+
+# Check Target_DIR volume is still correct - and fix if share has moved to another volume
+if [[ -n "$Target_DIR" ]]; then
+    "$PKG_ROOT/target/bin/check_share_volume.sh" --key=config_backup_target_dir --path="${bakpath:?}"
+    Target_DIR="$(/usr/syno/bin/synogetkeyvalue $TOOLBOX_CONF config_backup_target_dir)"
+fi
 
 # config_backup_remote_method: "ssh" (default, requires SSH key setup for remote user),
 #                               "filestation" (uses File Station API, no SSH key needed),
@@ -88,30 +93,14 @@ Remote2_HTTPS_Port="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backu
 Remote2_Toolbox_Port="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_remote2_toolbox_port)"
 [[ -z $Remote2_Toolbox_Port ]] && Remote2_Toolbox_Port="5001"
 
-
-# Get volume $Target_DIR is currently located on
-backupshare=$(echo -n "$Target_DIR" | cut -d"/" -f3)
+majorversion=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)
+minorversion=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION minorversion)
 buildnumber=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION buildnumber)
-if [[ $buildnumber -gt "64570" ]]; then
-    # DSM 7.2.1 and later
-    # synoshare --get-real-path is case insensitive
-    vol=$(/usr/syno/sbin/synoshare --get-real-path "$backupshare")
-else
-    # DSM 7.2 and earlier
-    # synoshare --getmap is case insensitive
-    vol=$(/usr/syno/sbin/synoshare --getmap "$backupshare" | grep volume | cut -d"[" -f2 | cut -d"]" -f1)
-    # I could also have used:
-    # vol=$(/usr/syno/sbin/synoshare --get "$backupshare" | tr '[]' '\n' | sed -n "9p")
-fi
-# Set current volume where shared folder is located
-#if [[ ! $vol =~ $bakpath ]]; then
-#    
-#fi
 
 # Set backup filename
-
 # Append date and time to backup file
-File_Name="$( hostname )_$( date +%F_%H%M ).dss"
+#File_Name="$( hostname )_$( date +%F_%H%M ).dss"
+File_Name="$( hostname )_$( date +%F_%H%M )_${majorversion}.${majorversion}-${buildnumber}.dss"
 
 
 #--------------------------------------------------------------------------
@@ -319,30 +308,34 @@ fi
 
 # 2nd remote backup
 if [[ $Remote2_Backup == "yes" ]]; then
-    # Get remote NAS hostname
-    Remote2_Host=$("$nmblookup_cmd" -A "$Remote2_IP" | sed -n 2p | cut -d ' ' -f1)
-    Remote2_Host="${Remote2_Host:1}"
+    if [[ $Remote2_IP != "$Remote_IP" ]]; then
+        # Get remote NAS hostname
+        Remote2_Host=$("$nmblookup_cmd" -A "$Remote2_IP" | sed -n 2p | cut -d ' ' -f1)
+        Remote2_Host="${Remote2_Host:1}"
 
-    if [[ $Remote2_Host ]]; then
-        echo -e "\nCopying backup to ${Remote2_Host}"
-    else
-        echo -e "\nCopying backup to ${Remote2_IP}"
-    fi
+        if [[ $Remote2_Host ]]; then
+            echo -e "\nCopying backup to ${Remote2_Host}"
+        else
+            echo -e "\nCopying backup to ${Remote2_IP}"
+        fi
 
-    if [[ $Remote2_Method == "filestation" ]]; then
-        if fs_backup_upload "$Remote2_IP" "$Remote2_HTTPS_Port" "$Remote2_FS_User" \
-            "$Remote2_FS_Pass" "$Remote2_DIR" "${Target_DIR}/${File_Name}" \
-            "${Remote2_Host:-$Remote2_IP}"; then
-            echo "Upload successful to ${Remote2_Host:-$Remote2_IP} via File Station API"
-        fi
-    elif [[ $Remote2_Method == "toolbox" ]]; then
-        if tb_backup_upload "$Remote2_IP" "$Remote2_Toolbox_Port" "$Shared_Secret" \
-            "${Target_DIR}/${File_Name}" "$File_Name" "${Remote2_Host:-$Remote2_IP}"; then
-            echo "Upload successful to ${Remote2_Host:-$Remote2_IP} via Syno_Toolbox"
+        if [[ $Remote2_Method == "filestation" ]]; then
+            if fs_backup_upload "$Remote2_IP" "$Remote2_HTTPS_Port" "$Remote2_FS_User" \
+                "$Remote2_FS_Pass" "$Remote2_DIR" "${Target_DIR}/${File_Name}" \
+                "${Remote2_Host:-$Remote2_IP}"; then
+                echo "Upload successful to ${Remote2_Host:-$Remote2_IP} via File Station API"
+            fi
+        elif [[ $Remote2_Method == "toolbox" ]]; then
+            if tb_backup_upload "$Remote2_IP" "$Remote2_Toolbox_Port" "$Shared_Secret" \
+                "${Target_DIR}/${File_Name}" "$File_Name" "${Remote2_Host:-$Remote2_IP}"; then
+                echo "Upload successful to ${Remote2_Host:-$Remote2_IP} via Syno_Toolbox"
+            fi
+        else
+            # Push backup to other device (safer for other device to pull backup from read only share)
+            sudo -u "${Local2_User}" scp -P "${Remote2_Port}" "${Target_DIR}/${File_Name}" "${Remote2_User}@${Remote2_IP}:'${Remote2_DIR}/'"
         fi
     else
-        # Push backup to other device (safer for other device to pull backup from read only share)
-        sudo -u "${Local2_User}" scp -P "${Remote2_Port}" "${Target_DIR}/${File_Name}" "${Remote2_User}@${Remote2_IP}:'${Remote2_DIR}/'"
+        echo "Skipping 2nd remote backup as $Remote2_IP the same as Remote backup $Remote_IP"
     fi
 fi
 

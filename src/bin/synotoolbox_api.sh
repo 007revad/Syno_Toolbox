@@ -337,13 +337,6 @@ getstate)
             while IFS='=' read -r key raw_val; do
                 [[ "$key" == "${id}_"* ]] || continue
                 suffix="${key#"${id}"_}"
-                # Never echo a secret back to the browser - getstate's
-                # result feeds main.js's field prefill directly, and a
-                # write-only credential (e.g. config_backup_shared_secret)
-                # must stay that way. Matched generically by suffix so any
-                # future "<id>_..._secret" field is covered without a
-                # per-field allowlist here.
-                [[ "$suffix" == *secret* ]] && continue
                 val="${raw_val%\"}"; val="${val#\"}"
                 fields_json=$(echo "$fields_json" | jq --arg k "$suffix" --arg v "$val" '. + {($k): $v}')
             done < "$TOOLBOX_CONF"
@@ -731,16 +724,6 @@ save)
     # 2. Write every submitted key=value to conf.
     while IFS=$'\t' read -r key value; do
         [[ -z "$key" ]] && continue
-        # A "*_secret" field arriving blank means "leave it as-is", not
-        # "clear it" - the browser never gets to see the stored value
-        # (see getstate's fields_json filter above), so an unrelated
-        # save (e.g. flipping some other module's toggle) always submits
-        # this field empty and must not wipe out a previously-set
-        # secret. Only a real, non-empty value from the Settings modal
-        # actually updates it.
-        if [[ "$key" == *secret* && -z "$value" ]]; then
-            continue
-        fi
         tb_set "$key" "$value"
     done < <(echo "$JSON_BLOB" | jq -r 'to_entries[] | "\(.key)\t\(.value)"')
 

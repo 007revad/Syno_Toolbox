@@ -116,7 +116,7 @@
                     <strong>Frequency</strong> dropdown.
                 </li>
                 <li>
-                    Set <strong>Target dir</strong> to where backups should
+                    Set <strong>Backup destination path</strong> to where backups should
                     be saved, using <strong>Browse</strong> to pick a
                     folder.
                     <ul><li>Set this even on a NAS you only ever intend to
@@ -125,25 +125,38 @@
                     this NAS's own scheduled backup is turned on.</li></ul>
                 </li>
                 <li>
-                    Click <strong>Settings</strong> to set the
-                    <strong>shared secret</strong> used to authenticate
-                    transfers between NAS. Set the same secret on every NAS
-                    involved, on both the sending and receiving side. Once
-                    saved, the secret is never shown again - leave the field
-                    blank and click <strong>Save</strong> to keep the
-                    secret already stored on this NAS unchanged.
-                </li>
-                <li>
-                    Optionally tick <strong>Remote backup</strong> (and
-                    <strong>2nd remote backup</strong>) to also send backups
-                    to another NAS, then choose it from the dropdown. The
-                    dropdown lists other NAS on your network that are
-                    running Syno Toolbox, found automatically - no need to
-                    enter an IP address by hand.
-                    <ul><li>A previously-selected NAS that isn't found in
-                    the current scan (e.g. it's offline) stays selected
-                    rather than being cleared, so you don't lose the
-                    destination just because it didn't answer once.</li></ul>
+                    Click <strong>Settings</strong> to open the Backup
+                    Transfer Settings window, where the
+                    <strong>shared secret</strong> and remote destinations
+                    are set together. This same window also opens from
+                    <strong>Backup Synoboot Image</strong> and
+                    <strong>Backup MTD Image</strong>'s own
+                    <strong>Settings</strong> buttons below, and the
+                    window shows which tool's destinations you're
+                    currently editing:
+                    <ul>
+                        <li>Set the <strong>shared secret</strong> used to
+                        authenticate transfers between NAS - one shared
+                        secret used by all three backup tools, and it has
+                        to be set to the same value on every NAS involved,
+                        on both the sending and receiving side.</li>
+                        <li>Optionally tick <strong>Remote backup</strong>
+                        (and <strong>2nd remote backup</strong>) to also
+                        send backups to another NAS, then choose it from
+                        the dropdown below it. Unlike the shared secret,
+                        these destinations are specific to whichever
+                        backup tool's Settings button you opened - DSM
+                        Configuration Backup, Backup Synoboot Image and
+                        Backup MTD Image can each be sent to their own,
+                        different pair of NAS. The dropdown lists other
+                        NAS on your network that are running Syno Toolbox,
+                        found automatically - no need to enter an IP
+                        address by hand. A previously-selected NAS that
+                        isn't found in the current scan (e.g. it's offline)
+                        stays selected rather than being cleared, so you
+                        don't lose the destination just because it didn't
+                        answer once.</li>
+                    </ul>
                 </li>
             </ol>
         </div>
@@ -156,6 +169,10 @@
                 Click <strong>Browse</strong> to choose the destination.
                 If enabled it runs when the package starts and only backs up
                 synoboot and it's partitions once for each DSM version.<br>
+                Click <strong>Settings</strong> to set the shared secret and
+                remote NAS destinations for pushing a copy to another NAS -
+                see <strong>DSM Configuration Backup</strong> above; it's
+                the same setting shared by all three backup tools.<br>
                 The tool's status area shows if a backup exists for the current DSM version.
             </p>
         </div>
@@ -168,6 +185,10 @@
                 Click <strong>Browse</strong> to choose the destination.
                 If enabled it runs when the package starts and only backs up
                 the MTD and it's partitions once for each DSM version.<br>
+                Click <strong>Settings</strong> to set the shared secret and
+                remote NAS destinations for pushing a copy to another NAS -
+                see <strong>DSM Configuration Backup</strong> above; it's
+                the same setting shared by all three backup tools.<br>
                 The tool's status area shows if a backup exists for the current DSM version.
             </p>
         </div>

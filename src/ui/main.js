@@ -96,6 +96,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-row-name { font-weight:bold; font-size:13px; }',
             '  .tb-row-controls { margin-top:6px; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:#555; }',
             '  .tb-row-controls input[type=text], .tb-row-controls input[type=number], .tb-row-controls input[type=password], .tb-row-controls select { padding:3px 5px; font-size:12px; border:1px solid #ccc; border-radius:3px; }',
+            '  .tb-row-controls button { padding:3px 10px; font-size:12px; border:1px solid #ccc; border-radius:3px; background:#f7f7f7; cursor:pointer; }',
             '  .tb-row-result { margin-top:6px; font-family:Verdana,Arial,sans-serif; font-size:11px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
             '  .tb-row-result-monospace { margin-top:6px; font-family:Consolas,Monaco,"Courier New",monospace; font-size:11px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
             '  .tb-toggle { width:38px; height:20px; position:relative; display:inline-block; flex:0 0 auto; }',
@@ -161,6 +162,8 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-backupset-close { border:none; background:none; font-size:16px; cursor:pointer; color:#666; line-height:1; padding:4px; }',
             '  .tb-backupset-close:hover { color:#000; }',
             '  .tb-backupset-body { padding:10px; font-size:13px; }',
+            '  .tb-backupset-body input[type=text], .tb-backupset-body select { padding:3px 5px; font-size:12px; border:1px solid #ccc; border-radius:3px; }',
+            '  .tb-backupset-context { font-size:12px; color:#1B8AED; font-weight:bold; margin-bottom:8px; }',
             '  .tb-backupset-hint { font-size:12px; color:#888; margin-top:10px; }',
             '  .tb-backupset-footer { padding:10px 10px 10px 10px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; }',
             '  .tb-backupset-savestatus { display:flex; align-items:center; gap:6px; font-size:13px; color:#888; }',
@@ -238,8 +241,27 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '    <div class="tb-backupset">',
             '      <div class="tb-backupset-header"><span>Backup Transfer Settings</span><button type="button" class="tb-backupset-close" aria-label="Close">\u00d7</button></div>',
             '      <div class="tb-backupset-body">',
-            '        <label>Shared secret:</label> <input type="password" class="tb-backupset-secret" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore="true" placeholder="Leave blank to keep the current secret" style="width:220px;">',
-            '        <div class="tb-backupset-hint">Authenticates backup transfers between NAS running Syno Toolbox - set the same secret on every NAS involved. It is never shown here once saved; leave this blank and click Save to keep the secret already stored on this NAS unchanged.</div>',
+            '        <div class="tb-backupset-context"></div>',
+            '        <label>Shared secret:</label> <input type="text" class="tb-backupset-secret" autocomplete="off" placeholder="No secret set" style="width:220px;">',
+            '        <div class="tb-backupset-hint">Authenticates backup transfers between NAS running Syno Toolbox - set the same secret on every NAS involved.</div>',
+            '        <div class="tb-remote-block" data-prefix="remote_" style="border-top:1px dashed #ddd;margin-top:12px;padding-top:8px;">',
+            '          <label><input type="checkbox" class="tb-remote-backup"> Remote backup</label>',
+            '          <div class="tb-remote-fields" style="margin-top:4px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;">',
+            '            <select class="tb-remote-select" style="min-width:220px;"><option value="">Searching\u2026</option></select>',
+            '            <input type="hidden" class="tb-remote-ip" value="">',
+            '            <input type="hidden" class="tb-remote-port" value="">',
+            '            <input type="hidden" class="tb-remote-label" value="">',
+            '          </div>',
+            '        </div>',
+            '        <div class="tb-remote-block" data-prefix="remote2_" style="border-top:1px dashed #ddd;margin-top:8px;padding-top:8px;">',
+            '          <label><input type="checkbox" class="tb-remote-backup"> 2nd remote backup</label>',
+            '          <div class="tb-remote-fields" style="margin-top:4px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;">',
+            '            <select class="tb-remote-select" style="min-width:220px;"><option value="">Searching\u2026</option></select>',
+            '            <input type="hidden" class="tb-remote-ip" value="">',
+            '            <input type="hidden" class="tb-remote-port" value="">',
+            '            <input type="hidden" class="tb-remote-label" value="">',
+            '          </div>',
+            '        </div>',
             '      </div>',
             '      <div class="tb-backupset-footer">',
             '        <span class="tb-backupset-savestatus">',
@@ -487,19 +509,109 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     },
 
     // ---------------------------------------------------------------
-    // Backup Transfer Settings modal - sets config_backup's shared
-    // secret used to authenticate NAS-to-NAS backup transfers
-    // (receive_backup in synotoolbox_api.sh). The field is deliberately
-    // write-only: getstate never echoes the stored secret back to the
-    // browser (see synotoolbox_api.sh's getstate case, which drops any
-    // "*_secret" suffix), so this modal has nothing to prefill and
-    // always opens blank. An empty Save leaves whatever secret is
-    // already stored on this NAS untouched rather than clearing it -
-    // see synotoolbox_api.sh's save case, which skips a "*_secret" key
-    // when its submitted value is blank.
+    // Backup Transfer Settings modal - one modal, opened from three
+    // different rows (DSM Configuration Backup, Backup Synoboot Image,
+    // Backup MTD Image). The shared secret (config_backup_shared_secret)
+    // really is global - one value, used by all three, all NAS. The two
+    // remote destinations are NOT global (confirmed with Dave 2026-09,
+    // reversing the earlier "one global setting" call): each of the
+    // three tools has its own pair, stored under its own module id
+    // (config_backup_remote_*, synoboot_backup_remote_*,
+    // mtd_backup_remote_*) - getstate/save need no changes for this,
+    // since both are already fully generic over "${id}_*" keys.
+    //
+    // this.backupsetActiveModId tracks which module's destinations are
+    // currently loaded into the modal, so Save (and an ordinary main-
+    // toolbar Save, via collectFormJson) know which module's keys to
+    // write the remote-block fields under. It defaults to
+    // "config_backup" and gets reset there on every Refresh (see
+    // wireConfigBackupRow) - opening Synoboot's or MTD's own Settings
+    // switches it until the next Refresh or a different Settings click.
+    // The secret itself is untouched by any of this - it's read from/
+    // written to config_backup's own hidden .tb-backup-secret field
+    // regardless of which module is active, since there's exactly one
+    // shared value and one DOM location for it.
     // ---------------------------------------------------------------
-    openBackupSettings: function() {
-        if (this.backupsetSecretInput) { this.backupsetSecretInput.value = ""; }
+    seedBackupSettingsFor: function(mod) {
+        var f = mod.current_fields || {};
+        this.backupsetActiveModId = mod.id;
+        this.backupsetContextEl = this.backupsetContextEl || this.backupsetBackdrop.querySelector(".tb-backupset-context");
+        if (this.backupsetContextEl) { this.backupsetContextEl.textContent = (mod.name || mod.id); }
+
+        Ext.each(this.backupsetBackdrop.querySelectorAll(".tb-remote-block"), function(block) {
+            var prefix = block.getAttribute("data-prefix"); // "remote_" or "remote2_"
+            var backupCb = block.querySelector(".tb-remote-backup");
+            var ipHidden = block.querySelector(".tb-remote-ip");
+            var portHidden = block.querySelector(".tb-remote-port");
+            var labelHidden = block.querySelector(".tb-remote-label");
+
+            backupCb.checked = f[prefix + "backup"] === "yes";
+            ipHidden.value = f[prefix + "ip"] || "";
+            portHidden.value = f[prefix + "toolbox_port"] || "";
+            labelHidden.value = f[prefix + "label"] || "";
+        });
+    },
+
+    // Populates both dropdowns' <option> lists from discovertoolboxnas,
+    // preserving whichever IP is currently in each block's hidden field
+    // (set moments earlier by seedBackupSettingsFor, for whichever
+    // module is now active) as the selected option. Mod-agnostic -
+    // works purely off the modal's current DOM state.
+    populateRemoteDropdowns: function() {
+        var self = this;
+        var blocks = this.backupsetBackdrop.querySelectorAll(".tb-remote-block");
+
+        SYNO.SDS.Syno_Toolbox.apiCall("discovertoolboxnas", {}, (function(resp) {
+            var found = (resp && resp.success && resp.result) || [];
+
+            Ext.each(blocks, function(block) {
+                var select = block.querySelector(".tb-remote-select");
+                var ipHidden = block.querySelector(".tb-remote-ip");
+                var portHidden = block.querySelector(".tb-remote-port");
+                var labelHidden = block.querySelector(".tb-remote-label");
+                var savedIp = ipHidden.value;
+
+                var optsHtml = '<option value="">None</option>';
+                var matchedSaved = false;
+                optsHtml += found.map(function(nas) {
+                    var hostname = nas.toolbox_hostname || nas.hostname || nas.ip;
+                    var selected = nas.ip === savedIp ? " selected" : "";
+                    if (selected) { matchedSaved = true; }
+                    return '<option value="' + Ext.util.Format.htmlEncode(nas.ip) + '"' +
+                        ' data-port="' + Ext.util.Format.htmlEncode(String(nas.toolbox_port || 5001)) + '"' +
+                        ' data-label="' + Ext.util.Format.htmlEncode(hostname) + '"' +
+                        selected + '>' +
+                        Ext.util.Format.htmlEncode(hostname + " (" + nas.ip + ")") + '</option>';
+                }).join("");
+
+                if (savedIp && !matchedSaved) {
+                    optsHtml += '<option value="' + Ext.util.Format.htmlEncode(savedIp) + '"' +
+                        ' data-port="' + Ext.util.Format.htmlEncode(portHidden.value || "5001") + '"' +
+                        ' data-label="' + Ext.util.Format.htmlEncode(labelHidden.value || savedIp) + '"' +
+                        ' selected>' +
+                        Ext.util.Format.htmlEncode((labelHidden.value || savedIp) + " (" + savedIp + ") \u2013 not found this scan") + '</option>';
+                }
+
+                select.innerHTML = optsHtml;
+
+                select.onchange = function() {
+                    var opt = select.options[select.selectedIndex];
+                    ipHidden.value = select.value;
+                    portHidden.value = opt ? (opt.getAttribute("data-port") || "") : "";
+                    labelHidden.value = opt ? (opt.getAttribute("data-label") || "") : "";
+                    self.setDirty(true);
+                };
+            });
+        }).createDelegate(this));
+    },
+
+    openBackupSettings: function(mod) {
+        if (!mod) { return; }
+        this.seedBackupSettingsFor(mod);
+        this.populateRemoteDropdowns();
+
+        var secretEl = this.body.dom.querySelector(".tb-backup-secret");
+        if (this.backupsetSecretInput) { this.backupsetSecretInput.value = secretEl ? secretEl.value : ""; }
         if (this.backupsetStatusEl) { this.backupsetStatusEl.textContent = ""; }
         Ext.fly(this.backupsetBackdrop).addClass("open");
     },
@@ -509,7 +621,9 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     },
 
     saveBackupSettings: function() {
-        var secretVal = this.backupsetSecretInput ? this.backupsetSecretInput.value : "";
+        var secretEl = this.body.dom.querySelector(".tb-backup-secret");
+        if (!secretEl) { this.closeBackupSettings(); return; }
+        secretEl.value = this.backupsetSecretInput ? this.backupsetSecretInput.value : "";
 
         var saveBtn = this.backupsetBackdrop.querySelector(".tb-backupset-save");
         saveBtn.disabled = true;
@@ -517,7 +631,6 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         if (this.backupsetSpinnerEl) { Ext.fly(this.backupsetSpinnerEl).addClass("show"); }
 
         var formData = this.collectFormJson();
-        formData["config_backup_shared_secret"] = secretVal;
         SYNO.SDS.Syno_Toolbox.apiCall("save", { form_json: Ext.encode(formData) }, "POST", (function(saveResp) {
             saveBtn.disabled = false;
             if (this.backupsetSpinnerEl) { Ext.fly(this.backupsetSpinnerEl).removeClass("show"); }
@@ -525,7 +638,6 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 if (this.backupsetStatusEl) { this.backupsetStatusEl.textContent = (saveResp && saveResp.message) || "Failed to save"; }
                 return;
             }
-            if (this.backupsetSecretInput) { this.backupsetSecretInput.value = ""; }
             if (this.backupsetStatusEl) { this.backupsetStatusEl.textContent = ""; }
             this.setDirty(false);
             this.closeBackupSettings();
@@ -761,9 +873,18 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 return this.renderConfigBackupControls(mod, f);
 
             case "toggle-filepicker":
+                // Backup Synoboot Image / Backup MTD Image share this
+                // control type. Settings here opens the SAME modal as
+                // DSM Configuration Backup's - the shared secret and 2
+                // remote NAS destinations are one global "where do my
+                // backups go" setting, not per-backup-type (confirmed
+                // with Dave 2026-09). Only config_backup's own row
+                // actually seeds the modal's fields from current_fields
+                // (see wireConfigBackupRow) - this button just opens it.
                 return '<label>' + (mod.filepicker && mod.filepicker.label || "Path") + ':</label> ' +
                     '<input type="text" class="tb-path" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.path || "") + '" style="width:200px;">' +
-                    ' <button type="button" class="tb-browse">Browse</button>';
+                    ' <button type="button" class="tb-browse">Browse</button>' +
+                    ' <button type="button" class="tb-backup-settings" title="Set the shared secret and remote NAS destinations used for backup transfers">Settings</button>';
 
             case "toggle-volume-numeric":
                 var def = (mod.numeric && mod.numeric.default) || 1024;
@@ -812,36 +933,21 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // rather than typed IP/port/dir/user fields. Transfer itself goes
     // through Syno_Toolbox's own receive_backup endpoint (HTTPS, shared
     // secret set via the Settings modal below), not SSH/scp - so there's
-    // no remote/local user or remote dir to configure per NAS.
+    // no remote/local user or remote dir to configure per NAS. The two
+    // remote blocks themselves live inside the Settings modal (below the
+    // shared secret), not in this row - their saved values get filled in
+    // by wireConfigBackupRow, since this function has no access to the
+    // modal's persistent DOM elements and the modal's static markup has
+    // no access to this row's current_fields.
     renderConfigBackupControls: function(mod, f) {
-        var remoteBlock = function(prefix, title) {
-            var checked = f[prefix + "backup"] === "yes" ? "checked" : "";
-            var savedIp = f[prefix + "ip"] || "";
-            var savedPort = f[prefix + "toolbox_port"] || "";
-            var savedLabel = f[prefix + "label"] || "";
-            var placeholderOpt = savedIp
-                ? '<option value="' + Ext.util.Format.htmlEncode(savedIp) + '" selected>' +
-                    Ext.util.Format.htmlEncode((savedLabel || savedIp) + " (" + savedIp + ")") + '</option>'
-                : '<option value="">Searching\u2026</option>';
-            return [
-                '<div class="tb-remote-block" data-prefix="' + prefix + '" style="width:100%;border-top:1px dashed #ddd;margin-top:8px;padding-top:6px;">',
-                '  <label><input type="checkbox" class="tb-remote-backup"' + checked + '> ' + title + '</label>',
-                '  <div class="tb-remote-fields" style="margin-top:4px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;">',
-                '    <select class="tb-remote-select" style="min-width:240px;">' + placeholderOpt + '</select>',
-                '    <input type="hidden" class="tb-remote-ip" value="' + Ext.util.Format.htmlEncode(savedIp) + '">',
-                '    <input type="hidden" class="tb-remote-port" value="' + Ext.util.Format.htmlEncode(savedPort) + '">',
-                '    <input type="hidden" class="tb-remote-label" value="' + Ext.util.Format.htmlEncode(savedLabel) + '">',
-                '  </div>',
-                '</div>'
-            ].join("");
-        };
-
         return this.renderFrequencySelect(mod.schedule && mod.schedule.default_frequency, f.frequency) +
-            ' <label>Target dir:</label> <input type="text" class="tb-target-dir" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.target_dir || "") + '" style="width:200px;">' +
-            ' <button type="button" class="tb-browse-target-dir">Browse</button>' +
-            ' <button type="button" class="tb-backup-settings" title="Set the shared secret used to authenticate transfers to other NAS">Settings</button>' +
-            remoteBlock("remote_", "Remote backup") +
-            remoteBlock("remote2_", "2nd remote backup");
+            '<button type="button" class="tb-backup-settings" title="Set the shared secret and remote NAS destinations used for backup transfers">Settings</button>' +
+            '<input type="hidden" class="tb-backup-secret" value="' + Ext.util.Format.htmlEncode(f.shared_secret || "") + '">' +
+            '<div style="width:100%;display:flex;align-items:center;gap:8px;">' +
+            '<label>Backup destination path:</label>' +
+            '<input type="text" class="tb-target-dir" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.target_dir || "") + '" style="width:200px;">' +
+            '<button type="button" class="tb-browse-target-dir">Browse</button>' +
+            '</div>';
     },
 
     renderHourSelect: function(defaultHour, currentHour) {
@@ -945,10 +1051,19 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
 
             if (mod && mod.control === "toggle-config-backup") {
                 this.wireConfigBackupRow(rowEl, mod);
-                var backupSettingsBtn = rowEl.querySelector(".tb-backup-settings");
-                if (backupSettingsBtn) {
-                    Ext.fly(backupSettingsBtn).on("click", (function() { this.openBackupSettings(); }).createDelegate(this));
-                }
+            }
+
+            // Settings button is generic across any row that renders one
+            // (config_backup, and Synoboot/MTD's toggle-filepicker rows) -
+            // all three open the same global Backup Transfer Settings
+            // modal, but only config_backup's own row above seeds its
+            // fields (see wireConfigBackupRow) - re-seeding it here for
+            // every row that has this button would let whichever row
+            // wires last stomp on the values the others just set, since
+            // Synoboot/MTD's current_fields don't carry these keys at all.
+            var backupSettingsBtn = rowEl.querySelector(".tb-backup-settings");
+            if (backupSettingsBtn) {
+                Ext.fly(backupSettingsBtn).on("click", (function() { this.openBackupSettings(mod); }).createDelegate(this));
             }
 
             if (mod && mod.control === "toggle-wol-selector") {
@@ -1279,61 +1394,21 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     },
 
     // ---------------------------------------------------------------
-    // config_backup row: both remote blocks' dropdowns are populated
-    // once, together, from a single discovertoolboxnas call when the
-    // row is wired (page open/refresh) - no per-block "Discover" click
-    // needed anymore. A block's previously-saved selection is kept
-    // even if that NAS doesn't answer this particular scan (offline,
-    // different subnet) rather than silently dropped, so a real save
-    // never loses a working destination just because discovery missed
-    // it once.
+    // config_backup's own row: runs on every Refresh (unlike Synoboot/
+    // MTD's Settings buttons, which only touch the modal on click), so
+    // the modal always resets back to reflecting config_backup's own
+    // saved remote destinations by default after a Refresh - meaning an
+    // ordinary Save that never opens Settings still submits
+    // config_backup's own unchanged values, not stale leftovers from
+    // whichever module's Settings was last opened before the refresh.
+    // See seedBackupSettingsFor/populateRemoteDropdowns for what this
+    // actually does - both are shared with openBackupSettings, since
+    // this is functionally identical to "open Settings for config_backup"
+    // minus actually opening the modal.
     // ---------------------------------------------------------------
     wireConfigBackupRow: function(rowEl, mod) {
-        var self = this;
-        var blocks = rowEl.querySelectorAll(".tb-remote-block");
-
-        SYNO.SDS.Syno_Toolbox.apiCall("discovertoolboxnas", {}, (function(resp) {
-            var found = (resp && resp.success && resp.result) || [];
-
-            Ext.each(blocks, function(block) {
-                var select = block.querySelector(".tb-remote-select");
-                var ipHidden = block.querySelector(".tb-remote-ip");
-                var portHidden = block.querySelector(".tb-remote-port");
-                var labelHidden = block.querySelector(".tb-remote-label");
-                var savedIp = ipHidden.value;
-
-                var optsHtml = '<option value="">None</option>';
-                var matchedSaved = false;
-                optsHtml += found.map(function(nas) {
-                    var hostname = nas.toolbox_hostname || nas.hostname || nas.ip;
-                    var selected = nas.ip === savedIp ? " selected" : "";
-                    if (selected) { matchedSaved = true; }
-                    return '<option value="' + Ext.util.Format.htmlEncode(nas.ip) + '"' +
-                        ' data-port="' + Ext.util.Format.htmlEncode(String(nas.toolbox_port || 5001)) + '"' +
-                        ' data-label="' + Ext.util.Format.htmlEncode(hostname) + '"' +
-                        selected + '>' +
-                        Ext.util.Format.htmlEncode(hostname + " (" + nas.ip + ")") + '</option>';
-                }).join("");
-
-                if (savedIp && !matchedSaved) {
-                    optsHtml += '<option value="' + Ext.util.Format.htmlEncode(savedIp) + '"' +
-                        ' data-port="' + Ext.util.Format.htmlEncode(portHidden.value || "5001") + '"' +
-                        ' data-label="' + Ext.util.Format.htmlEncode(labelHidden.value || savedIp) + '"' +
-                        ' selected>' +
-                        Ext.util.Format.htmlEncode((labelHidden.value || savedIp) + " (" + savedIp + ") \u2013 not found this scan") + '</option>';
-                }
-
-                select.innerHTML = optsHtml;
-
-                Ext.fly(select).on("change", (function() {
-                    var opt = select.options[select.selectedIndex];
-                    ipHidden.value = select.value;
-                    portHidden.value = opt ? (opt.getAttribute("data-port") || "") : "";
-                    labelHidden.value = opt ? (opt.getAttribute("data-label") || "") : "";
-                    self.setDirty(true);
-                }).createDelegate(self));
-            });
-        }).createDelegate(this));
+        this.seedBackupSettingsFor(mod);
+        this.populateRemoteDropdowns();
     },
 
     findModule: function(id) {
@@ -1385,6 +1460,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // synotoolbox_api.sh's save action expects.
     // ---------------------------------------------------------------
     collectFormJson: function() {
+        var self = this;
         var form = {};
         var rows = this.listEl.querySelectorAll(".tb-row");
         Ext.each(rows, function(rowEl) {
@@ -1403,13 +1479,25 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 var targetDirEl = rowEl.querySelector(".tb-target-dir");
                 if (targetDirEl) { form[id + "_target_dir"] = targetDirEl.value; }
 
-                Ext.each(rowEl.querySelectorAll(".tb-remote-block"), function(block) {
+                var secretEl = rowEl.querySelector(".tb-backup-secret");
+                if (secretEl) { form[id + "_shared_secret"] = secretEl.value; }
+
+                // The two remote blocks live in the Settings modal now (a
+                // page-level singleton), not in this row - see
+                // wireConfigBackupRow/openBackupSettings. They belong to
+                // whichever module's Settings is currently loaded into the
+                // modal (self.backupsetActiveModId), NOT necessarily
+                // config_backup - each of the three backup tools has its
+                // own separate remote destinations, only the shared secret
+                // above is actually config_backup's alone.
+                var activeModId = self.backupsetActiveModId || "config_backup";
+                Ext.each(self.backupsetBackdrop.querySelectorAll(".tb-remote-block"), function(block) {
                     var prefix = block.getAttribute("data-prefix"); // "remote_" or "remote2_"
                     var backupCb = block.querySelector(".tb-remote-backup");
-                    form[id + "_" + prefix + "backup"] = backupCb && backupCb.checked ? "yes" : "no";
-                    form[id + "_" + prefix + "ip"] = block.querySelector(".tb-remote-ip").value;
-                    form[id + "_" + prefix + "toolbox_port"] = block.querySelector(".tb-remote-port").value;
-                    form[id + "_" + prefix + "label"] = block.querySelector(".tb-remote-label").value;
+                    form[activeModId + "_" + prefix + "backup"] = backupCb && backupCb.checked ? "yes" : "no";
+                    form[activeModId + "_" + prefix + "ip"] = block.querySelector(".tb-remote-ip").value;
+                    form[activeModId + "_" + prefix + "toolbox_port"] = block.querySelector(".tb-remote-port").value;
+                    form[activeModId + "_" + prefix + "label"] = block.querySelector(".tb-remote-label").value;
                     // This UI only ever builds toolbox-method destinations
                     // (no SSH/File Station fields exist here anymore) - has
                     // to be written explicitly on every save, otherwise a
@@ -1417,7 +1505,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                     // default with none of the fields SSH needs, and an
                     // older install keeps whatever stale method value it
                     // had from before this redesign.
-                    form[id + "_" + prefix + "method"] = "toolbox";
+                    form[activeModId + "_" + prefix + "method"] = "toolbox";
                 });
             }
 
