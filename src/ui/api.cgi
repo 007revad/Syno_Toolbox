@@ -118,7 +118,7 @@ POST)
         echo "Content-Type: application/json; charset=utf-8"
         echo ""
 
-        if [[ -z "$FILENAME" || ! "$FILENAME" =~ ^[A-Za-z0-9._-]+$ || "$FILENAME" == .* ]]; then
+        if [[ -z "$FILENAME" || ! "$FILENAME" =~ ^[A-Za-z0-9._+-]+$ || "$FILENAME" == .* ]]; then
             json_response false "Invalid filename" ""
             exit 0
         fi

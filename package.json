@@ -21,6 +21,6 @@
     "dsmuidir": "ui",
     "dsmappname": "SYNO.SDS._ThirdParty.App.Syno_Toolbox",
     "thirdparty": "yes",
-    "beta": "yes"
+    "beta": "no"
   }
 }

@@ -5,10 +5,10 @@
 
 scriptver="1.0.1-toolbox"
 
-DSM_VER="$(synogetkeyvalue /etc.defaults/VERSION majorversion)"
+dsm="$(synogetkeyvalue /etc.defaults/VERSION majorversion)"
 
 # Get UPS server's IP address
-if [[ "$DSM_VER" -ge "7" ]]; then
+if [[ "$dsm" -ge "7" ]]; then
     # DSM 7
     # Get UPS mode
     UPS_MODE="$(synogetkeyvalue /usr/syno/etc/ups/synoups.conf ups_mode)"

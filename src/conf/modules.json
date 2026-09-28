@@ -236,7 +236,7 @@
       "live": false,
       "run_args": [],
       "disable_args": null,
-      "check_args": null,
+      "check_args": ["check"],
       "schedule": { "default_frequency": "week" },
       "note": "Script reads its own settings straight from toolbox.conf (config_backup_* keys) rather than taking CLI args - run_args stays empty. Conf keys mirror the script's own variable names: target_dir, remote_backup, remote_port, remote_ip, remote_dir, local_user, remote_user, and the same set prefixed remote2_/local2_ for the 2nd optional remote. Discover NAS is repurposed here to prefill Remote IP fields, not as a source-NAS list."
     },
@@ -277,8 +277,9 @@
       "run_args": ["--volumes={volumes}", "--kb={kb}"],
       "disable_args": ["--volumes={volumes}", "--kb=1024"],
       "check_args": ["--check"],
-      "numeric": { "label": "Sequential I/O (kb)", "default": 1024, "min": 4 },
+      "numeric": { "label": "Sequential I/O (kb)", "default": 1024, "min": 0 },
       "volume_source": "listvolumes",
+      "rerun_on_change": true,
       "note": "Confirmed CLI: --volumes=VOLUME[,VOLUME...] --kb=KB. Disable re-runs with --kb=1024 against the same selected volumes."
     },
     {

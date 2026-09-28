@@ -84,6 +84,26 @@ if [[ $Remote2_Backup == "yes" ]]; then
     fi
 fi
 
+# Percent-encodes a string for safe use in a URL query string - needed
+# because filename can contain characters like "+" (real Synology model
+# names, e.g. DS925+/DS720+) that have special meaning in a query
+# string otherwise: a literal "+" is the standard convention for a
+# space, and api.cgi's own urldecode() follows that convention when
+# parsing QUERY_STRING - an unencoded "+" here silently becomes a space
+# in the filename on the receiving end instead of surviving as "+".
+tb_urlencode() {
+    local string="$1" length="${#1}" pos c encoded="" hex
+    for (( pos=0; pos<length; pos++ )); do
+        c="${string:$pos:1}"
+        case "$c" in
+            [a-zA-Z0-9.~_-]) encoded+="$c" ;;
+            *) printf -v hex '%%%02X' "'$c"
+               encoded+="$hex" ;;
+        esac
+    done
+    printf '%s' "$encoded"
+}
+
 # Args: ip  https_port  secret  local_file_path  filename  label
 # (unchanged from synology_config_backup.sh - see that file's own
 # comments for the full protocol rationale)
@@ -102,9 +122,9 @@ tb_backup_upload() {
         return 1
     fi
 
-    url="https://${ip}:${port}/webman/3rdparty/Syno_Toolbox/api.cgi?action=receive_backup&filename=${filename}"
+    url="https://${ip}:${port}/webman/3rdparty/Syno_Toolbox/api.cgi?action=receive_backup&filename=$(tb_urlencode "$filename")"
 
-    response=$(curl -s -k --max-time 300 -X POST \
+    response=$(curl -s -k --max-time 30 -X POST \
         -H "X-Toolbox-Secret: ${secret}" \
         --data-binary "@${file_path}" \
         "$url")
@@ -124,19 +144,33 @@ tb_backup_upload() {
 push_remote_copies() {
     local file_path="$1" filename="$2" label="$3"
 
-    if [[ $Remote_Backup == "yes" ]]; then
-        if tb_backup_upload "$Remote_IP" "$Remote_Toolbox_Port" "$Shared_Secret" \
-            "$file_path" "$filename" "${Remote_Host:-$Remote_IP}"; then
-            echo -e "Upload successful to ${Remote_Host:-$Remote_IP} via Syno_Toolbox (${label})" |& tee -a "$TOOLBOX_LOG"
+    # Backgrounded and disowned: this script runs as a boot module,
+    # which gates the package's own "Starting..." -> running
+    # transition. tb_backup_upload's curl call can take up to
+    # --max-time to fail against a peer whose own package hasn't
+    # finished starting yet (or is stopped outright) - blocking here
+    # means Package Center sits on "Loading..." for however long that
+    # takes, times however many targets are unreachable. Backgrounding
+    # means this function (and the boot module) returns immediately
+    # regardless of how the transfer goes; the outcome still lands in
+    # toolbox.log, just asynchronously. disown so the job survives
+    # after this script's own process exits.
+    (
+        if [[ $Remote_Backup == "yes" ]]; then
+            if tb_backup_upload "$Remote_IP" "$Remote_Toolbox_Port" "$Shared_Secret" \
+                "$file_path" "$filename" "${Remote_Host:-$Remote_IP}"; then
+                echo -e "Upload successful to ${Remote_Host:-$Remote_IP} via Syno_Toolbox (${label})" |& tee -a "$TOOLBOX_LOG"
+            fi
         fi
-    fi
 
-    if [[ $Remote2_Backup == "yes" && $Remote2_Skip == "no" ]]; then
-        if tb_backup_upload "$Remote2_IP" "$Remote2_Toolbox_Port" "$Shared_Secret" \
-            "$file_path" "$filename" "${Remote2_Host:-$Remote2_IP}"; then
-            echo -e "Upload successful to ${Remote2_Host:-$Remote2_IP} via Syno_Toolbox (${label})" |& tee -a "$TOOLBOX_LOG"
+        if [[ $Remote2_Backup == "yes" && $Remote2_Skip == "no" ]]; then
+            if tb_backup_upload "$Remote2_IP" "$Remote2_Toolbox_Port" "$Shared_Secret" \
+                "$file_path" "$filename" "${Remote2_Host:-$Remote2_IP}"; then
+                echo -e "Upload successful to ${Remote2_Host:-$Remote2_IP} via Syno_Toolbox (${label})" |& tee -a "$TOOLBOX_LOG"
+            fi
         fi
-    fi
+    ) &
+    disown
 }
 
 scriptver="v1.0.4-toolbox"

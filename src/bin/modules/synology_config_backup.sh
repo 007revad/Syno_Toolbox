@@ -7,16 +7,20 @@
 # Works on DMS 7 and DSM 6
 #
 # Author: 007revad
-# Date/Version: 2026-09-26 v1.1.8
+# Date/Version: 2026-09-27 v1.1.9
 #
 # Github: https://github.com/007revad/Synology_Config_Backup
 # Script verified at https://www.shellcheck.net/
 #--------------------------------------------------------------------------
 
-scriptver="v1.1.8-toolbox"
+scriptver="v1.1.9-toolbox"
 # v1.1.8-toolbox: added "toolbox" remote copy method - transfers via a
 # peer NAS's own Syno_Toolbox receive_backup endpoint (HTTPS + shared
 # secret), no DSM account/SSH key/File Station 2FA restriction needed.
+
+if [[ $1 == "check" ]]; then
+    check=yes
+fi
 
 PKG_NAME="Syno_Toolbox"
 PKG_ROOT="/var/packages/${PKG_NAME}"
@@ -34,7 +38,7 @@ Target_DIR="$(/usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" config_backup_target
 
 # Check Target_DIR volume is still correct - and fix if share has moved to another volume
 if [[ -n "$Target_DIR" ]]; then
-    "$PKG_ROOT/target/bin/check_share_volume.sh" --key=config_backup_target_dir --path="${bakpath:?}"
+    "$PKG_ROOT/target/bin/check_share_volume.sh" --key=config_backup_target_dir --path="${Target_DIR:?}"
     Target_DIR="$(/usr/syno/bin/synogetkeyvalue $TOOLBOX_CONF config_backup_target_dir)"
 fi
 
@@ -100,7 +104,38 @@ buildnumber=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION buildnumber)
 # Set backup filename
 # Append date and time to backup file
 #File_Name="$( hostname )_$( date +%F_%H%M ).dss"
-File_Name="$( hostname )_$( date +%F_%H%M )_${majorversion}.${majorversion}-${buildnumber}.dss"
+File_Name="$( hostname )_$( date +%F_%H%M )_${majorversion}.${minorversion}-${buildnumber}.dss"
+
+
+#--------------------------------------------------------------------------
+# Show if scheduled and show the latest backup
+#--------------------------------------------------------------------------
+if [[ $1 == "check" ]]; then
+    no_task=""
+    if /var/packages/Syno_Toolbox/target/bin/task_setup.sh find \
+        --name="Syno_Toolbox DSM Configuration Backup" | grep '"exists":true,"id":' >/dev/null; then
+        echo -n "Scheduled. "
+    else
+        echo "Not Scheduled"
+        no_task=yes
+    fi
+ 
+    host=$( hostname )
+    latest_backup=""
+    #latest_backup="$(ls "$Target_DIR" | grep -i "$host" | tail -1 2>/dev/null)"
+    for f in "$Target_DIR"/*; do
+        base=$(basename -- "$f")
+        if [[ ${base,,} == *"${host,,}"* ]]; then
+            latest_backup="$base"
+        fi
+    done
+    if [[ -n "$latest_backup" ]]; then
+        echo "Last backup: $latest_backup"
+    elif [[ "$no_task" != "yes" ]]; then
+        echo "No backup yet"
+    fi
+    exit 0
+fi
 
 
 #--------------------------------------------------------------------------
@@ -114,6 +149,7 @@ File_Name="$( hostname )_$( date +%F_%H%M )_${majorversion}.${majorversion}-${bu
 # has a trusted certificate.
 #
 # Args: ip  https_port  account  password  dest_dir  local_file_path  label
+#--------------------------------------------------------------------------
 fs_backup_upload() {
     local ip="$1" port="$2" account="$3" password="$4"
     local dest_dir="$5" file_path="$6" label="$7"
@@ -178,6 +214,28 @@ fs_backup_upload() {
 
 
 #--------------------------------------------------------------------------
+# Percent-encodes a string for safe use in a URL query string - needed
+# because filename can contain characters like "+" (real Synology model
+# names, e.g. DS925+/DS720+) that have special meaning in a query
+# string otherwise: a literal "+" is the standard convention for a
+# space, and api.cgi's own urldecode() follows that convention when
+# parsing QUERY_STRING - an unencoded "+" here silently becomes a space
+# in the filename on the receiving end instead of surviving as "+".
+#--------------------------------------------------------------------------
+tb_urlencode() {
+    local string="$1" length="${#1}" pos c encoded="" hex
+    for (( pos=0; pos<length; pos++ )); do
+        c="${string:$pos:1}"
+        case "$c" in
+            [a-zA-Z0-9.~_-]) encoded+="$c" ;;
+            *) printf -v hex '%%%02X' "'$c"
+               encoded+="$hex" ;;
+        esac
+    done
+    printf '%s' "$encoded"
+}
+
+#--------------------------------------------------------------------------
 # Upload a file to a peer NAS running Syno_Toolbox, via that package's own
 # receive_backup endpoint (api.cgi) - a plain HTTPS POST of the raw file
 # bytes, authenticated by a shared secret (set once in Syno_Toolbox's
@@ -193,6 +251,7 @@ fs_backup_upload() {
 # string, the secret in a custom header - never in the body itself.
 #
 # Args: ip  https_port  secret  local_file_path  filename  label
+#--------------------------------------------------------------------------
 tb_backup_upload() {
     local ip="$1" port="$2" secret="$3"
     local file_path="$4" filename="$5" label="$6"
@@ -208,7 +267,7 @@ tb_backup_upload() {
         return 1
     fi
 
-    url="https://${ip}:${port}/webman/3rdparty/Syno_Toolbox/api.cgi?action=receive_backup&filename=${filename}"
+    url="https://${ip}:${port}/webman/3rdparty/Syno_Toolbox/api.cgi?action=receive_backup&filename=$(tb_urlencode "$filename")"
 
     response=$(curl -s -k --max-time 300 -X POST \
         -H "X-Toolbox-Secret: ${secret}" \
@@ -240,16 +299,18 @@ fi
 #--------------------------------------------------------------------------
 # Export Synology configuration to a Synology directory
 
-echo -e "Starting backup of Synology configuration on $( hostname )\n"
+#echo -e "Starting backup of Synology configuration on $( hostname )\n"
 
 if [[ ! -d "$Target_DIR" ]]; then
-	echo -e "\nBackup path does not exist:\n${Target_DIR}"
+	#echo -e "\nBackup path does not exist: \n${Target_DIR}"
+	echo -e "Backup path does not exist: ${Target_DIR}"
 	exit 255
 fi
 
 cd "${Target_DIR}" || exit 255
 if [[ -f "${Target_DIR}/${File_Name}" ]]; then
-	echo -e "Error: Backup file already exists: \n${Target_DIR}/${File_Name}"
+	#echo -e "Error: Backup file already exists: \n${Target_DIR}/${File_Name}"
+	echo -e "Error: Backup file already exists: ${Target_DIR}/${File_Name}"
 	exit 255
 else
     /usr/syno/bin/synoconfbkp export --filepath="${Target_DIR}/${File_Name}" >/dev/null
@@ -259,12 +320,14 @@ fi
 
 # Check exported file created
 if [[ ! -f "${Target_DIR}/${File_Name}" ]]; then
-	echo -e "Error: Backup file not created: \n${Target_DIR}/${File_Name}"
+	#echo -e "Error: Backup file not created: \n${Target_DIR}/${File_Name}"
+	echo -e "Error: Backup file not created: ${Target_DIR}/${File_Name}"
 	exit 255
 else
 	#echo "Synology configuration exported to $File_Name on $( hostname )"
 	#echo "Exported Synology configuration on $( hostname )"
-	echo "Export successful on $( hostname )"
+	#echo "Export successful on $( hostname )"
+	echo "Backup successful on $( hostname ): $File_Name"
 fi
 
 
@@ -283,11 +346,11 @@ if [[ $Remote_Backup == "yes" ]]; then
     Remote_Host=$("$nmblookup_cmd" -A "$Remote_IP" | sed -n 2p | cut -d ' ' -f1)
     Remote_Host="${Remote_Host:1}"
 
-    if [[ $Remote_Host ]]; then
-        echo -e "\nCopying backup to ${Remote_Host}"
-    else
-        echo -e "\nCopying backup to ${Remote_IP}"
-    fi
+    #if [[ $Remote_Host ]]; then
+    #    echo -e "\nCopying backup to ${Remote_Host}"
+    #else
+    #    echo -e "\nCopying backup to ${Remote_IP}"
+    #fi
 
     if [[ $Remote_Method == "filestation" ]]; then
         if fs_backup_upload "$Remote_IP" "$Remote_HTTPS_Port" "$Remote_FS_User" \
@@ -313,11 +376,11 @@ if [[ $Remote2_Backup == "yes" ]]; then
         Remote2_Host=$("$nmblookup_cmd" -A "$Remote2_IP" | sed -n 2p | cut -d ' ' -f1)
         Remote2_Host="${Remote2_Host:1}"
 
-        if [[ $Remote2_Host ]]; then
-            echo -e "\nCopying backup to ${Remote2_Host}"
-        else
-            echo -e "\nCopying backup to ${Remote2_IP}"
-        fi
+        #if [[ $Remote2_Host ]]; then
+        #    echo -e "\nCopying backup to ${Remote2_Host}"
+        #else
+        #    echo -e "\nCopying backup to ${Remote2_IP}"
+        #fi
 
         if [[ $Remote2_Method == "filestation" ]]; then
             if fs_backup_upload "$Remote2_IP" "$Remote2_HTTPS_Port" "$Remote2_FS_User" \
@@ -343,6 +406,6 @@ fi
 #--------------------------------------------------------------------------
 # Finished
 
-echo -e "\nSynology configuration backup complete"
+#echo -e "\nSynology configuration backup complete"
 
 exit

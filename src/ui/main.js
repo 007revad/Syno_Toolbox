@@ -552,57 +552,91 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         });
     },
 
-    // Populates both dropdowns' <option> lists from discovertoolboxnas,
-    // preserving whichever IP is currently in each block's hidden field
-    // (set moments earlier by seedBackupSettingsFor, for whichever
-    // module is now active) as the selected option. Mod-agnostic -
-    // works purely off the modal's current DOM state.
+    // Renders both dropdowns from whatever NAS list scanToolboxNas last
+    // found - does NOT run a scan itself. Settings can be opened/
+    // switched between as fast as the user likes with no network call
+    // involved at all, so there's nothing left to race.
     populateRemoteDropdowns: function() {
-        var self = this;
-        var blocks = this.backupsetBackdrop.querySelectorAll(".tb-remote-block");
+        this.renderRemoteOptions(this.lastDiscoveredNas || []);
+    },
+
+    // The only place discovertoolboxnas is actually called - see its
+    // call site in renderList for why (package open / Refresh only).
+    // Re-renders the dropdowns with the fresh result only if the modal
+    // is currently open; if it's closed there's no visible dropdown to
+    // update, and the next time it's opened populateRemoteDropdowns
+    // will already have this scan's result cached.
+    scanToolboxNas: function() {
+        this.backupScanInFlight = true;
+        this.updateBackupScanSpinner();
 
         SYNO.SDS.Syno_Toolbox.apiCall("discovertoolboxnas", {}, (function(resp) {
+            this.backupScanInFlight = false;
+            this.updateBackupScanSpinner();
+
             var found = (resp && resp.success && resp.result) || [];
-
-            Ext.each(blocks, function(block) {
-                var select = block.querySelector(".tb-remote-select");
-                var ipHidden = block.querySelector(".tb-remote-ip");
-                var portHidden = block.querySelector(".tb-remote-port");
-                var labelHidden = block.querySelector(".tb-remote-label");
-                var savedIp = ipHidden.value;
-
-                var optsHtml = '<option value="">None</option>';
-                var matchedSaved = false;
-                optsHtml += found.map(function(nas) {
-                    var hostname = nas.toolbox_hostname || nas.hostname || nas.ip;
-                    var selected = nas.ip === savedIp ? " selected" : "";
-                    if (selected) { matchedSaved = true; }
-                    return '<option value="' + Ext.util.Format.htmlEncode(nas.ip) + '"' +
-                        ' data-port="' + Ext.util.Format.htmlEncode(String(nas.toolbox_port || 5001)) + '"' +
-                        ' data-label="' + Ext.util.Format.htmlEncode(hostname) + '"' +
-                        selected + '>' +
-                        Ext.util.Format.htmlEncode(hostname + " (" + nas.ip + ")") + '</option>';
-                }).join("");
-
-                if (savedIp && !matchedSaved) {
-                    optsHtml += '<option value="' + Ext.util.Format.htmlEncode(savedIp) + '"' +
-                        ' data-port="' + Ext.util.Format.htmlEncode(portHidden.value || "5001") + '"' +
-                        ' data-label="' + Ext.util.Format.htmlEncode(labelHidden.value || savedIp) + '"' +
-                        ' selected>' +
-                        Ext.util.Format.htmlEncode((labelHidden.value || savedIp) + " (" + savedIp + ") \u2013 not found this scan") + '</option>';
-                }
-
-                select.innerHTML = optsHtml;
-
-                select.onchange = function() {
-                    var opt = select.options[select.selectedIndex];
-                    ipHidden.value = select.value;
-                    portHidden.value = opt ? (opt.getAttribute("data-port") || "") : "";
-                    labelHidden.value = opt ? (opt.getAttribute("data-label") || "") : "";
-                    self.setDirty(true);
-                };
-            });
+            this.lastDiscoveredNas = found;
+            if (this.backupsetBackdrop && Ext.fly(this.backupsetBackdrop).hasClass("open")) {
+                this.renderRemoteOptions(found);
+            }
         }).createDelegate(this));
+    },
+
+    // Same pattern as updateWolSpinner, but toggles all three rows'
+    // spinners together (DSM Configuration Backup, Backup Synoboot
+    // Image, Backup MTD Image all share the .tb-backup-scan-spinner
+    // class) since they all reflect the one scan in scanToolboxNas.
+    updateBackupScanSpinner: function() {
+        var self = this;
+        if (!this.toolsPanel) { return; }
+        Ext.each(this.toolsPanel.querySelectorAll(".tb-backup-scan-spinner"), function(spinnerEl) {
+            Ext.fly(spinnerEl)[self.backupScanInFlight ? "addClass" : "removeClass"]("show");
+        });
+    },
+
+    // Mod-agnostic - works purely off the modal's current DOM state
+    // (each block's hidden .tb-remote-ip etc.) plus whatever NAS list
+    // is passed in.
+    renderRemoteOptions: function(found) {
+        var self = this;
+        Ext.each(this.backupsetBackdrop.querySelectorAll(".tb-remote-block"), function(block) {
+            var select = block.querySelector(".tb-remote-select");
+            var ipHidden = block.querySelector(".tb-remote-ip");
+            var portHidden = block.querySelector(".tb-remote-port");
+            var labelHidden = block.querySelector(".tb-remote-label");
+            var savedIp = ipHidden.value;
+
+            var optsHtml = '<option value="">None</option>';
+            var matchedSaved = false;
+            optsHtml += found.map(function(nas) {
+                var hostname = nas.toolbox_hostname || nas.hostname || nas.ip;
+                var selected = nas.ip === savedIp ? " selected" : "";
+                if (selected) { matchedSaved = true; }
+                return '<option value="' + Ext.util.Format.htmlEncode(nas.ip) + '"' +
+                    ' data-port="' + Ext.util.Format.htmlEncode(String(nas.toolbox_port || 5001)) + '"' +
+                    ' data-label="' + Ext.util.Format.htmlEncode(hostname) + '"' +
+                    selected + '>' +
+                    Ext.util.Format.htmlEncode(hostname + " (" + nas.ip + ")") + '</option>';
+            }).join("");
+
+            if (savedIp && !matchedSaved) {
+                optsHtml += '<option value="' + Ext.util.Format.htmlEncode(savedIp) + '"' +
+                    ' data-port="' + Ext.util.Format.htmlEncode(portHidden.value || "5001") + '"' +
+                    ' data-label="' + Ext.util.Format.htmlEncode(labelHidden.value || savedIp) + '"' +
+                    ' selected>' +
+                    Ext.util.Format.htmlEncode((labelHidden.value || savedIp) + " (" + savedIp + ") \u2013 not found this scan") + '</option>';
+            }
+
+            select.innerHTML = optsHtml;
+
+            select.onchange = function() {
+                var opt = select.options[select.selectedIndex];
+                ipHidden.value = select.value;
+                portHidden.value = opt ? (opt.getAttribute("data-port") || "") : "";
+                labelHidden.value = opt ? (opt.getAttribute("data-label") || "") : "";
+                self.setDirty(true);
+            };
+        });
     },
 
     openBackupSettings: function(mod) {
@@ -618,6 +652,56 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
 
     closeBackupSettings: function() {
         Ext.fly(this.backupsetBackdrop).removeClass("open");
+    },
+
+    // Re-fetches getstate and updates this.modules only - no full DOM
+    // rebuild (renderList), no re-running module checks, no WOL scan or
+    // pkg_updates regeneration (unlike loadState, which does all of
+    // that and is much too heavy to trigger just because Backup
+    // Transfer Settings changed). Needed because Settings reads from
+    // mod.current_fields, a point-in-time snapshot fetched at page
+    // load/last Refresh - without refreshing it after a save,
+    // toolbox.conf ends up correctly written but the in-memory
+    // snapshot goes stale, so reopening ANY Settings dialog (even a
+    // different module's) shows what was there BEFORE that save -
+    // which looks exactly like the save silently failed or reverted,
+    // even though it didn't (confirmed against Dave's own toolbox.conf
+    // dumps throughout this).
+    // Patches this.modules directly from a just-saved formData object,
+    // rather than round-tripping to getstate to ask the server what it
+    // just wrote. Safe because synotoolbox_api.sh's save case has no
+    // per-field validation - every key it's given gets tb_set verbatim
+    // - so a successful save response means every key in formData is
+    // now genuinely in toolbox.conf, exactly as sent. This is what
+    // actually fixes the stale-Settings-data bug together with looking
+    // up the module fresh (via findModule) at click time in wireRows:
+    // that fix makes the click handler READ this.modules fresh, but
+    // this.modules itself still has to actually BE fresh for that to
+    // matter. A getstate re-fetch would also work but adds a real
+    // network round-trip (the visible 1-2s delay before Settings closed)
+    // for data we already have in hand.
+    //
+    // Matches each formData key against the LONGEST module id it starts
+    // with (not just the first match) so this can't misattribute a
+    // field if a future module id ever happens to be a prefix of
+    // another's (e.g. "config" vs "config_backup") - not a real
+    // collision today, just not something to rely on staying that way.
+    applyFormDataToModules: function(formData) {
+        var modules = this.modules || [];
+        Object.keys(formData).forEach(function(key) {
+            var bestMod = null, bestLen = -1;
+            for (var i = 0; i < modules.length; i++) {
+                var prefix = modules[i].id + "_";
+                if (key.indexOf(prefix) === 0 && prefix.length > bestLen) {
+                    bestMod = modules[i];
+                    bestLen = prefix.length;
+                }
+            }
+            if (bestMod) {
+                bestMod.current_fields = bestMod.current_fields || {};
+                bestMod.current_fields[key.slice(bestLen)] = formData[key];
+            }
+        });
     },
 
     saveBackupSettings: function() {
@@ -640,6 +724,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             }
             if (this.backupsetStatusEl) { this.backupsetStatusEl.textContent = ""; }
             this.setDirty(false);
+            this.applyFormDataToModules(formData);
             this.closeBackupSettings();
         }).createDelegate(this));
     },
@@ -825,6 +910,16 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         this.infoPanel.innerHTML = infoHtml || '<div style="padding:20px;color:#999;">No info modules.</div>';
         this.toolsPanel.innerHTML = toolsHtml || '<div style="padding:20px;color:#999;">No tool modules.</div>';
         this.wireRows();
+
+        // discovertoolboxnas only runs from here - renderList's only two
+        // call sites are the initial load and an explicit Refresh click
+        // (confirmed - it's called nowhere else). Firing this scan again
+        // on every Settings-button click (the old behaviour) meant a
+        // ~3s UDP broadcast could still be in flight when the user
+        // switched to a different module's Settings, and the late
+        // response would land and re-render using whatever context
+        // happened to be active by then - see populateRemoteDropdowns.
+        this.scanToolboxNas();
     },
 
     // ---------------------------------------------------------------
@@ -884,12 +979,14 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 return '<label>' + (mod.filepicker && mod.filepicker.label || "Path") + ':</label> ' +
                     '<input type="text" class="tb-path" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.path || "") + '" style="width:200px;">' +
                     ' <button type="button" class="tb-browse">Browse</button>' +
-                    ' <button type="button" class="tb-backup-settings" title="Set the shared secret and remote NAS destinations used for backup transfers">Settings</button>';
+                    ' <button type="button" class="tb-backup-settings" title="Set the shared secret and remote NAS destinations used for backup transfers">Settings</button>' +
+                    ' <img class="tb-spinner tb-backup-scan-spinner" src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="16" height="16" style="margin-left:6px;">';
 
             case "toggle-volume-numeric":
-                var def = (mod.numeric && mod.numeric.default) || 1024;
-                var min = (mod.numeric && mod.numeric.min) || 4;
-                var kbVal = f.kb || def;
+                // 0 is a valid value (enables sequential I/O), so don't use || fallbacks here
+                var def = (mod.numeric && mod.numeric.default !== undefined) ? mod.numeric.default : 0;
+                var min = (mod.numeric && mod.numeric.min !== undefined) ? mod.numeric.min : 0;
+                var kbVal = (f.kb !== undefined && f.kb !== null && f.kb !== "") ? f.kb : def;
                 return '<div class="tb-volumes-wrap" data-source="listvolumes"><span style="color:#999;">Loading volumes\u2026</span></div>' +
                     ' <label>' + (mod.numeric && mod.numeric.label || "Value") + ':</label> ' +
                     '<input type="number" class="tb-kb" min="' + min + '" value="' + kbVal + '">';
@@ -942,6 +1039,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     renderConfigBackupControls: function(mod, f) {
         return this.renderFrequencySelect(mod.schedule && mod.schedule.default_frequency, f.frequency) +
             '<button type="button" class="tb-backup-settings" title="Set the shared secret and remote NAS destinations used for backup transfers">Settings</button>' +
+            '<img class="tb-spinner tb-backup-scan-spinner" src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="16" height="16">' +
             '<input type="hidden" class="tb-backup-secret" value="' + Ext.util.Format.htmlEncode(f.shared_secret || "") + '">' +
             '<div style="width:100%;display:flex;align-items:center;gap:8px;">' +
             '<label>Backup destination path:</label>' +
@@ -1063,7 +1161,19 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             // Synoboot/MTD's current_fields don't carry these keys at all.
             var backupSettingsBtn = rowEl.querySelector(".tb-backup-settings");
             if (backupSettingsBtn) {
-                Ext.fly(backupSettingsBtn).on("click", (function() { this.openBackupSettings(mod); }).createDelegate(this));
+                // Looks up the module fresh at click time (via moduleId,
+                // a stable string) rather than closing over the `mod`
+                // object captured above at wire time. applyFormDataToModules
+                // (called after a Settings-modal save) patches fields on
+                // the SAME module objects already in this.modules, but
+                // this closure never re-reads from this.modules at all -
+                // it holds a direct reference to whatever `mod` was at
+                // wire time - so without this fix, `mod` here would
+                // still point at the object from whenever wireRows last
+                // ran, permanently missing anything patched into it
+                // since. That's exactly what made a just-saved change
+                // look like it reverted on reopen.
+                Ext.fly(backupSettingsBtn).on("click", (function() { this.openBackupSettings(this.findModule(moduleId)); }).createDelegate(this));
             }
 
             if (mod && mod.control === "toggle-wol-selector") {
@@ -1567,6 +1677,21 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         this.modules.forEach(function(mod) {
             if (formData[mod.id + "_enabled"] !== mod.current_enabled) {
                 changed.push(mod.id);
+                return;
+            }
+            // Modules with "rerun_on_change" in the manifest are re-applied by
+            // the backend when they stay enabled but one of their own fields
+            // changed (seq_io's volumes/kb), so their result text needs
+            // refreshing too. Mirrors synotoolbox_api.sh's CHANGED_KEYS rule.
+            if (mod.rerun_on_change === true && mod.current_enabled === "yes") {
+                var prefix = mod.id + "_";
+                var curFields = mod.current_fields || {};
+                var fieldChanged = Object.keys(formData).some(function(key) {
+                    if (key.indexOf(prefix) !== 0 || key === prefix + "enabled") { return false; }
+                    var cur = curFields[key.substring(prefix.length)];
+                    return String(formData[key]) !== String(cur === undefined || cur === null ? "" : cur);
+                });
+                if (fieldChanged) { changed.push(mod.id); }
             }
         });
         return changed;
@@ -1613,9 +1738,15 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 if (!rowEl || !mod) { return; }
                 var hasCheckArgs = !!(mod.check_args && mod.check_args !== null);
 
-                if (results && results[id] !== undefined) {
+                // save() output that is empty/whitespace-only counts as "nothing
+                // captured" so check_args modules still fall through to checkModule
+                // instead of showing "(no output)" (e.g. seq_io after Disable -> Save).
+                var savedOut = (results && results[id] !== undefined) ? String(results[id]) : undefined;
+                var hasSavedOut = savedOut !== undefined && savedOut.replace(/\s+/g, "") !== "";
+
+                if (hasSavedOut) {
                     var resultEl = rowEl.querySelector('[data-result-for="' + id + '"]');
-                    if (resultEl) { resultEl.innerHTML = this.safeResultHtml(results[id] || "(no output)"); }
+                    if (resultEl) { resultEl.innerHTML = this.safeResultHtml(savedOut); }
                 } else if (hasCheckArgs) {
                     this.checkModule(id, rowEl);
                 } else if (mod.live === true) {
@@ -1626,6 +1757,9 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                         var resultEl2 = rowEl.querySelector('[data-result-for="' + id + '"]');
                         if (resultEl2) { resultEl2.textContent = ""; }
                     }
+                } else if (savedOut !== undefined) {
+                    var resultEl3 = rowEl.querySelector('[data-result-for="' + id + '"]');
+                    if (resultEl3) { resultEl3.innerHTML = this.safeResultHtml("(no output)"); }
                 }
             }, this);
         }).createDelegate(this));

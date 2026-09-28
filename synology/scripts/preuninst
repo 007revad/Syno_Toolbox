@@ -1,3 +1,57 @@
-#!/bin/sh
+#!/bin/bash
+
+PKG_NAME="Syno_Toolbox"
+TARGET_DIR="/var/packages/${PKG_NAME}/target"
+BIN_DIR="${TARGET_DIR}/bin"
+
+# Get DSM major version
+dsm=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)
+if [[ $dsm -ge 7 ]]; then
+    VAR_DIR="/var/packages/${PKG_NAME}/var"
+else
+    VAR_DIR="/var/packages/${PKG_NAME}/etc"
+fi
+
+log_message() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "${VAR_DIR}/install.log" 2>/dev/null || true
+}
+
+# Remove every DSM Task Scheduler entry Syno_Toolbox created, so
+# uninstalling doesn't leave orphaned tasks pointing at scripts that no
+# longer exist (which would fail silently, or email the user, on their
+# next scheduled run).
+#
+# Which tasks exist is recorded in toolbox.conf's schedules_set key
+# (comma-separated module ids, maintained by synotoolbox_api.sh's
+# sync_scheduled_task). The loop over that list lives in
+# synotoolbox_api.sh's "remove_all_schedules" action rather than here:
+# on DSM7 this script runs as the package user, which can't read the
+# root-owned 600 toolbox.conf, so reading the key and calling
+# task_setup.sh both have to happen as root.
+#
+# DSM 7: go through the setuid helper, same as everything else in this
+# package.
+# DSM 6: preuninst already runs as root, so call the api script directly.
+#
+# Either way, a failure here must never block the uninstall itself - an
+# orphaned task is a much smaller problem than a package the user can
+# no longer remove.
+if [[ $dsm -ge 7 ]]; then
+    HELPER="${BIN_DIR}/helper/synotoolbox-helper"
+    if [[ -u "$HELPER" ]]; then
+        result="$("$HELPER" run remove_all_schedules 2>&1)"
+        log_message "preuninst: remove_all_schedules via helper: ${result}"
+    else
+        log_message "preuninst: helper missing or not setuid - scheduled tasks not removed"
+    fi
+else
+    API="${BIN_DIR}/synotoolbox_api.sh"
+    if [[ -x "$API" ]]; then
+        result="$("$API" run remove_all_schedules 2>&1)"
+        log_message "preuninst: remove_all_schedules directly (DSM6): ${result}"
+    else
+        log_message "preuninst: synotoolbox_api.sh missing - scheduled tasks not removed"
+    fi
+fi
 
 exit 0

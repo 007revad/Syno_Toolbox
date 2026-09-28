@@ -194,6 +194,37 @@ schedule_type() {
     fi
 }
 
+# schedules_set - comma-separated list of MODULE IDS (not task names)
+# whose DSM Task Scheduler entry Syno_Toolbox has created, kept in
+# toolbox.conf under this key so preuninst can delete them all on
+# uninstall. Ids rather than task names: they never contain spaces,
+# and the task name is always re-derived from the manifest via
+# scheduled_task_name, so nothing free-form is ever passed to
+# task_setup.sh as root.
+SCHEDULES_KEY="schedules_set"
+
+schedules_set_get() {
+    /usr/syno/bin/synogetkeyvalue "$TOOLBOX_CONF" "$SCHEDULES_KEY"
+}
+
+schedules_set_add() {
+    local id="$1" cur
+    cur="$(schedules_set_get)"
+    case ",${cur}," in
+        *",${id},"*) return 0 ;;
+    esac
+    tb_set "$SCHEDULES_KEY" "${cur:+${cur},}${id}"
+}
+
+schedules_set_remove() {
+    local id="$1" list
+    list=",$(schedules_set_get),"
+    list="${list//,${id},/,}"
+    list="${list#,}"
+    list="${list%,}"
+    tb_set "$SCHEDULES_KEY" "$list"
+}
+
 ACTION="${1:-}"
 shift || true
 
@@ -261,14 +292,22 @@ sync_scheduled_task() {
             # this on the next call anyway, but fixing it here avoids
             # even one round-trip of an inconsistent state.
             tb_set "${id}_enabled" "no"
+            schedules_set_remove "$id"
         else
             echo "Syno_Toolbox: ${id} enabled (${interval_type}${interval:+=$interval}) - task_setup.sh set: ${task_output}" >> "$TOOLBOX_LOG"
+            schedules_set_add "$id"
         fi
     else
         task_output="$("$task_setup" remove --name="$task_name" 2>>"$TOOLBOX_LOG")"
         echo "Syno_Toolbox: ${id} disabled - task_setup.sh remove: ${task_output}" >> "$TOOLBOX_LOG"
+        schedules_set_remove "$id"
     fi
-    RESULTS=$(echo "$RESULTS" | jq --arg k "$id" --arg v "$task_output" '. + {($k): $v}')
+
+    local check_args
+    check_args="$(module_field "$idx" check_args)"
+    if [[ "$check_args" == "null" ]]; then
+        RESULTS=$(echo "$RESULTS" | jq --arg k "$id" --arg v "$task_output" '. + {($k): $v}')
+    fi
 }
 
 case "$ACTION" in
@@ -605,7 +644,7 @@ receive_backup)
     # Plain filename only - no path separators, no leading dot. Same
     # defensive style as listfolder's TARGET_PATH check above, applied
     # to a bare filename instead of a /volumeN/... path.
-    if [[ -z "$FILENAME" || ! "$FILENAME" =~ ^[A-Za-z0-9._-]+$ || "$FILENAME" == .* ]]; then
+    if [[ -z "$FILENAME" || ! "$FILENAME" =~ ^[A-Za-z0-9._+-]+$ || "$FILENAME" == .* ]]; then
         echo '{"success":false,"message":"Invalid filename"}'
         cleanup_tmp
         exit 1
@@ -615,7 +654,29 @@ receive_backup)
         exit 1
     fi
 
-    TARGET_DIR="$(tb_get "config_backup_target_dir" "")"
+    # This endpoint is shared by all three backup tools (DSM
+    # Configuration Backup, Backup Synoboot Image, Backup MTD Image),
+    # but each writes into its OWN destination folder, not one shared
+    # folder - so which conf key to read for TARGET_DIR depends on
+    # which type of file this is. Inferred from the filename's own
+    # suffix rather than a separate parameter, since each sending
+    # script's naming convention is fixed and distinct:
+    #   synology_config_backup.sh -> always ends ".dss"
+    #   synoboot_backup.sh        -> always ends "_synoboot[N].img" (N optional)
+    #   mtd_backup.sh             -> always ends "_mtd_full.img" or "_mtdN_<label>.img"
+    # Anything that matches none of these (a future backup type, or a
+    # sender running an older build) falls back to config_backup's own
+    # dir, matching this endpoint's original single-purpose behaviour
+    # rather than failing outright.
+    if [[ "$FILENAME" =~ _synoboot[0-9]*\.img$ ]]; then
+        TARGET_DIR_KEY="synoboot_backup_path"
+    elif [[ "$FILENAME" =~ _mtd(_full|[0-9]+_[A-Za-z0-9_]+)\.img$ ]]; then
+        TARGET_DIR_KEY="mtd_backup_path"
+    else
+        TARGET_DIR_KEY="config_backup_target_dir"
+    fi
+
+    TARGET_DIR="$(tb_get "$TARGET_DIR_KEY" "")"
     if [[ -z "$TARGET_DIR" || ! -d "$TARGET_DIR" ]]; then
         echo '{"success":false,"message":"No valid backup target dir configured on this NAS"}'
         cleanup_tmp
@@ -644,6 +705,50 @@ run)
     if [[ -z "$MODULE_ID" ]]; then
         echo '{"success":false,"message":"No module id given"}'
         exit 1
+    fi
+
+    if [[ "$MODULE_ID" == "remove_all_schedules" ]]; then
+        # Not a real module id - called by preuninst (via the setuid
+        # helper on DSM7, directly as root on DSM6) to delete every
+        # Task Scheduler entry listed in toolbox.conf's schedules_set.
+        # The loop lives here, not in preuninst, because on DSM7
+        # preuninst runs as the package user, which can't read the
+        # root-owned 600 toolbox.conf (see tb_self_heal). One arg only
+        # to stay inside the helper's one_arg whitelist.
+        #
+        # Best-effort: one failed removal never stops the rest, and
+        # this always exits 0 so it can never block the uninstall.
+        removed=0
+        failed=0
+        sched_list="$(schedules_set_get)"
+        if [[ -n "$sched_list" ]]; then
+            IFS=',' read -ra sched_ids <<< "$sched_list"
+            for sid in "${sched_ids[@]}"; do
+                [[ -n "$sid" ]] || continue
+                idx="$(find_module_index "$sid")" || {
+                    echo "Syno_Toolbox: remove_all_schedules: unknown module id \"${sid}\" in ${SCHEDULES_KEY} - skipped" >> "$TOOLBOX_LOG"
+                    failed=$((failed + 1))
+                    continue
+                }
+                if [[ -z "$(schedule_type "$idx")" ]]; then
+                    echo "Syno_Toolbox: remove_all_schedules: ${sid} has no schedule in the manifest - skipped" >> "$TOOLBOX_LOG"
+                    failed=$((failed + 1))
+                    continue
+                fi
+                task_name="$(scheduled_task_name "$idx")"
+                task_output="$("${BIN_DIR}/task_setup.sh" remove --name="$task_name" 2>>"$TOOLBOX_LOG")"
+                if echo "$task_output" | grep -q '"success":false'; then
+                    echo "Syno_Toolbox: remove_all_schedules: ${sid} FAILED - ${task_output}" >> "$TOOLBOX_LOG"
+                    failed=$((failed + 1))
+                else
+                    echo "Syno_Toolbox: remove_all_schedules: ${sid} removed - ${task_output}" >> "$TOOLBOX_LOG"
+                    schedules_set_remove "$sid"
+                    removed=$((removed + 1))
+                fi
+            done
+        fi
+        printf '{"success":true,"result":"removed %d, failed %d"}\n' "$removed" "$failed"
+        exit 0
     fi
 
     if [[ "$MODULE_ID" == "cpu_usage_seed" ]]; then
@@ -721,9 +826,14 @@ save)
     #echo "old_state done: $(date +%s.%N)" >> "$TOOLBOX_LOG"
     #echo "[$(date '+%Y-%m-%d %H:%M:%S:%N')] old state done" >> "$TOOLBOX_LOG"
 
-    # 2. Write every submitted key=value to conf.
+    # 2. Write every submitted key=value to conf, remembering which keys
+    #    actually changed value (used in step 3 for modules that set
+    #    "rerun_on_change" in the manifest).
+    declare -A CHANGED_KEYS
     while IFS=$'\t' read -r key value; do
         [[ -z "$key" ]] && continue
+        old_val="$(tb_get "$key" "")"
+        [[ "$old_val" != "$value" ]] && CHANGED_KEYS["$key"]=1
         tb_set "$key" "$value"
     done < <(echo "$JSON_BLOB" | jq -r 'to_entries[] | "\(.key)\t\(.value)"')
 
@@ -752,6 +862,23 @@ save)
             if [[ "$disable_args" != "null" ]]; then
                 output="$(run_module_script "$id" disable_args 2>>"$TOOLBOX_LOG")"
                 LOG+="disabled:${id} "
+                RESULTS=$(echo "$RESULTS" | jq --arg k "$id" --arg v "$output" '. + {($k): $v}')
+            fi
+        elif [[ "$old" == "yes" && "$new" == "yes" \
+                && "$(module_field "$i" rerun_on_change)" == "true" ]]; then
+            # Still enabled, but one of the module's own fields (e.g. seq_io's
+            # volumes or kb) changed - re-apply so the change takes effect.
+            changed=""
+            if (( ${#CHANGED_KEYS[@]} )); then
+                for k in "${!CHANGED_KEYS[@]}"; do
+                    if [[ "$k" == "${id}_"* && "$k" != "${id}_enabled" ]]; then
+                        changed="yes"
+                    fi
+                done
+            fi
+            if [[ "$changed" == "yes" ]]; then
+                output="$(run_module_script "$id" run_args 2>>"$TOOLBOX_LOG")"
+                LOG+="reapplied:${id} "
                 RESULTS=$(echo "$RESULTS" | jq --arg k "$id" --arg v "$output" '. + {($k): $v}')
             fi
         fi
