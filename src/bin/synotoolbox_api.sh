@@ -365,7 +365,15 @@ getstate)
                     if ! echo "$TASK_CHECK" | grep -q '"exists":true'; then
                         enabled="no"
                         tb_set "${id}_enabled" "no"
+                        schedules_set_remove "$id"
                         echo "Syno_Toolbox: getstate reconciled ${id}_enabled=no (no Task Scheduler entry named \"${task_name}\" found)" >> "$TOOLBOX_LOG"
+                    else
+                        # Task exists: make sure schedules_set lists it, so
+                        # preuninst can delete it. Covers installs upgraded
+                        # from a release that predates schedules_set, whose
+                        # tasks exist but were never recorded. A no-op
+                        # (no conf write) when the id is already listed.
+                        schedules_set_add "$id"
                     fi
                 fi
             fi
