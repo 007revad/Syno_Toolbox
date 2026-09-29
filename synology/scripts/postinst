@@ -91,6 +91,24 @@ if [[ -d "$VAR_DIR" ]]; then
     chown -R "${PKG_NAME}:$PKG_NAME" "${VAR_DIR}/"
 fi
 
+# Rebuild cpu_chart.html from the existing cpu_usage.log. The chart lives
+# under target/ui, which an upgrade replaces, while cpu_usage.log (in
+# VAR_DIR) survives. Without this the CPU Usage tab shows "No CPU usage
+# data yet" until the next scheduled sample or a manual Refresh.
+# Only done when a log already exists: with CPU Usage enabled the seed
+# step creates it, and with it disabled the tab never loads the chart.
+# Written to a temp file then renamed so api.cgi never reads a partial file.
+CPU_LOG="$VAR_DIR/cpu_usage.log"
+if [[ -f "$CPU_LOG" && -x "$BIN_DIR/generate_cpu_chart.sh" ]]; then
+    if "$BIN_DIR/generate_cpu_chart.sh" "$(hostname):$CPU_LOG" > "$UI_DIR/cpu_chart.html.tmp" 2>/dev/null \
+       && [[ -s "$UI_DIR/cpu_chart.html.tmp" ]]; then
+        mv -f "$UI_DIR/cpu_chart.html.tmp" "$UI_DIR/cpu_chart.html"
+        log_message "Rebuilt cpu_chart.html from existing cpu_usage.log"
+    else
+        rm -f "$UI_DIR/cpu_chart.html.tmp"
+        log_message "WARNING: failed to rebuild cpu_chart.html"
+    fi
+fi
 
 # Lock down synotoolbox_api.sh
 chmod 555 "$BIN_DIR/synotoolbox_api.sh" 2>/dev/null        # Blocks injection exploit

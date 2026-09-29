@@ -311,7 +311,9 @@ cd "${Target_DIR}" || exit 255
 if [[ -f "${Target_DIR}/${File_Name}" ]]; then
 	#echo -e "Error: Backup file already exists: \n${Target_DIR}/${File_Name}"
 	echo -e "Error: Backup file already exists: ${Target_DIR}/${File_Name}"
-	exit 255
+	echo "Backup already exists: ${File_Name}"
+	#exit 255
+	exit
 else
     /usr/syno/bin/synoconfbkp export --filepath="${Target_DIR}/${File_Name}" >/dev/null
     chown admin:administrators "${Target_DIR}/${File_Name}"
