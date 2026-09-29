@@ -1038,13 +1038,13 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // no access to this row's current_fields.
     renderConfigBackupControls: function(mod, f) {
         return this.renderFrequencySelect(mod.schedule && mod.schedule.default_frequency, f.frequency) +
-            '<button type="button" class="tb-backup-settings" title="Set the shared secret and remote NAS destinations used for backup transfers">Settings</button>' +
-            '<img class="tb-spinner tb-backup-scan-spinner" src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="16" height="16">' +
             '<input type="hidden" class="tb-backup-secret" value="' + Ext.util.Format.htmlEncode(f.shared_secret || "") + '">' +
             '<div style="width:100%;display:flex;align-items:center;gap:8px;">' +
             '<label>Backup destination path:</label>' +
             '<input type="text" class="tb-target-dir" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.target_dir || "") + '" style="width:200px;">' +
             '<button type="button" class="tb-browse-target-dir">Browse</button>' +
+            '<button type="button" class="tb-backup-settings" title="Set the shared secret and remote NAS destinations used for backup transfers">Settings</button>' +
+            '<img class="tb-spinner tb-backup-scan-spinner" src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="16" height="16">' +
             '</div>';
     },
 
