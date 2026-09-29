@@ -16,6 +16,18 @@ log_message() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "${VAR_DIR}/install.log" 2>/dev/null || true
 }
 
+# DSM runs preuninst/postuninst/preinst/postinst as part of an upgrade
+# too (SYNOPKG_PKG_STATUS=UPGRADE - confirmed 2026-09-29). Leave the
+# scheduled tasks and toolbox.conf's schedules_set alone in that case:
+# the tasks point at fixed paths under target/, which the upgrade
+# replaces in place, so they keep working, and the modules stay
+# enabled instead of being silently switched off by getstate's
+# reconciliation on the next page load.
+if [[ "${SYNOPKG_PKG_STATUS:-}" == "UPGRADE" ]]; then
+    log_message "preuninst: upgrade in progress - scheduled tasks left in place"
+    exit 0
+fi
+
 # Remove every DSM Task Scheduler entry Syno_Toolbox created, so
 # uninstalling doesn't leave orphaned tasks pointing at scripts that no
 # longer exist (which would fail silently, or email the user, on their

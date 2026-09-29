@@ -1,11 +1,12 @@
 #!/bin/bash
-# See preupgrade's comment for why this file needs to exist at all.
+# DSM requires preupgrade/postupgrade to exist for an upgrade install
+# to proceed at all - without them it fails outright with error 261
+# ("package does not have preupgrade / postupgrade script"), which Package
+# Center surfaces to the user as a generic "invalid file format" message. 
+# 
+# This package has no persistent state that could conflict across versions, 
+# so nothing to do here.
 #
-# Re-running postinst's steps after an upgrade (setuid helper
-# verification, webman symlink, exec permissions) is correct here -
-# they're all idempotent, and nothing about this package's state needs
-# migration between versions.
-
-exec "$(dirname "$0")/postinst" "$@"
+# Note: Package Center runs postinst after an upgrade.
 
 exit 0
