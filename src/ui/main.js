@@ -106,7 +106,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-toggle .tb-slider:before { content:""; position:absolute; height:16px; width:16px; left:2px; top:2px; background:#fff; border-radius:50%; transition:.15s; }',
             '  .tb-toggle input:checked + .tb-slider { background:#1B8AED; }',
             '  .tb-toggle input:checked + .tb-slider:before { transform:translateX(18px); }',
-            '  .tb-toggle.tb-toggle-unsupported .tb-slider { background:#e4e4e4; cursor:not-allowed; opacity:0.6; }',
+            '  .tb-toggle.tb-toggle-unsupported .tb-slider { background:#e7b9c0; cursor:not-allowed; opacity:0.8; }',
             '  .tb-picker-backdrop { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }',
             '  .tb-picker-backdrop.open { display:flex; }',
             '  .tb-picker { position:relative; background:#fff; color:#222; width:560px; max-width:90%; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); display:flex; flex-direction:column; }',
