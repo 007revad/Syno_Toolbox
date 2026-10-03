@@ -53,6 +53,25 @@ Optional bool. Only an explicit `true` counts - absent and `false` behave identi
 
 Different from `hidden_row`, which only keeps the module out of `renderList` - a `hidden_row` module still runs, is still returned by `getstate`, and can still be scheduled (`pkg_updates`, `cpu_usage` and `disable_ssh_root` all rely on that). Use `disabled` to ship a module that's still in development: remove the key or set it to `false` to bring it back.
 
+## `requires`
+
+Optional object. Declares what a module needs from the NAS. If any key present isn't satisfied, the module is **unsupported** on this NAS: its row is still shown (so users know it exists), but its toggle is greyed out and it can't be enabled or run. Evaluated by `tb_requirements_unmet` in `conf_lib.sh`, which `getstate`, `run_module_script`, `runboot` and `run_boot_modules.sh` all share. Keys (all optional, all must pass):
+
+- `min_dsm_major` (integer): `/etc.defaults/VERSION` `majorversion` must be >= this. e.g. `7` excludes DSM 6.
+- `min_build` (integer): `/etc.defaults/VERSION` `buildnumber` must be >= this. `86009` is DSM 7.3.2 (the same cutoff `restore_rs3621_fan_speed.sh` uses).
+- `models` (array of strings): the NAS model must equal one of them - exact match, case-insensitive, no substring matching. Model comes from `upnpmodelname` in `/etc.defaults/synoinfo.conf`, falling back to `/proc/sys/kernel/syno_hw_version`.
+- `exists` (array of paths): every path must exist, e.g. `/dev/synoboot`, `/proc/mtd`.
+
+If a value needed for a check can't be read (model unknown, VERSION unreadable), the requirement counts as **unmet**.
+
+What "unsupported" does at runtime:
+
+- `getstate` still returns the module, adds `"unsupported": true`, and reports `current_enabled` as `"no"` even if `toolbox.conf` still says `yes` (e.g. left over from another DSM version).
+- `main.js` renders the toggle `disabled` with a greyed slider and a tooltip.
+- `run_args` is refused (`run` action, `runboot`, Save's enable-diff, `run_boot_modules.sh`). `disable_args` and `check_args` are **not** blocked - `check_args` is what shows the user why the module isn't available, so an unsupported module's script should print a clear reason when called with its check args. No reason text lives in the manifest.
+
+Different from `disabled`: `disabled` removes the module from the UI and from `getstate` entirely (development/unreleased); `requires` keeps it visible but inert on hardware or DSM versions that can't use it.
+
 ## `note`
 
 Pure documentation. Never read by any script.

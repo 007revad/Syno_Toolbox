@@ -106,6 +106,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-toggle .tb-slider:before { content:""; position:absolute; height:16px; width:16px; left:2px; top:2px; background:#fff; border-radius:50%; transition:.15s; }',
             '  .tb-toggle input:checked + .tb-slider { background:#1B8AED; }',
             '  .tb-toggle input:checked + .tb-slider:before { transform:translateX(18px); }',
+            '  .tb-toggle.tb-toggle-unsupported .tb-slider { background:#e4e4e4; cursor:not-allowed; opacity:0.6; }',
             '  .tb-picker-backdrop { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }',
             '  .tb-picker-backdrop.open { display:flex; }',
             '  .tb-picker { position:relative; background:#fff; color:#222; width:560px; max-width:90%; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); display:flex; flex-direction:column; }',
@@ -938,11 +939,15 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         // it's a one-shot "send now" action fired by its own button, not
         // a persistent enabled/disabled state, so the toggle is unused.
         var toggleHiddenClass = ((mod.live === true && hasCheckArgs) || mod.control === "toggle-wol-selector" || mod.control === "toggle-password-prompt") ? " tb-toggle-hidden" : "";
+        // "requires" not met on this NAS/DSM (see getstate in
+        // synotoolbox_api.sh): the row still renders, and its check
+        // output explains why, but the toggle can't be turned on.
+        var unsupported = mod.unsupported === true;
 
         return [
             '<div class="tb-row" data-module-id="' + mod.id + '">',
-            '  <label class="tb-toggle' + toggleHiddenClass + '">',
-            '    <input type="checkbox" class="tb-enabled" ' + checked + '>',
+            '  <label class="tb-toggle' + toggleHiddenClass + (unsupported ? ' tb-toggle-unsupported' : '') + '"' + (unsupported ? ' title="Not supported on this Synology model or DSM version"' : '') + '>',
+            '    <input type="checkbox" class="tb-enabled" ' + checked + (unsupported ? ' disabled' : '') + '>',
             '    <span class="tb-slider"></span>',
             '  </label>',
             '  <div class="tb-row-main">',

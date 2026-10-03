@@ -211,6 +211,7 @@
       "run_args": [],
       "disable_args": null,
       "check_args": ["check"],
+      "requires": { "min_dsm_major": 7 },
       "note": "run_args wraps: sudo /usr/syno/bin/synopkg uninstall ActiveInsight - confirm exact wrapper script contents before shipping"
     },
     {
@@ -253,6 +254,7 @@
       "run_args": [],
       "disable_args": null,
       "check_args": ["check"],
+      "requires": { "exists": ["/dev/synoboot"] },
       "filepicker": { "label": "Backup destination path" }
     },
     {
@@ -266,6 +268,7 @@
       "run_args": [],
       "disable_args": null,
       "check_args": ["check"],
+      "requires": { "exists": ["/proc/mtd"] },
       "filepicker": { "label": "Backup destination path" }
     },
     {
@@ -314,7 +317,9 @@
       "live": false,
       "run_args": [],
       "disable_args": null,
-      "check_args": ["check"]
+      "check_args": ["check"],
+      "requires": { "min_build": 86009, "models": ["RS3621xs+", "RS3621RPxs"] },
+      "note": "requires.min_build 86009 = DSM 7.3.2 (same cutoff restore_rs3621_fan_speed.sh itself uses)"
     },
     {
       "id": "enable_ssh_root",

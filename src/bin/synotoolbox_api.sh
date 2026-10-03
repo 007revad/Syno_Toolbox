@@ -131,6 +131,16 @@ module_disabled() {
     [[ "$(module_field "$1" disabled)" == "true" ]]
 }
 
+# module_unsupported <idx> - true if the module's "requires" object (model,
+# DSM version, files that must exist - see conf_lib.sh's
+# tb_requirements_unmet) isn't satisfied on this NAS. Unlike "disabled"
+# the module stays visible: getstate flags it "unsupported" so main.js
+# greys out its toggle, and run_args is refused below. check_args still
+# runs, since that's what shows the user *why* it isn't available.
+module_unsupported() {
+    tb_requirements_unmet "$MANIFEST" "$1"
+}
+
 # run_module_script <module_id> <args_field: run_args|disable_args|check_args>
 # args_field values in the manifest may contain placeholders like {kb} or
 # {volumes} -- any {field} is resolved by reading conf key "<id>_<field>".
@@ -144,6 +154,10 @@ run_module_script() {
     idx="$(find_module_index "$id")" || { echo "Syno_Toolbox: unknown module $id" >&2; return 1; }
     if module_disabled "$idx"; then
         echo "Syno_Toolbox: module $id is disabled in modules.json" >&2
+        return 1
+    fi
+    if [[ "$args_field" == "run_args" ]] && module_unsupported "$idx"; then
+        echo "Syno_Toolbox: module $id is not supported on this NAS/DSM version" >&2
         return 1
     fi
     script="$(module_field "$idx" script)"
@@ -350,6 +364,7 @@ runboot)
         trigger="$(module_field "$i" trigger)"
         [[ "$trigger" == "boot" || "$trigger" == "scheduled" ]] || continue
         module_disabled "$i" && continue
+        module_unsupported "$i" && continue
         tb_is_enabled "$id" || continue
 
         echo "Syno_Toolbox: running $id"
@@ -384,6 +399,16 @@ getstate)
         fi
 
         enabled="$(tb_get "${id}_enabled" "no")"
+
+        # "requires" not met on this NAS/DSM: still returned (so the row
+        # renders), flagged unsupported for main.js to grey out the
+        # toggle, and reported as not enabled even if toolbox.conf still
+        # says "yes" from another DSM version or an earlier install.
+        unsupported="false"
+        if module_unsupported "$i"; then
+            unsupported="true"
+            enabled="no"
+        fi
 
         # A schedule-having module's "enabled" is meant to reflect a
         # real DSM Task Scheduler entry, not just the last checkbox
@@ -430,8 +455,9 @@ getstate)
 
         entry=$(jq -n --argjson mod "$(jq ".modules[$i]" "$MANIFEST")" \
                        --arg enabled "$enabled" \
+                       --argjson unsupported "$unsupported" \
                        --argjson fields "$fields_json" \
-                       '$mod + {current_enabled: $enabled, current_fields: $fields}')
+                       '$mod + {current_enabled: $enabled, current_fields: $fields, unsupported: $unsupported}')
         OUT=$(echo "$OUT" | jq --argjson e "$entry" '. + [$e]')
     done
     echo "$OUT"

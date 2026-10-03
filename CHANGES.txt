@@ -14,6 +14,7 @@ v1.0.28
   - Each schedule's settings are retained in case the user later re-installs Syno Toolbox.
   - Scheduled tasks are retained during an upgrade to a newer Syno Toolbox version.
 - Improvements and bug fixes for "Enable Sequential I/O for SSD Cache".
+- Changed so modules not supported for the Synology model or DSM version cannot be enabled.
 - Bug fix for CPU Usage tab, after updating Syno Toolbox, not showing the graph until user clicks Refresh.
 - Bug fix for all LAN ports listed as having the same MAC address as LAN 1.
 - Bug fix for "Restore RS3621 Fan Speed" getting the model name.

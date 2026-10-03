@@ -46,6 +46,7 @@ for (( i=0; i<MODULE_COUNT; i++ )); do
 
     [[ "$trigger" == "boot" || "$trigger" == "scheduled" ]] || continue
     [[ "$(jq -r ".modules[$i].disabled // false" "$MANIFEST")" == "true" ]] && continue
+    tb_requirements_unmet "$MANIFEST" "$i" && continue
     tb_is_enabled "$id" || continue
 
     args_json=$(jq -c ".modules[$i].run_args // []" "$MANIFEST")

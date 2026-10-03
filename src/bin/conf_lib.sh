@@ -88,6 +88,70 @@ tb_is_enabled() {
     [[ "$(tb_get "${module_id}_enabled" "no")" == "yes" ]]
 }
 
+# ---- Model / "requires" checks ----------------------------------------------
+
+# tb_model
+# Echoes this NAS's model name (e.g. "RS3621xs+"), or nothing if it
+# can't be determined. upnpmodelname first, /proc/sys/kernel/syno_hw_version
+# as the fallback - same two sources restore_rs3621_fan_speed.sh uses.
+tb_model() {
+    local m
+    m="$(/usr/syno/bin/synogetkeyvalue /etc.defaults/synoinfo.conf upnpmodelname 2>/dev/null)"
+    if [[ -z "$m" && -f /proc/sys/kernel/syno_hw_version ]]; then
+        m="$(cat /proc/sys/kernel/syno_hw_version 2>/dev/null)"
+    fi
+    echo "$m"
+}
+
+# tb_requirements_unmet <manifest> <module_index>
+# Exit status 0 = the module has a "requires" object in modules.json and
+# this NAS does NOT satisfy it. Exit status 1 = supported (requirements
+# met, or the module has none). Every key present must be satisfied:
+#   min_dsm_major  integer  - /etc.defaults/VERSION majorversion >= value
+#   min_build      integer  - /etc.defaults/VERSION buildnumber >= value
+#   models         [string] - tb_model equals one of them (exact, case-insensitive)
+#   exists         [path]   - every path exists
+# If a value needed for a check can't be read (e.g. model unknown), the
+# requirement counts as unmet - safer to grey a toggle out than to let
+# something run on hardware it wasn't meant for.
+tb_requirements_unmet() {
+    local manifest="$1" idx="$2" req val p m model matched
+
+    req="$(jq -c ".modules[$idx].requires // empty" "$manifest" 2>/dev/null)"
+    [[ -n "$req" ]] || return 1
+
+    val="$(jq -r '.min_dsm_major // empty' <<< "$req")"
+    if [[ -n "$val" ]]; then
+        m="$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion 2>/dev/null)"
+        [[ "$m" =~ ^[0-9]+$ ]] || return 0
+        (( m >= val )) || return 0
+    fi
+
+    val="$(jq -r '.min_build // empty' <<< "$req")"
+    if [[ -n "$val" ]]; then
+        m="$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION buildnumber 2>/dev/null)"
+        [[ "$m" =~ ^[0-9]+$ ]] || return 0
+        (( m >= val )) || return 0
+    fi
+
+    if jq -e '.models' <<< "$req" >/dev/null 2>&1; then
+        model="$(tb_model)"
+        [[ -n "$model" ]] || return 0
+        matched=1
+        while IFS= read -r m; do
+            [[ "${model,,}" == "${m,,}" ]] && matched=0
+        done < <(jq -r '.models[]' <<< "$req")
+        (( matched == 0 )) || return 0
+    fi
+
+    while IFS= read -r p; do
+        [[ -n "$p" ]] || continue
+        [[ -e "$p" ]] || return 0
+    done < <(jq -r '(.exists // [])[]' <<< "$req")
+
+    return 1
+}
+
 # ---- Ensure conf file + directory exist -------------------------------------
 tb_ensure_conf() {
     [[ -d "$VAR_DIR" ]] || mkdir -p "$VAR_DIR"
