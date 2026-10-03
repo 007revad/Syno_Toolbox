@@ -224,7 +224,9 @@
       "run_args": [],
       "disable_args": null,
       "check_args": null,
-      "schedule": { "default_repeat_hour": 6 }
+      "schedule": { "default_repeat_hour": 6 },
+      "disabled": true,
+      "note": "disabled:true makes it hidden and inactive even if was enabled while not hidden."
     },
     {
       "id": "config_backup",
@@ -300,7 +302,7 @@
         ],
         "secondary_toggle": { "label": "RAID F1", "value": "raidf1" }
       },
-      "note": "Confirmed positional CLI: syno_shr_switch.sh <shr|raidgrp> [raidf1]. raidf1 is an optional 2nd positional arg. Our placeholder substitution always passes 2 args - when RAID F1 isn't checked, {raidf1} resolves to an empty string rather than being omitted entirely. ASSUMPTION (not confirmed by Dave): the script treats an empty/non-matching 2nd arg the same as a missing one. Verify against the actual script before relying on this."
+      "note": "Confirmed positional CLI: syno_shr_switch.sh <shr|raidgrp> [raidf1]. raidf1 is an optional 2nd positional arg. The placeholder substitution always passes 2 args - when RAID F1 isn't checked, {raidf1} resolves to an empty string rather than being omitted entirely."      
     },
     {
       "id": "restore_fan_speed",
@@ -354,7 +356,7 @@
       "run_args": ["disable"],
       "disable_args": ["enable"],
       "check_args": ["check"],
-      "note": "single script, 3 modes (enable/disable/check) verified by Dave - not separate files"
+      "note": "single script, 3 modes (enable/disable/check) verified by testing - not separate files"
     },
     {
       "id": "pkg_updates",

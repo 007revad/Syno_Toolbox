@@ -118,6 +118,19 @@ find_module_index() {
     return 1
 }
 
+# module_disabled <idx> - true if the manifest entry has "disabled": true.
+# A disabled module is treated as if it weren't in the manifest at all:
+# getstate leaves it out (so main.js never renders it or submits its
+# fields), run_module_script refuses to run it (covers runboot, run,
+# check and save's enable-diff), and sync_scheduled_task never creates
+# a Task Scheduler entry for it. It stays in the manifest itself so
+# find_module_index/remove_all_schedules can still clean up after it.
+# module_field maps both absent and false to "null", so only an explicit
+# true counts.
+module_disabled() {
+    [[ "$(module_field "$1" disabled)" == "true" ]]
+}
+
 # run_module_script <module_id> <args_field: run_args|disable_args|check_args>
 # args_field values in the manifest may contain placeholders like {kb} or
 # {volumes} -- any {field} is resolved by reading conf key "<id>_<field>".
@@ -129,6 +142,10 @@ run_module_script() {
     local idx script args_json line resolved_args=()
 
     idx="$(find_module_index "$id")" || { echo "Syno_Toolbox: unknown module $id" >&2; return 1; }
+    if module_disabled "$idx"; then
+        echo "Syno_Toolbox: module $id is disabled in modules.json" >&2
+        return 1
+    fi
     script="$(module_field "$idx" script)"
     args_json="$(jq -c ".modules[$idx].${args_field} // []" "$MANIFEST")"
 
@@ -248,6 +265,9 @@ sync_scheduled_task() {
     local idx task_name command enabled interval interval_type family
 
     idx="$(find_module_index "$id")" || { echo "Syno_Toolbox: sync_scheduled_task: unknown module $id" >&2; return 1; }
+    # Disabled modules never get a Task Scheduler entry. Removing one
+    # that was created before the module was disabled is getstate's job.
+    module_disabled "$idx" && return 0
     task_name="$(scheduled_task_name "$idx")"
     command="${PKG_DEST}/$(module_field "$idx" script)"
     enabled="$(tb_get "${id}_enabled" "no")"
@@ -318,7 +338,7 @@ selfheal)
 
 runboot)
     # Called only via synotoolbox-helper on DSM 7+ package start, since
-    # start-stop-status never runs as root there (confirmed by Dave -
+    # start-stop-status never runs as root there (confirmed by testing -
     # unlike DSM 6, where start-stop-status runs as root and calls
     # run_boot_modules.sh directly instead of going through this helper
     # gate). Same enabled/trigger logic run_boot_modules.sh used to do
@@ -329,6 +349,7 @@ runboot)
         id="$(module_field "$i" id)"
         trigger="$(module_field "$i" trigger)"
         [[ "$trigger" == "boot" || "$trigger" == "scheduled" ]] || continue
+        module_disabled "$i" && continue
         tb_is_enabled "$id" || continue
 
         echo "Syno_Toolbox: running $id"
@@ -344,6 +365,24 @@ getstate)
     OUT="[]"
     for (( i=0; i<MODULE_COUNT; i++ )); do
         id="$(module_field "$i" id)"
+
+        # "disabled": true in modules.json - leave the module out of the
+        # result entirely so main.js never renders it. If it had a Task
+        # Scheduler entry from before it was disabled (recorded in
+        # schedules_set), remove that too so nothing keeps running
+        # behind a hidden row.
+        if module_disabled "$i"; then
+            case ",$(schedules_set_get)," in
+                *",${id},"*)
+                    task_output="$("${BIN_DIR}/task_setup.sh" remove --name="$(scheduled_task_name "$i")" 2>>"$TOOLBOX_LOG")"
+                    echo "Syno_Toolbox: ${id} is disabled in modules.json - task_setup.sh remove: ${task_output}" >> "$TOOLBOX_LOG"
+                    schedules_set_remove "$id"
+                    tb_set "${id}_enabled" "no"
+                    ;;
+            esac
+            continue
+        fi
+
         enabled="$(tb_get "${id}_enabled" "no")"
 
         # A schedule-having module's "enabled" is meant to reflect a
@@ -567,8 +606,7 @@ listfolder)
 
 discovernas)
     # syno_discover.py is bundled inside Syno_Toolbox itself (confirmed
-    # 2026-08-04 by Dave, tested as root on DS925+) - no dependency on
-    # Drive Info being installed.
+    # 2026-08-04, tested as root on DS925+) - no dependency on Drive Info being installed.
     DISCOVER_SCRIPT="/var/packages/Syno_Toolbox/target/bin/syno_discover.py"
     if [[ ! -f "$DISCOVER_SCRIPT" ]]; then
         echo '{"success":false,"message":"syno_discover.py not found in this package build. Add target NAS manually instead."}'

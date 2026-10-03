@@ -513,12 +513,11 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // different rows (DSM Configuration Backup, Backup Synoboot Image,
     // Backup MTD Image). The shared secret (config_backup_shared_secret)
     // really is global - one value, used by all three, all NAS. The two
-    // remote destinations are NOT global (confirmed with Dave 2026-09,
-    // reversing the earlier "one global setting" call): each of the
-    // three tools has its own pair, stored under its own module id
-    // (config_backup_remote_*, synoboot_backup_remote_*,
-    // mtd_backup_remote_*) - getstate/save need no changes for this,
-    // since both are already fully generic over "${id}_*" keys.
+    // remote destinations are NOT global, each of the three tools has 
+    // its own pair, stored under its own module id(config_backup_remote_*,
+    // synoboot_backup_remote_*, mtd_backup_remote_*) - getstate/save need
+    // no changes for this, since both are already fully generic over
+    // "${id}_*" keys.
     //
     // this.backupsetActiveModId tracks which module's destinations are
     // currently loaded into the modal, so Save (and an ordinary main-
@@ -665,8 +664,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // snapshot goes stale, so reopening ANY Settings dialog (even a
     // different module's) shows what was there BEFORE that save -
     // which looks exactly like the save silently failed or reverted,
-    // even though it didn't (confirmed against Dave's own toolbox.conf
-    // dumps throughout this).
+    // even though it didn't.
     // Patches this.modules directly from a just-saved formData object,
     // rather than round-tripping to getstate to ask the server what it
     // just wrote. Safe because synotoolbox_api.sh's save case has no
@@ -972,10 +970,10 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 // control type. Settings here opens the SAME modal as
                 // DSM Configuration Backup's - the shared secret and 2
                 // remote NAS destinations are one global "where do my
-                // backups go" setting, not per-backup-type (confirmed
-                // with Dave 2026-09). Only config_backup's own row
-                // actually seeds the modal's fields from current_fields
-                // (see wireConfigBackupRow) - this button just opens it.
+                // backups go" setting, not per-backup-type. Only config
+                //_backup's own row actually seeds the modal's fields
+                // from current_fields (see wireConfigBackupRow) - this
+                // button just opens it.
                 return '<label>' + (mod.filepicker && mod.filepicker.label || "Path") + ':</label> ' +
                     '<input type="text" class="tb-path" placeholder="/volume1/backup" value="' + Ext.util.Format.htmlEncode(f.path || "") + '" style="width:200px;">' +
                     ' <button type="button" class="tb-browse">Browse</button>' +
@@ -1063,8 +1061,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // ordinal, not a count), so this is an either/or rather than a
     // numeric interval like renderHourSelect. Both options run at a
     // fixed time (Monday 00:00, or the first occurrence of the month)
-    // with no further configuration, per Dave's "keep it simple" spec
-    // confirmed 2026-09-13 - see task_setup.sh's build_schedule.
+    // with no further configuration - see task_setup.sh's build_schedule.
     //
     // "Monthly" is only offered on build 64570+ - DSM 6, 7.0, and 7.1
     // (all below that build) have no monthly repeat mode in Task

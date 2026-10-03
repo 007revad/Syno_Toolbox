@@ -16,7 +16,7 @@ fi
 dsm=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)
 if [[ "$dsm" -lt "7" ]]; then
     # Only DSM 7 includes Active Insight
-    echo "Active Insight is not installed"
+    echo "Active Insight is not included in DSM ${dsm}"
     exit
 fi
 

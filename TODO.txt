@@ -1,8 +1,6 @@
-Finish adding Schedule support for the modules that need it.
+Finish editing help to explain what each tool does and explain their settings.
 
 Cleanup Coredumps maybe add a schedule settings with --new option.
-
-Finish editing help to explain what each tool does and explain their settings.
 
 Add module to add more than 5 UPS clients.
 

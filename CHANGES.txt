@@ -10,13 +10,14 @@ v1.0.28
 - Renamed "DSM Configuration Backup and Export" to "DSM Configuration Backup"
 - Finished enabling scheduling for the "Check Connected to UPS Server" module.
 - Finished enabling scheduling for the "DSM Configuration Backup" module.
-- Finished "Check Connect to UPS Server" module.
 - Changed to delete all SynoToolbox schedules tasks when the package in uninstalled.
   - Each schedule's settings are retained in case the user later re-installs Syno Toolbox.
   - Scheduled tasks are retained during an upgrade to a newer Syno Toolbox version.
 - Improvements and bug fixes for "Enable Sequential I/O for SSD Cache".
 - Bug fix for CPU Usage tab, after updating Syno Toolbox, not showing the graph until user clicks Refresh.
 - Bug fix for all LAN ports listed as having the same MAC address as LAN 1.
+- Bug fix for "Restore RS3621 Fan Speed" getting the model name.
+- Removed (hid and disabled) "Check Connect to UPS Server" module until I decide if it's worth finishing.
 
 v1.0.27
 - 4th public beta release.

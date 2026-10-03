@@ -38,11 +38,11 @@ fi
 
 UPS_MODE="$(synogetkeyvalue "$CONF" ups_mode)"
 if [[ -z "$UPS_MODE" ]]; then
-    echo "UPS not configured!"
+    echo "UPS not configured"
     exit 3
 elif [[ "$UPS_MODE" == "slave" ]]; then
     echo "This NAS is a UPS client (slave), not the server. ups_acl doesn't apply here."
-    exit 3
+    exit 0
 fi
 
 CURRENT_ACL="$(synogetkeyvalue "$CONF" ups_acl)"
@@ -66,6 +66,15 @@ done
 
 if [[ "${#missing[@]}" -eq 0 ]]; then
     echo "UPS ACL OK: all required clients present."
+    exit 0
+fi
+
+if [[ "$check" == "yes" ]]; then
+    if [[ "${#missing[@]}" -gt 0 ]]; then
+        for client in "${missing[@]}"; do
+            echo "Missing UPS ACL entry for: $client"
+        done
+    fi
     exit 0
 fi
 

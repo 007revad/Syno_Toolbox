@@ -20,16 +20,20 @@ if [[ $( whoami ) != "root" ]]; then
     exit 1
 fi
 
+if [[ $1 == check ]]; then
+    check=yes
+fi
+
 # Get NAS model
 model=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/synoinfo.conf upnpmodelname 2>/dev/null)
 # Fallback for systems where upnpmodelname is unavailable
-if [[ -z "$nas_model" && -f /proc/sys/kernel/syno_hw_version ]]; then
+if [[ -z "$model" && -f /proc/sys/kernel/syno_hw_version ]]; then
     model=$(cat /proc/sys/kernel/syno_hw_version 2>/dev/null || echo "")
     # Check for dodgy characters after model number
-    if [[ ${nas_model,,} =~ 'pv10-j'$ ]]; then  # GitHub issue #10
-        model=${nas_model%??????}+              # replace last 6 chars with +
-    elif [[ ${nas_model} =~ '-j'$ ]]; then      # GitHub issue #2
-        model=${nas_model%??}                   # remove last 2 chars
+    if [[ ${model,,} =~ 'pv10-j'$ ]]; then  # GitHub issue #10
+        model=${model%??????}+              # replace last 6 chars with +
+    elif [[ ${model} =~ '-j'$ ]]; then      # GitHub issue #2
+        model=${model%??}                   # remove last 2 chars
     fi
 fi
 if [[ -z "$model" ]]; then
@@ -54,6 +58,33 @@ fi
 # Backup scemd.xml if no backup exists
 scemd_file="/usr/syno/etc.defaults/scemd.xml"
 
+if [[ "$check" == "yes" ]]; then
+    # Execute Python script using HERE document
+    scemd_file="$scemd_file" python3 << 'PYTHON_EOF'
+import xml.etree.ElementTree as ET
+import os
+import sys
+
+scemd_file = os.environ.get('scemd_file', '/usr/syno/etc.defaults/scemd.xml')
+
+try:
+    pwm_configs = ET.parse(scemd_file).getroot().findall('.//pwm_config')
+except Exception as e:
+    print(f"Error: {e}", file=sys.stderr)
+    # sys.exit(2)
+
+if len(pwm_configs) >= 2 \
+   and pwm_configs[0].get('pwm_duty_low') == '50' \
+   and pwm_configs[1].get('pwm_duty_low') == '100':
+    print("Fan speeds already edited")
+    sys.exit(0)
+else:
+    print("Fan speeds not edited")
+    # sys.exit(1)
+PYTHON_EOF
+    exit
+fi
+
 if [[ ! -f "${scemd_file}.bak" ]]; then
     backup_file="${scemd_file}.bak"
     if cp -p "$scemd_file" "$backup_file"; then
@@ -64,7 +95,6 @@ if [[ ! -f "${scemd_file}.bak" ]]; then
 else
     echo -e "Backup of scemd.xml already exists"
 fi
-
 
 edit_scemdxml(){ 
     # Parse the XML file and modify pwm_config elements ONLY if they have expected values:

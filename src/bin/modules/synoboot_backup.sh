@@ -67,7 +67,7 @@ else
 fi
 
 # Resolve remote hostnames and the same-target skip decision once up
-# front, same guard Dave added to synology_config_backup.sh - avoids
+# front, same guard added to synology_config_backup.sh - avoids
 # repeating the nmblookup/duplicate-check once per file below.
 if [[ $Remote_Backup == "yes" ]]; then
     Remote_Host=$("$nmblookup_cmd" -A "$Remote_IP" | sed -n 2p | cut -d ' ' -f1)

@@ -38,10 +38,9 @@
 # depends on the same build threshold: build >= 64570 uses the real
 # Weekly repeat mode (repeat_date=1002, confirmed via read-back);
 # older builds have no separate Weekly mode at all, so week falls back
-# to Daily mode with week_day restricted to just Monday - Dave's own
-# specified recipe (2026-09-13), reusing each API version's already-
-# verified daily repeat_date marker, but NOT independently read-back
-# confirmed the way the newer shape was.
+# to Daily mode with week_day restricted to just Monday, reusing each
+# API version's already-verified daily repeat_date marker, but NOT
+# independently read-back confirmed the way the newer shape was.
 #
 # Both week and month take NO --interval: DSM's own Task Scheduler has
 # no "every N weeks/months" concept (Daily/Weekly/Monthly are the only
@@ -51,12 +50,11 @@
 #
 # One more open item found alongside week/month: method=list version=1
 # doesn't find a monthly-scheduled task at all (version=3 does, on
-# DSM7 - DSM6's list only works at version=1 at all, per Dave
-# 2026-09-13, so the version=3 fallback below is effectively a DSM7-
-# only path in practice) - see find_task_id, which falls back to
-# version=3 when version=1 finds nothing. Weekly/hourly/minute tasks
-# are still found fine at version=1, so this is a targeted fallback,
-# not a wholesale version bump.
+# DSM7 - DSM6's list only works at version=1 at all, so the version=3
+# fallback below is effectively a DSM7 - only path in practice) - see
+# find_task_id, which falls back to version=3 when version=1 finds
+# nothing. Weekly/hourly/minute tasks are still found fine at version=1,
+# so this is a targeted fallback, not a wholesale version bump.
 #
 # Usage:
 #   task_setup.sh set --name="<task name>" --command="<full command>" \
@@ -122,7 +120,7 @@ find_task_id() {
     # synowebapi prints its own "[Line NNN] Exec WebAPI: ..." trace
     # line before the actual JSON on every call (confirmed 2026-09-13
     # - visible in every synowebapi output throughout this whole
-    # project) - on stderr specifically (confirmed by Dave: `2>/dev/null`
+    # project) - on stderr specifically (confirmed by tests: `2>/dev/null`
     # alone leaves clean JSON on stdout). The previous `2>&1` merged it
     # into what got parsed, breaking json.loads() silently on every
     # call, always returning "not found" regardless of whether a match
@@ -152,9 +150,8 @@ if match:
         return 0
     fi
 
-    # DSM6's list only works at version=1 at all (confirmed by Dave
-    # 2026-09-13) - skip the fallback there entirely rather than make
-    # a call that can't help.
+    # DSM6's list only works at version=1 at all (confirmed by testing).
+    # Skip the fallback there entirely rather than make a call that can't help.
     [[ "$API_VER" -eq 4 ]] || return 0
 
     raw=$(synowebapi $WEBAPI_FLAG --exec api=SYNO.Core.TaskScheduler method=list version=3 2>/dev/null)
@@ -251,12 +248,11 @@ build_schedule() {
             # Older builds (DSM6, DSM 7.0/7.1) have no separate Weekly
             # mode - achieve the same result via Daily's own day-of-
             # week filter, restricted to just Monday ("1") instead of
-            # every day ("0,1,2,3,4,5,6"). This is Dave's own specified
-            # recipe (2026-09-13), reusing each API version's already-
-            # verified daily repeat_date marker (1001 for v4, 0 for
-            # v1) - NOT independently read-back confirmed the way the
-            # build>=64570 shape above was, so worth a real create+get
-            # round trip if this ever misbehaves.
+            # every day ("0,1,2,3,4,5,6"). This is reusing each API
+            # version's already-verified daily repeat_date marker (1001
+            # for v4, 0 for v1) - NOT independently read-back confirmed
+            # the way the build>=64570 shape above was, so worth a real 
+            # create+get round trip if this ever misbehaves.
             if [[ "$API_VER" -eq 4 ]]; then
                 printf '{"date_type":0,"hour":0,"minute":0,"repeat_hour":0,"repeat_min":0,"repeat_date":1001,"week_day":"1","monthly_week":[],"last_work_hour":0,"version":4}'
             else
@@ -316,7 +312,7 @@ build_schedule() {
     # confirmed "whole day" value (real DSM task read-back, 2026-09-13).
     # The previous last_work_hour:0 here was never independently
     # verified for hour-type the way 23 was for minute-type, and a live
-    # test on 2026-09-25/26 (Dave, schedule_ups_connected, start 11:00,
+    # test on 2026-09-25/26 (schedule_ups_connected, start 11:00,
     # repeat every 6h) only ran twice (11:00, 13:00) before an unrelated
     # Edit-task-dialog interaction reset the schedule's stored
     # hour/last_work_hour fields mid-test - inconclusive on whether
@@ -475,15 +471,15 @@ print(json.dumps({
     if [[ -n "$EXISTING_ID" ]]; then
         # method=set was previously UNVERIFIED for taking the full
         # create-style schedule payload, and is now confirmed NOT to
-        # work that way: Dave, 2026-09-26, changing an already-enabled
-        # hourly task's interval (1h -> 4h) via this path silently
-        # returned success but left the real DSM task half-configured
-        # (start reset to next-hour, "Continue running within the same
-        # day" unchecked, repeat effectively 0) instead of applying the
-        # new schedule. Deleting and recreating instead, reusing the
-        # exact delete call already confirmed reliable on both DSM
-        # versions by the "remove" action below, rather than guessing
-        # at a corrected method=set shape.
+        # work that way, changing an already-enabled hourly task's
+        # interval (1h -> 4h) via this path silently returned success
+        # but left the real DSM task half-configured (start reset to
+        # next-hour, "Continue running within the same day" unchecked,
+        # repeat effectively 0) instead of applying the new schedule.
+        # Deleting and recreating instead, reusing the exact delete
+        # call already confirmed reliable on both DSM versions by the
+        # "remove" action below, rather than guessing at a corrected
+        # method=set shape.
         if [[ "$dsm" -ge 7 ]]; then
             synowebapi $WEBAPI_FLAG --exec api=SYNO.Core.TaskScheduler method=delete version=2 \
                 tasks="[{\"id\":${EXISTING_ID},\"real_owner\":\"root\"}]" >/dev/null

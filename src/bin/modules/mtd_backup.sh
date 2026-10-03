@@ -83,7 +83,7 @@ else
 fi
 
 # Resolve remote hostnames and the same-target skip decision once up
-# front, same guard Dave added to synology_config_backup.sh - avoids
+# front, same guard added to synology_config_backup.sh - avoids
 # repeating the nmblookup/duplicate-check once per partition file below
 # (this script alone backs up 6 files: 5 partitions + the full chip).
 if [[ $Remote_Backup == "yes" ]]; then
