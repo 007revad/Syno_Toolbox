@@ -5,12 +5,11 @@ v1.0.28
   - You need to set the "DSM Configuration Backup"'s "Target dir" on the target Synolog NAS.
 - Added support for copying synoboot backups to other Synology NAS running Syno Toolbox.
 - Added support for copying MTD backups to other Synology NAS running Syno Toolbox.
-- Updated to prevent DSM showing old cached ui files from the previously installed version.
+- Updated to prevent DSM showing old cached ui file content from the previously installed version.
 - Changed to update /volumeN backup paths in config file if the shared folder has been moved to a different volume.
 - Renamed "DSM Configuration Backup and Export" to "DSM Configuration Backup"
-- Finished enabling scheduling for the "Check Connected to UPS Server" module.
 - Finished enabling scheduling for the "DSM Configuration Backup" module.
-- Changed to delete all SynoToolbox schedules tasks when the package in uninstalled.
+- Changed to delete all SynoToolbox scheduled tasks when the package is uninstalled.
   - Each schedule's settings are retained in case the user later re-installs Syno Toolbox.
   - Scheduled tasks are retained during an upgrade to a newer Syno Toolbox version.
 - Improvements and bug fixes for "Enable Sequential I/O for SSD Cache".
