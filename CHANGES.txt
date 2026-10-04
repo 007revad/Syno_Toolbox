@@ -9,7 +9,7 @@ v1.0.28
 - Changed to update /volumeN backup paths in config file if the shared folder has been moved to a different volume.
 - Renamed "DSM Configuration Backup and Export" to "DSM Configuration Backup"
 - Finished enabling scheduling for the "DSM Configuration Backup" module.
-- Changed to delete all SynoToolbox scheduled tasks when the package is uninstalled.
+- Changed to delete all Syno Toolbox scheduled tasks when the package is uninstalled.
   - Each schedule's settings are retained in case the user later re-installs Syno Toolbox.
   - Scheduled tasks are retained during an upgrade to a newer Syno Toolbox version.
 - Improvements and bug fixes for "Enable Sequential I/O for SSD Cache".
