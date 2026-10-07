@@ -96,6 +96,47 @@ run_privileged_stdin() {
     RUN_RC=$?
 }
 
+# --------- 2c. Who may call this -----------------------------------
+# api.cgi is reachable without being logged in to DSM, and these actions can
+# read shares, scan the network and run things as root, so every action must
+# be called by a logged in DSM administrator, except the ones listed in
+# the gate below (and receive_backup, which is answered above and is guarded
+# by its own shared secret).
+#  - Who is calling: /usr/syno/synoman/webman/modules/authenticate.cgi prints
+#    the logged in user's name. DSM validates the session itself, from the
+#    session cookie plus the X-SYNO-TOKEN header the DSM desktop sends. With
+#    no valid session it prints nothing.
+#  - Is it an administrator: the name is in the "administrators" line of
+#    /etc/group (world readable; the CGI user can't run synogroup).
+#    Local accounts only.
+#  - Any failure, or anything unexpected, is "not authorised".
+
+is_admin() {
+    # $1 = user name, already checked against a strict pattern by the caller
+    awk -F: -v u="$1" '
+        $1=="administrators" {
+            n=split($4,a,",")
+            for (i=1;i<=n;i++) if (a[i]==u) found=1
+        }
+        END { exit !found }' /etc/group
+}
+
+require_auth() {
+    local user
+    user=$(/usr/syno/synoman/webman/modules/authenticate.cgi 2>/dev/null | head -n1)
+
+    if [[ "$user" =~ ^[A-Za-z0-9._@-]+$ ]]; then
+        if is_admin "$user"; then
+            return 0
+        fi
+        log "[ERROR] ${ACTION}: not authorised (user=${user} is not an administrator)"
+    else
+        log "[ERROR] ${ACTION}: not authorised (no valid DSM session)"
+    fi
+    json_response false "Not authorised" ""
+    exit 0
+}
+
 case "$REQUEST_METHOD" in
 POST)
     # receive_backup is intercepted here, before the generic POST_DATA
@@ -188,6 +229,14 @@ else
 fi
 
 # --------- 4. Action processing ----------------------------------
+
+# Open to anyone: init (no data), pingtoolbox (how other Toolbox NAS find this
+# one), and the Packages and CPU Usage tabs, which load in an iframe and so
+# can't send DSM's X-SYNO-TOKEN header.
+case "$ACTION" in
+init|pingtoolbox|pkgupdateshtml|cpuusagehtml) ;;
+*) require_auth ;;
+esac
 
 
 case "${ACTION}" in
