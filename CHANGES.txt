@@ -1,3 +1,10 @@
+v1.0.30
+- Added "Recently installed", "Recently upgraded" and "Dependent Packages" buttons to the Packages page.
+- Added "Check Access from Internet" module to Tools tab.
+- Updated Send WOL module to find other Synology NAS when run on multi-homed NAS with more than 1 LAN port connected.
+- Changed Info and Tools scroll bar color to match Packages and Help scroll bar color.
+- Bug fix for when a modules' backup path's shared folder has been renamed or deleted in DSM.
+
 v1.0.29
 - Security bug fix against unauthorised cgi requests able to run modules as root.
 

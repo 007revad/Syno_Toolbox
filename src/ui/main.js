@@ -86,7 +86,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-tab { padding:8px 18px; cursor:pointer; border:none; background:none; font-size:13px; font-weight:bold; color:#888; border-bottom:2px solid transparent; }',
             '  .tb-tab:hover { color:#1B8AED; }',
             '  .tb-tab.tb-tab-active { color:#1B8AED; border-bottom-color:#1B8AED; }',
-            '  .tb-list { flex:1 1 auto; overflow:auto; border:1px solid #e0e0e0; border-top:none; border-radius:0 0 4px 4px; }',
+            '  .tb-list { flex:1 1 auto; overflow:auto; border:1px solid #e0e0e0; border-top:none; border-radius:0 0 4px 4px; scrollbar-color:#8b8b8b #f1f1f1; }',
             '  .tb-panel { display:none; height:100%; }',
             '  .tb-panel.tb-panel-active { display:block; }',
             '  .tb-iframe { width:100%; height:100%; min-height:400px; border:none; display:block; }',
@@ -96,9 +96,10 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-row-name { font-weight:bold; font-size:13px; }',
             '  .tb-row-controls { margin-top:6px; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:#555; }',
             '  .tb-row-controls input[type=text], .tb-row-controls input[type=number], .tb-row-controls input[type=password], .tb-row-controls select { padding:3px 5px; font-size:12px; border:1px solid #ccc; border-radius:3px; }',
-            '  .tb-row-controls button { padding:3px 10px; font-size:12px; border:1px solid #ccc; border-radius:3px; background:#f7f7f7; cursor:pointer; }',
-            '  .tb-row-result { margin-top:6px; font-family:Verdana,Arial,sans-serif; font-size:11px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
-            '  .tb-row-result-monospace { margin-top:6px; font-family:Consolas,Monaco,"Courier New",monospace; font-size:11px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
+            '  .tb-row-controls button, .tb-pkg-bar button, .tb-cpu-settings { padding:4px 10px; font-size:12px; border:1px solid #ccc; border-radius:3px; background:#f7f7f7; cursor:pointer; }',
+            '  .tb-row-controls button:hover:not(:disabled), .tb-pkg-bar button:hover, .tb-cpu-settings:hover { border-color:#1B8AED; color:#1B8AED; }',
+            '  .tb-row-result { margin-top:6px; font-family:Verdana,Arial,sans-serif; font-size:12px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
+            '  .tb-row-result-monospace { margin-top:6px; font-family:Consolas,Monaco,"Courier New",monospace; font-size:13px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
             '  .tb-toggle { width:38px; height:20px; position:relative; display:inline-block; flex:0 0 auto; }',
             '  .tb-toggle.tb-toggle-hidden { visibility:hidden; }',
             '  .tb-toggle input { opacity:0; width:0; height:0; }',
@@ -138,11 +139,23 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-wolset-save:disabled { opacity:0.5; cursor:default; }',
             '  .tb-cpu-header { align-items:center; flex:0 0 auto; }',
             '  .tb-cpu-header .tb-row-main { display:flex; align-items:center; }',
-            '  .tb-cpu-settings { padding:5px 14px; border:1px solid #ccc; background:#fff; border-radius:4px; cursor:pointer; font-size:12px; flex:0 0 auto; margin-left:auto; }',
+            '  .tb-cpu-settings { flex:0 0 auto; margin-left:auto; }',
             '  .tb-cpu-frame-wrap { flex:1 1 auto; min-height:0; }',
             '  .tb-cpu-disabled-msg { display:flex; align-items:center; justify-content:center; height:100%; color:#999; font-size:13px; padding:0 24px; text-align:center; }',
             '  .tb-panel[data-panel="cpu_usage"] { display:none; flex-direction:column; height:100%; }',
             '  .tb-panel[data-panel="cpu_usage"].tb-panel-active { display:flex; }',
+            '  .tb-panel[data-panel="packages"] { display:none; flex-direction:column; height:100%; }',
+            '  .tb-panel[data-panel="packages"].tb-panel-active { display:flex; }',
+            '  .tb-pkg-bar { flex:0 0 auto; display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid #eee; }',
+            '  .tb-pkg-frame-wrap { flex:1 1 auto; min-height:0; }',
+            '  .tb-pkg-frame-wrap .tb-iframe { min-height:0; }',
+            '  .tb-recent-backdrop { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }',
+            '  .tb-recent-backdrop.open { display:flex; }',
+            '  .tb-recent { position:relative; background:#fff; color:#222; width:680px; max-width:94%; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); display:flex; flex-direction:column; }',
+            '  .tb-recent-header { padding:12px 16px; border-bottom:1px solid #eee; font-weight:bold; font-size:14px; display:flex; justify-content:space-between; align-items:center; }',
+            '  .tb-recent-close { border:none; background:none; font-size:16px; cursor:pointer; color:#666; line-height:1; padding:4px; }',
+            '  .tb-recent-close:hover { color:#000; }',
+            '  .tb-recent-body { max-height:360px; min-height:120px; overflow:auto; padding:10px 16px; font-family:Verdana,Arial,sans-serif; font-size:12px; color:#555; white-space:pre-wrap; word-break:break-all; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
             '  .tb-cpuset-backdrop { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }',
             '  .tb-cpuset-backdrop.open { display:flex; }',
             '  .tb-cpuset { position:relative; background:#fff; color:#222; width:420px; max-width:90%; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); display:flex; flex-direction:column; }',
@@ -190,7 +203,14 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  <div class="tb-list">',
             '    <div class="tb-panel tb-panel-active" data-panel="info"><div style="padding:20px;color:#999;">Loading&hellip;</div></div>',
             '    <div class="tb-panel" data-panel="tools"></div>',
-            '    <div class="tb-panel" data-panel="packages"></div>',
+            '    <div class="tb-panel" data-panel="packages">',
+            '      <div class="tb-pkg-bar">',
+            '        <button type="button" class="tb-pkg-recent-installed">Recently Installed</button>',
+            '        <button type="button" class="tb-pkg-recent-upgraded">Recently Upgraded</button>',
+            '        <button type="button" class="tb-pkg-depends">Dependent Packages</button>',
+            '      </div>',
+            '      <div class="tb-pkg-frame-wrap"></div>',
+            '    </div>',
             '    <div class="tb-panel" data-panel="cpu_usage">',
             '      <div class="tb-row tb-cpu-header" data-module-id="cpu_usage">',
             '        <label class="tb-toggle">',
@@ -220,6 +240,12 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '      <div class="tb-wolset-header"><span>Hidden Devices</span><button type="button" class="tb-wolset-close" aria-label="Close">\u00d7</button></div>',
             '      <div class="tb-wolset-body"></div>',
             '      <div class="tb-wolset-footer"><span class="tb-wolset-hint">Checked devices are hidden from the Send WOL list</span><button type="button" class="tb-wolset-save">Save</button></div>',
+            '    </div>',
+            '  </div>',
+            '  <div class="tb-recent-backdrop">',
+            '    <div class="tb-recent">',
+            '      <div class="tb-recent-header"><span class="tb-recent-title"></span><button type="button" class="tb-recent-close" aria-label="Close">\u00d7</button></div>',
+            '      <div class="tb-recent-body"></div>',
             '    </div>',
             '  </div>',
             '  <div class="tb-cpuset-backdrop">',
@@ -315,6 +341,24 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             if (ev.getTarget() === this.wolsetBackdrop) { this.closeWolSettings(); }
         }).createDelegate(this));
 
+        this.pkgFrameWrap = el.querySelector(".tb-pkg-frame-wrap");
+        this.recentBackdrop = el.querySelector(".tb-recent-backdrop");
+        this.recentTitleEl = el.querySelector(".tb-recent-title");
+        this.recentBodyEl = el.querySelector(".tb-recent-body");
+        Ext.fly(el.querySelector(".tb-pkg-recent-installed")).on("click", (function() {
+            this.openRecentModal("pkg_recent_installed", "Recently Installed");
+        }).createDelegate(this));
+        Ext.fly(el.querySelector(".tb-pkg-recent-upgraded")).on("click", (function() {
+            this.openRecentModal("pkg_recent_upgraded", "Recently Upgraded");
+        }).createDelegate(this));
+        Ext.fly(el.querySelector(".tb-pkg-depends")).on("click", (function() {
+            this.openRecentModal("pkg_depends", "Dependent Packages");
+        }).createDelegate(this));
+        Ext.fly(el.querySelector(".tb-recent-close")).on("click", this.closeRecentModal, this);
+        Ext.fly(this.recentBackdrop).on("click", (function(ev) {
+            if (ev.getTarget() === this.recentBackdrop) { this.closeRecentModal(); }
+        }).createDelegate(this));
+
         this.cpuFrameWrap = el.querySelector(".tb-cpu-frame-wrap");
         this.cpuEnabledCheckbox = el.querySelector('.tb-row[data-module-id="cpu_usage"] .tb-enabled');
         Ext.fly(this.cpuEnabledCheckbox).on("change", (function() {
@@ -389,7 +433,36 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         // scrollbar there is a sub-pixel rounding artifact, never
         // legitimate overflow. Force it off specifically for this tab
         // instead of chasing an exact zero-overflow layout.
-        this.listEl.style.overflow = (category === "cpu_usage") ? "hidden" : "";
+        this.listEl.style.overflow = (category === "cpu_usage" || category === "packages") ? "hidden" : "";
+    },
+
+    // ---------------------------------------------------------------
+    // Packages tab button row: each button runs a hidden module
+    // (pkg_recent_installed / pkg_recent_upgraded, both bin/modules/
+    // pkg_recent.sh) through the ordinary `run` action - same pattern
+    // as disable_ssh_root - and shows its output in a modal. Output is
+    // fetched on click, so nothing extra runs on open/Refresh.
+    // recentReqId discards a late response if the modal was closed or
+    // switched to the other button in the meantime.
+    // ---------------------------------------------------------------
+    openRecentModal: function(moduleId, title) {
+        var reqId = (this.recentReqId = (this.recentReqId || 0) + 1);
+        this.recentTitleEl.textContent = title;
+        this.recentBodyEl.textContent = "Loading\u2026";
+        Ext.fly(this.recentBackdrop).addClass("open");
+
+        SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: moduleId }, (function(resp) {
+            if (reqId !== this.recentReqId) { return; }
+            // textContent, not innerHTML - log lines are untrusted text
+            this.recentBodyEl.textContent = (resp && resp.success)
+                ? (resp.result || "(no output)")
+                : "Error: " + ((resp && resp.message) || "unknown");
+        }).createDelegate(this));
+    },
+
+    closeRecentModal: function() {
+        this.recentReqId = (this.recentReqId || 0) + 1;
+        Ext.fly(this.recentBackdrop).removeClass("open");
     },
 
     // Packages shows the live pkg_updates.html written by pkg_updates.sh
@@ -400,7 +473,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // is what forces a fresh iframe load, called again once that run
     // completes.
     ensurePackagesLoaded: function() {
-        if (this.packagesPanel.firstChild) { return; }
+        if (this.pkgFrameWrap.firstChild) { return; }
         this.reloadPackagesPanel();
     },
 
@@ -409,7 +482,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // "Loading..." indicator (.tb-spinner), rather than a second,
     // differently-styled spinner just for this panel.
     showPackagesLoading: function() {
-        this.packagesPanel.innerHTML =
+        this.pkgFrameWrap.innerHTML =
             '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:13px;">' +
             '<img src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="28" height="28" style="margin-right:10px;">' +
             'Loading&hellip;</div>';
@@ -420,7 +493,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // api.cgi), unlike every other action's JSON envelope, since an
     // iframe needs an actual HTML document, not JSON to parse.
     reloadPackagesPanel: function() {
-        this.packagesPanel.innerHTML = '<iframe class="tb-iframe" src="' +
+        this.pkgFrameWrap.innerHTML = '<iframe class="tb-iframe" src="' +
             SYNO.SDS.Syno_Toolbox.API_PATH + '?action=pkgupdateshtml&_ts=' + new Date().getTime() + '"></iframe>';
     },
 
@@ -875,11 +948,11 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         // sitting there looking frozen until it's done. Skipped on
         // initial open - nothing's rendered yet for firstChild to be
         // stale.
-        if (!isInitial && this.packagesPanel && this.packagesPanel.firstChild) {
+        if (!isInitial && this.pkgFrameWrap && this.pkgFrameWrap.firstChild) {
             this.showPackagesLoading();
         }
         SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: "pkg_updates" }, (function() {
-            if (this.packagesPanel && this.packagesPanel.firstChild) { this.reloadPackagesPanel(); }
+            if (this.pkgFrameWrap && this.pkgFrameWrap.firstChild) { this.reloadPackagesPanel(); }
         }).createDelegate(this));
 
         SYNO.SDS.Syno_Toolbox.apiCall("getstate", {}, (function(resp) {

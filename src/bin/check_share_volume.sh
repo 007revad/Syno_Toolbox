@@ -72,9 +72,18 @@ if [[ $buildnumber -gt "64570" ]]; then
 else
     # DSM 7.2 and earlier
     # synoshare --getmap is case insensitive
-    volshare=$(/usr/syno/sbin/synoshare --getmap "$backupshare" | grep volume | cut -d"[" -f2 | cut -d"]" -f1)
+    # The line to read is the "Path .......[/volume1/Backups]" one. (Grepping for
+    # "volume" also matches a comment, a share name or a user name that has it.)
+    volshare=$(/usr/syno/sbin/synoshare --getmap "$backupshare" | sed -n 's/^ *Path \.*\[\(.*\)\]$/\1/p' | head -n 1)
     # I could also have used:
     # vol=$(/usr/syno/sbin/synoshare --get "$backupshare" | tr '[]' '\n' | sed -n "9p")
+fi
+
+# The share is gone (renamed or deleted) or synoshare gave nothing usable:
+# leave the setting alone instead of writing a made up path
+if [[ ! "$volshare" =~ ^/volume[0-9]+(/.*)?$ ]]; then
+    echo "Error: shared folder $backupshare not found. $key left as $bakpath" |& tee -a "$TOOLBOX_LOG"
+    exit 1
 fi
 
 if [[ -n "$subfolder" ]]; then

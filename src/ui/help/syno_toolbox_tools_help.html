@@ -19,7 +19,12 @@
         <p>
             The <strong>Packages</strong> tab shows you which installed Synology packages and 
             installed packages from the 007revad and SynoCommunity repositories have updates 
-            available as well as their release notes.
+            available as well as their release notes. It also lists any broken packages, if there are any.<br>
+            <ul>
+                <li>The <strong>Recently Installed</strong> button lists recently installed packages.</li>
+                <li>The <strong>Recently Upgraded</strong> button lists recently upgraded packages.</li>
+                <li>The <strong>Dependent Packages</strong> button lists packages that depend on other packages and shows those packages.</li>
+            </ul>
         </p>
 
         <h2 style="color:#1B8AED; font-size:18px;">CPU Usage</h2>
@@ -67,6 +72,15 @@
                 Enabling this switches DSM's displayed size units to their binary equivalents 
                 (GiB, MiB, KiB, TiB) for your current language.<br>
                 The tool's status area shows the current DSM storage size units for your language.
+            </p>
+        </div>
+
+        <div class="section">
+            <h4 style="color:#1B8AED;">Check Access from Internet</h4>
+            <p>
+                Checks if the Synology's DSM webui is accessible from the Internet via your Internet IP and DSM's https login port.<br>
+                The tool's status area shows whether your Internet IP address, DSM's https port and whether it's open to the Internet.<br>
+                <strong>WARNING:</strong> If your Synology is shown to be accessible from the Internet it is susceptible to the C3RB3R ransomware!!!
             </p>
         </div>
 

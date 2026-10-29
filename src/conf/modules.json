@@ -177,6 +177,18 @@
       "check_args": ["--check"]
     },
     {
+      "id": "check_internet_access",
+      "category": "tools",
+      "name": "Check Access from Internet",
+      "control": "toggle-display",
+      "script": "bin/modules/check_internet_access.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": null
+    },
+    {
       "id": "cleanup_coredumps",
       "category": "tools",
       "name": "Cleanup Coredumps",
@@ -376,6 +388,48 @@
       "check_args": [],
       "hidden_row": true,
       "note": "Drives the Packages tab's pkg_updates.html, not a rendered row - hidden_row keeps it out of renderList. trigger:on_save (like send_wol) is purely to keep run_boot_modules.sh from auto-firing this at package start - nothing about it is actually save-driven. main.js's loadState runs it via the ordinary run/module_id API on window open and on every Refresh, then reloads the tab's iframe."
+    },
+    {
+      "id": "pkg_recent_installed",
+      "category": "packages",
+      "name": "Recently Installed Packages",
+      "control": "toggle-display",
+      "script": "bin/modules/pkg_recent.sh",
+      "trigger": "on_save",
+      "live": true,
+      "run_args": ["installed"],
+      "disable_args": null,
+      "check_args": null,
+      "hidden_row": true,
+      "note": "Not a rendered row - main.js's Packages tab [Recently Installed] button calls run against this id and shows the output in a modal. Same script as pkg_recent_upgraded, selected by its first arg. trigger:on_save + live:true only keep run_boot_modules.sh and Save's enable-diff from ever touching it (same reasoning as pkg_updates)."
+    },
+    {
+      "id": "pkg_recent_upgraded",
+      "category": "packages",
+      "name": "Recently Upgraded Packages",
+      "control": "toggle-display",
+      "script": "bin/modules/pkg_recent.sh",
+      "trigger": "on_save",
+      "live": true,
+      "run_args": ["upgraded"],
+      "disable_args": null,
+      "check_args": null,
+      "hidden_row": true,
+      "note": "Not a rendered row - main.js's Packages tab [Recently Upgraded] button calls run against this id and shows the output in a modal. See pkg_recent_installed."
+    },
+    {
+      "id": "pkg_depends",
+      "category": "packages",
+      "name": "Dependent Packages",
+      "control": "toggle-display",
+      "script": "bin/modules/pkg_depends.sh",
+      "trigger": "on_save",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": null,
+      "hidden_row": true,
+      "note": "Not a rendered row - main.js's Packages tab [Dependent Packages] button calls run against this id and shows the output in a modal. See pkg_recent_installed."
     },
     {
       "id": "cpu_usage",
