@@ -99,7 +99,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-row-controls button, .tb-pkg-bar button, .tb-cpu-settings { padding:4px 10px; font-size:12px; border:1px solid #ccc; border-radius:3px; background:#f7f7f7; cursor:pointer; }',
             '  .tb-row-controls button:hover:not(:disabled), .tb-pkg-bar button:hover, .tb-cpu-settings:hover { border-color:#1B8AED; color:#1B8AED; }',
             '  .tb-row-result { margin-top:6px; font-family:Verdana,Arial,sans-serif; font-size:12px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
-            '  .tb-row-result-monospace { margin-top:6px; font-family:Consolas,Monaco,"Courier New",monospace; font-size:13px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
+            '  .tb-row-result-monospace { margin-top:6px; font-family:Consolas,Monaco,"Courier New",monospace; font-size:14px; color:#777; white-space:pre-wrap; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
             '  .tb-toggle { width:38px; height:20px; position:relative; display:inline-block; flex:0 0 auto; }',
             '  .tb-toggle.tb-toggle-hidden { visibility:hidden; }',
             '  .tb-toggle input { opacity:0; width:0; height:0; }',
@@ -1609,10 +1609,12 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     // string stays escaped, so module output can never inject arbitrary HTML.
     safeResultHtml: function(text) {
         var escaped = Ext.util.Format.htmlEncode(text);
-        return escaped.replace(
-            /&lt;a href=&quot;(https:\/\/[^&"]+)&quot;&gt;([^&<]*)&lt;\/a&gt;/g,
-            '<a href="$1" target="_blank" rel="noopener noreferrer">$2</a>'
-        );
+        return escaped
+            .replace(
+                /&lt;a href=&quot;(https:\/\/[^&"]+)&quot;&gt;([^&<]*)&lt;\/a&gt;/g,
+                '<a href="$1" target="_blank" rel="noopener noreferrer">$2</a>'
+            )
+            .replace(/^(WARNING:.*)$/gm, '<span style="color:#d32f2f;">$1</span>');
     },
 
     runModule: function(moduleId, rowEl) {

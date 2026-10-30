@@ -1,3 +1,6 @@
+v1.0.31
+- Updated "Check Access from Internet" module to also check the DSM http port.
+
 v1.0.30
 - Added "Recently installed", "Recently upgraded" and "Dependent Packages" buttons to the Packages page.
 - Added "Check Access from Internet" module to Tools tab.

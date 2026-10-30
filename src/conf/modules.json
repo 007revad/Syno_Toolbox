@@ -182,11 +182,12 @@
       "name": "Check Access from Internet",
       "control": "toggle-display",
       "script": "bin/modules/check_internet_access.sh",
-      "trigger": "boot",
-      "live": true,
+      "trigger": "on_save",
+      "live": false,
       "run_args": [],
       "disable_args": null,
-      "check_args": null
+      "check_args": ["check"],
+      "note": "'trigger: on_save' prevents check_internet_access.sh running twice when the package is opened."
     },
     {
       "id": "cleanup_coredumps",
