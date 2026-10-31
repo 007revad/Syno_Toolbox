@@ -1,5 +1,6 @@
 v1.0.31
 - Updated "Check Access from Internet" module to also check the DSM http port.
+- Updated "DSM Version" module to warn if DSM is at risk of known exploits and show which version to update to.
 
 v1.0.30
 - Added "Recently installed", "Recently upgraded" and "Dependent Packages" buttons to the Packages page.
