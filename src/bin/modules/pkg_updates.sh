@@ -77,6 +77,76 @@ MESSAGE='<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" 
 
 
 #------------------------------------------------------------------------------
+# Check for packages at risk of PHP2Shell (Synology-SA-26:14)
+# https://www.synology.com/en-global/security/advisory/Synology_SA_26_14
+
+# Prints the fixed version, "none" if no fix will be provided,
+# or nothing if the package isn't affected on this DSM version
+php2shell_fixed() {
+    case "$1" in
+        Calendar)
+            if   [[ "$BUILD" -ge 64570 ]]; then echo "3.0.4-21435"  # DSM 7.2 and later
+            elif [[ "$BUILD" -ge 41890 ]]; then echo "2.4.8-10948"  # DSM 7.0 to 7.1
+            elif [[ "$BUILD" -ge 24922 ]]; then echo "2.4.8-0948"   # DSM 6.2.2 to 6.2.4
+            fi ;;
+        MailStation)
+            if   [[ "$BUILD" -ge 60000 ]]; then echo "30000002.3.19-20333"  # DSM 7.2 and later
+            elif [[ "$BUILD" -ge 41805 ]]; then echo "30000002.3.19-10333"  # DSM 7.0 to 7.1
+            elif [[ "$BUILD" -ge 24922 ]]; then echo "30000002.3.19-0333"   # DSM 6.2.2 to 6.2.4
+            fi ;;
+        PHP7.3)      echo "none" ;;  # End of life
+        PHP7.4)
+            if   [[ "$BUILD" -ge 60096 ]]; then echo "7.4.33-0131"  # DSM 7.2 and later
+            elif [[ "$BUILD" -ge 41300 ]]; then echo "7.4.33-0122"  # DSM 7.0 to 7.1
+            elif [[ "$BUILD" -ge 22232 ]]; then echo "7.4.33-0010"  # DSM 6.2 to 6.2.4
+            fi ;;
+        PHP8.0)
+            if   [[ "$BUILD" -ge 60096 ]]; then echo "8.0.30-0122"  # DSM 7.2 and later
+            elif [[ "$BUILD" -ge 41300 ]]; then echo "8.0.30-0104"  # DSM 7.0 to 7.1
+            fi ;;
+        PHP8.1) echo "8.1.34-0120" ;;  # DSM 7.2-60096 and later
+        PHP8.2)
+            if [[ "$ENTERPRISE" == "yes" ]]; then echo "8.2.35-0134"  # DSM Enterprise
+            elif   [[ "$BUILD" -ge 60096 ]]; then echo "8.2.35-0171"  # DSM 7.2 and later
+            fi ;;
+        PHP8.3) echo "8.3.36-0051" ;;  # DSM 7.2-60096 and later
+        PHP8.4) echo "8.4.27-0051" ;;  # DSM 7.2-60096 and later
+    esac
+}
+
+MESSAGE_C+='<table>
+<thead style="background-color: #c00000;"><tr><th>Packages at Risk (PHP2Shell)</th><th>Installed</th><th>Fixed in</th></tr></thead>
+<tbody>'
+
+risk_count=0
+for PACKAGE in Calendar MailStation PHP7.3 PHP7.4 PHP8.0 PHP8.1 PHP8.2 PHP8.3 PHP8.4; do
+    [[ -f "/var/packages/${PACKAGE}/INFO" ]] || continue
+    INSTALLED=$(synogetkeyvalue "/var/packages/${PACKAGE}/INFO" version)
+    PACKAGE_NAME="$(synogetkeyvalue "/var/packages/${PACKAGE}/INFO" displayname)"
+    [[ -z "$PACKAGE_NAME" ]] && PACKAGE_NAME="$PACKAGE"
+
+    FIXED="$(php2shell_fixed "$PACKAGE")"
+    if [[ -z "$FIXED" ]]; then
+        continue
+    elif [[ "$FIXED" == "none" ]]; then
+        FIXED_SHOW="No fix (end of life)"
+    elif [[ "$(printf '%s\n' "$FIXED" "$INSTALLED" | sort -V | head -n1)" != "$FIXED" ]]; then
+        FIXED_SHOW="$FIXED"  # Installed is older than fixed
+    else
+        continue
+    fi
+
+    MESSAGE_C+='<tr><td class="no-wrap" style="width:1%">'"$PACKAGE_NAME"'</td><td class="no-wrap" style="width:1%">'"$INSTALLED"'</td><td class="no-wrap" style="width:1%">'"$FIXED_SHOW"'</td></tr>'
+    risk_count=$((risk_count +1))
+done
+MESSAGE_C+='</tbody></table><p>'
+
+if [[ "$risk_count" -gt 0 ]]; then
+    MESSAGE+="$MESSAGE_C"
+fi
+
+
+#------------------------------------------------------------------------------
 # Check for broken packages
 
 # Broken packages table head
@@ -93,7 +163,7 @@ for pkg in /var/packages/*; do
         STATUS_JSON="$(synopkg status "$PKG_ID" 2>/dev/null || true)"
         REASON="$(jq -r '.aspect.error.status_description // .aspect.active.status_description // "unknown reason"' <<< "$STATUS_JSON")"
         echo "$PACKAGE_NAME $PACKAGE_VERSION $REASON"
-        MESSAGE_A+='<tr><td class="no-wrap">'"$PACKAGE_NAME"'</td><td class="no-wrap">'"$PACKAGE_VERSION"'</td></td><td class="notes">'"$REASON"'</td></tr>'
+        MESSAGE_A+='<tr><td class="no-wrap">'"$PACKAGE_NAME"'</td><td class="no-wrap">'"$PACKAGE_VERSION"'</td><td class="notes">'"$REASON"'</td></tr>'
         count=$((count +1))
     fi
 done
@@ -170,7 +240,7 @@ if [[ "$count" -gt 0 ]]; then
     MESSAGE+="$MESSAGE_B"
 else
     # No updates found
-    MESSAGE+='No package updatess found.'
+    MESSAGE+='No package updates found.'
 fi
 
 

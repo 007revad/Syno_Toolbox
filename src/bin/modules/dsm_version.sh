@@ -61,6 +61,12 @@ if [[ "$smallfixnumber" -gt "0" ]]; then
 fi 
 buildnumber=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION buildnumber)
 
+
+#productversion=7.2.1  # debug ###########################################
+#buildnumber=69057     # debug ###########################################
+#smallfixnumber=1      # debug ###########################################
+
+
 # Show DSM version info
 echo "$os_name $productversion$base$smallfixnumber_show"
 
@@ -79,9 +85,6 @@ echo "$os_name $productversion$base$smallfixnumber_show"
 #
 # DSM 7.3	Important	Upgrade to 7.3.1-86003-1 or above.
 # DSM 7.2.2	Important	Upgrade to 7.2.2-72806-5 or above.
-
-#buildnumber=69057  # debug ###########################################
-#smallfixnumber=1   # debug ###########################################
 
 case "$buildnumber" in
     90080)  # DSM 7.4.1
