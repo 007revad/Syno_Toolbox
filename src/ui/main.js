@@ -146,6 +146,28 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-panel[data-panel="cpu_usage"].tb-panel-active { display:flex; }',
             '  .tb-panel[data-panel="packages"] { display:none; flex-direction:column; height:100%; }',
             '  .tb-panel[data-panel="packages"].tb-panel-active { display:flex; }',
+            '  .tb-panel[data-panel="snapshots"] { display:none; flex-direction:column; height:100%; }',
+            '  .tb-panel[data-panel="snapshots"].tb-panel-active { display:flex; }',
+            '  .tb-snap-frame-wrap { flex:1 1 auto; min-height:0; }',
+            '  .tb-snap-frame-wrap .tb-iframe { min-height:0; }',
+            '  .tb-snapset-backdrop { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }',
+            '  .tb-snapset-backdrop.open { display:flex; }',
+            '  .tb-snapset { position:relative; background:#fff; color:#222; width:420px; max-width:90%; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); display:flex; flex-direction:column; }',
+            '  .tb-snapset-header { padding:12px 16px; border-bottom:1px solid #eee; font-weight:bold; font-size:14px; display:flex; justify-content:space-between; align-items:center; }',
+            '  .tb-snapset-close { border:none; background:none; font-size:16px; cursor:pointer; color:#666; line-height:1; padding:4px; }',
+            '  .tb-snapset-close:hover { color:#000; }',
+            '  .tb-snapset-tools { padding:8px 16px 0 16px; display:flex; gap:8px; }',
+            '  .tb-snapset-tools button { padding:3px 10px; font-size:12px; border:1px solid #ccc; border-radius:3px; background:#f7f7f7; cursor:pointer; }',
+            '  .tb-snapset-tools button:hover { border-color:#1B8AED; color:#1B8AED; }',
+            '  .tb-snapset-body { max-height:320px; overflow-y:auto; padding:6px 0; }',
+            '  .tb-snapset-item { display:block; padding:6px 16px; font-size:13px; cursor:pointer; }',
+            '  .tb-snapset-item:hover { background:#f0f6ff; }',
+            '  .tb-snapset-item input { margin-right:8px; }',
+            '  .tb-snapset-msg { padding:16px; color:#888; font-size:13px; }',
+            '  .tb-snapset-footer { padding:12px 16px 16px 16px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:12px; }',
+            '  .tb-snapset-hint { font-size:12px; color:#888; }',
+            '  .tb-snapset-save { padding:5px 18px; border:1px solid #1B8AED; background:#1B8AED; color:#fff; border-radius:4px; cursor:pointer; font-weight:bold; font-size:13px; flex:0 0 auto; }',
+            '  .tb-snapset-save:disabled { opacity:0.5; cursor:default; }',
             '  .tb-pkg-bar { flex:0 0 auto; display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid #eee; }',
             '  .tb-pkg-frame-wrap { flex:1 1 auto; min-height:0; }',
             '  .tb-pkg-frame-wrap .tb-iframe { min-height:0; }',
@@ -156,6 +178,29 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '  .tb-recent-close { border:none; background:none; font-size:16px; cursor:pointer; color:#666; line-height:1; padding:4px; }',
             '  .tb-recent-close:hover { color:#000; }',
             '  .tb-recent-body { max-height:360px; min-height:120px; overflow:auto; padding:10px 16px; font-family:Verdana,Arial,sans-serif; font-size:12px; color:#555; white-space:pre-wrap; word-break:break-all; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
+            '  .tb-row[data-module-id="failed_logins"] .tb-row-main { display:flex; flex-wrap:wrap; align-items:center; column-gap:12px; }',
+            '  .tb-row[data-module-id="failed_logins"] .tb-row-name { flex:0 0 100%; }',
+            '  .tb-row[data-module-id="failed_logins"] .tb-row-result { order:1; }',
+            '  .tb-row[data-module-id="failed_logins"] .tb-row-controls { order:2; }',
+            '  .tb-fl-backdrop { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }',
+            '  .tb-fl-backdrop.open { display:flex; }',
+            '  .tb-fl { position:relative; background:#fff; color:#222; width:680px; max-width:94%; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); display:flex; flex-direction:column; }',
+            '  .tb-fl-header { padding:12px 16px; border-bottom:1px solid #eee; font-weight:bold; font-size:14px; display:flex; justify-content:space-between; align-items:center; }',
+            '  .tb-fl-close { border:none; background:none; font-size:16px; cursor:pointer; color:#666; line-height:1; padding:4px; }',
+            '  .tb-fl-close:hover { color:#000; }',
+            '  .tb-fl-bar { padding:8px 16px; border-bottom:1px solid #eee; display:flex; align-items:center; gap:8px; font-size:12px; color:#555; }',
+            '  .tb-fl-bar select { padding:3px 5px; font-size:12px; border:1px solid #ccc; border-radius:3px; }',
+            '  .tb-fl-note { margin-left:auto; color:#888; }',
+            '  .tb-fl-body { max-height:360px; min-height:120px; overflow:auto; padding:0 16px 10px 16px; font-size:12px; color:#555; -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }',
+            '  .tb-fl-table { width:100%; border-collapse:collapse; }',
+            '  .tb-fl-table th { position:sticky; top:0; background:#fff; text-align:left; padding:8px 10px 6px 0; border-bottom:1px solid #ddd; font-weight:bold; }',
+            '  .tb-fl-table td { padding:4px 10px 4px 0; border-bottom:1px solid #f0f0f0; word-break:break-all; }',
+            '  .tb-fl-table tr.tb-fl-recent td { background:#fff6d6; }',
+            '  .tb-fl-svc-dsm { color:#1565c0; font-weight:normal; }',
+            '  .tb-fl-svc-ssh { color:#e65100; font-weight:normal; }',
+            '  .tb-fl-yes { color:#d32f2f; font-weight:normal; }',
+            '  .tb-fl-disabled { color:inherit; }',
+            '  .tb-fl-legend { display:inline-block; width:10px; height:10px; background:#fff6d6; border:1px solid #e0cf90; margin:0 4px 0 12px; vertical-align:middle; }',
             '  .tb-cpuset-backdrop { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }',
             '  .tb-cpuset-backdrop.open { display:flex; }',
             '  .tb-cpuset { position:relative; background:#fff; color:#222; width:420px; max-width:90%; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); display:flex; flex-direction:column; }',
@@ -196,6 +241,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '    <button type="button" class="tb-tab tb-tab-active" data-category="info">Info</button>',
             '    <button type="button" class="tb-tab" data-category="tools">Tools</button>',
             '    <button type="button" class="tb-tab" data-category="packages">Packages</button>',
+            '    <button type="button" class="tb-tab" data-category="snapshots">Snapshots</button>',
             '    <button type="button" class="tb-tab" data-category="cpu_usage">CPU Usage</button>',
             '    <button type="button" class="tb-tab" data-category="help">Help</button>',
             '    <button type="button" class="tb-tab" data-category="about">About</button>',
@@ -210,6 +256,12 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '        <button type="button" class="tb-pkg-depends">Dependent Packages</button>',
             '      </div>',
             '      <div class="tb-pkg-frame-wrap"></div>',
+            '    </div>',
+            '    <div class="tb-panel" data-panel="snapshots">',
+            '      <div class="tb-pkg-bar">',
+            '        <button type="button" class="tb-snap-settings">Settings</button>',
+            '      </div>',
+            '      <div class="tb-snap-frame-wrap"></div>',
             '    </div>',
             '    <div class="tb-panel" data-panel="cpu_usage">',
             '      <div class="tb-row tb-cpu-header" data-module-id="cpu_usage">',
@@ -240,6 +292,21 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '      <div class="tb-wolset-header"><span>Hidden Devices</span><button type="button" class="tb-wolset-close" aria-label="Close">\u00d7</button></div>',
             '      <div class="tb-wolset-body"></div>',
             '      <div class="tb-wolset-footer"><span class="tb-wolset-hint">Checked devices are hidden from the Send WOL list</span><button type="button" class="tb-wolset-save">Save</button></div>',
+            '    </div>',
+            '  </div>',
+            '  <div class="tb-snapset-backdrop">',
+            '    <div class="tb-snapset">',
+            '      <div class="tb-snapset-header"><span>Snapshot Check Settings</span><button type="button" class="tb-snapset-close" aria-label="Close">\u00d7</button></div>',
+            '      <div class="tb-snapset-tools"><button type="button" class="tb-snapset-all">Select all</button><button type="button" class="tb-snapset-none">Select none</button></div>',
+            '      <div class="tb-snapset-body"></div>',
+            '      <div class="tb-snapset-footer"><span class="tb-snapset-hint">Only ticked shared folders are checked. New Btrfs shared folders are ticked by default.</span><span class="tb-snapset-status tb-snapset-hint"></span><button type="button" class="tb-snapset-save" disabled>Save</button></div>',
+            '    </div>',
+            '  </div>',
+            '  <div class="tb-snapset-backdrop tb-flset-backdrop">',
+            '    <div class="tb-snapset">',
+            '      <div class="tb-snapset-header"><span>Failed Logins Settings</span><button type="button" class="tb-snapset-close tb-flset-close" aria-label="Close">\u00d7</button></div>',
+            '      <div class="tb-snapset-body" style="padding:14px 16px;font-size:13px;"><label>Show the latest <select class="tb-flset-max"><option value="100">100</option><option value="200">200</option><option value="300">300</option><option value="400">400</option><option value="500">500</option></select> failed logins in View, however old they are.</label></div>',
+            '      <div class="tb-snapset-footer"><span class="tb-snapset-hint">Older entries depend on Log Center keeping them.</span><span class="tb-snapset-status tb-snapset-hint tb-flset-status"></span><button type="button" class="tb-snapset-save tb-flset-save">Save</button></div>',
             '    </div>',
             '  </div>',
             '  <div class="tb-recent-backdrop">',
@@ -297,6 +364,13 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             '        </span>',
             '        <button type="button" class="tb-backupset-save">Save</button>',
             '      </div>',
+            '    </div>',
+            '  </div>',
+            '  <div class="tb-fl-backdrop">',
+            '    <div class="tb-fl">',
+            '      <div class="tb-fl-header"><span>Failed logins</span><button type="button" class="tb-fl-close" aria-label="Close">\u00d7</button></div>',
+            '      <div class="tb-fl-bar"><label>Order:</label> <select class="tb-fl-sort"><option value="time">Newest first</option><option value="ip">Group by IP address</option></select><span class="tb-fl-legend"></span>last 24 hr<span class="tb-fl-note"></span></div>',
+            '      <div class="tb-fl-body"></div>',
             '    </div>',
             '  </div>',
             '</div>'
@@ -357,6 +431,40 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         Ext.fly(el.querySelector(".tb-recent-close")).on("click", this.closeRecentModal, this);
         Ext.fly(this.recentBackdrop).on("click", (function(ev) {
             if (ev.getTarget() === this.recentBackdrop) { this.closeRecentModal(); }
+        }).createDelegate(this));
+
+        this.flBackdrop = el.querySelector(".tb-fl-backdrop");
+        this.flBodyEl = el.querySelector(".tb-fl-body");
+        this.flSortEl = el.querySelector(".tb-fl-sort");
+        this.flNoteEl = el.querySelector(".tb-fl-note");
+        this.flsetBackdrop = el.querySelector(".tb-flset-backdrop");
+        this.flsetMaxEl = el.querySelector(".tb-flset-max");
+        this.flsetStatusEl = el.querySelector(".tb-flset-status");
+        this.flsetSaveBtn = el.querySelector(".tb-flset-save");
+        Ext.fly(el.querySelector(".tb-flset-close")).on("click", this.closeFailedLoginsSettings, this);
+        Ext.fly(this.flsetSaveBtn).on("click", this.saveFailedLoginsSettings, this);
+        Ext.fly(this.flsetBackdrop).on("click", (function(ev) {
+            if (ev.getTarget() === this.flsetBackdrop) { this.closeFailedLoginsSettings(); }
+        }).createDelegate(this));
+        Ext.fly(el.querySelector(".tb-fl-close")).on("click", this.closeFailedLoginsModal, this);
+        Ext.fly(this.flSortEl).on("change", this.renderFailedLogins, this);
+        Ext.fly(this.flBackdrop).on("click", (function(ev) {
+            if (ev.getTarget() === this.flBackdrop) { this.closeFailedLoginsModal(); }
+        }).createDelegate(this));
+
+        this.snapPanel = el.querySelector('.tb-panel[data-panel="snapshots"]');
+        this.snapFrameWrap = el.querySelector(".tb-snap-frame-wrap");
+        this.snapsetBackdrop = el.querySelector(".tb-snapset-backdrop");
+        this.snapsetBody = el.querySelector(".tb-snapset-body");
+        this.snapsetStatusEl = el.querySelector(".tb-snapset-status");
+        this.snapsetSaveBtn = el.querySelector(".tb-snapset-save");
+        Ext.fly(el.querySelector(".tb-snap-settings")).on("click", this.openSnapshotSettings, this);
+        Ext.fly(el.querySelector(".tb-snapset-close")).on("click", this.closeSnapshotSettings, this);
+        Ext.fly(this.snapsetSaveBtn).on("click", this.saveSnapshotSettings, this);
+        Ext.fly(el.querySelector(".tb-snapset-all")).on("click", (function() { this.setAllSnapshotChecks(true); }).createDelegate(this));
+        Ext.fly(el.querySelector(".tb-snapset-none")).on("click", (function() { this.setAllSnapshotChecks(false); }).createDelegate(this));
+        Ext.fly(this.snapsetBackdrop).on("click", (function(ev) {
+            if (ev.getTarget() === this.snapsetBackdrop) { this.closeSnapshotSettings(); }
         }).createDelegate(this));
 
         this.cpuFrameWrap = el.querySelector(".tb-cpu-frame-wrap");
@@ -423,6 +531,7 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             Ext.fly(panelEl)[panelEl.getAttribute("data-panel") === category ? "addClass" : "removeClass"]("tb-panel-active");
         });
         if (category === "packages") { this.ensurePackagesLoaded(); }
+        if (category === "snapshots") { this.ensureSnapshotsLoaded(); }
         if (category === "cpu_usage") { this.refreshCPUUsageDisplay(); }
         if (category === "help") { this.ensureHelpLoaded(); }
         if (category === "about") { this.ensureAboutLoaded(); }
@@ -433,7 +542,146 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         // scrollbar there is a sub-pixel rounding artifact, never
         // legitimate overflow. Force it off specifically for this tab
         // instead of chasing an exact zero-overflow layout.
-        this.listEl.style.overflow = (category === "cpu_usage" || category === "packages") ? "hidden" : "";
+        this.listEl.style.overflow = (category === "cpu_usage" || category === "packages" || category === "snapshots") ? "hidden" : "";
+    },
+
+    // ---------------------------------------------------------------
+    // Snapshots tab: bin/modules/snapshot_check.sh prints a complete
+    // HTML document, fetched through the ordinary authenticated `run`
+    // action (module id snapshot_check) and shown in an iframe via
+    // srcdoc. Deliberately NOT a separate text/html api.cgi action like
+    // pkgupdateshtml/cpuusagehtml: those are open to anyone because an
+    // iframe can't send DSM's X-SYNO-TOKEN, and this page lists which
+    // shares lack immutable snapshots. The iframe is sandboxed with no
+    // permissions - the page needs no scripts.
+    //
+    // The check takes a few seconds (several synology commands per
+    // share), so it only runs when the tab is opened with no current
+    // result, and Refresh marks the result stale (re-running at once
+    // if this tab is the one being looked at). snapReqId discards a
+    // response that arrives after a newer request started.
+    // ---------------------------------------------------------------
+    ensureSnapshotsLoaded: function() {
+        if (this.snapLoaded) { return; }
+        this.loadSnapshots();
+    },
+
+    loadSnapshots: function() {
+        var reqId = (this.snapReqId = (this.snapReqId || 0) + 1);
+        this.snapLoaded = true;
+        this.snapFrameWrap.innerHTML =
+            '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:13px;">' +
+            '<img src="/webman/3rdparty/Syno_Toolbox/images/wait_triangle_blue_40p.gif" alt="" width="28" height="28" style="margin-right:10px;">' +
+            'Checking snapshots&hellip;</div>';
+
+        SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: "snapshot_check" }, (function(resp) {
+            if (reqId !== this.snapReqId) { return; }
+            if (resp && resp.success && resp.result) {
+                var frame = document.createElement("iframe");
+                frame.className = "tb-iframe";
+                frame.setAttribute("sandbox", "");
+                frame.srcdoc = resp.result;
+                this.snapFrameWrap.innerHTML = "";
+                this.snapFrameWrap.appendChild(frame);
+            } else {
+                this.snapLoaded = false;   // let the next visit try again
+                var msg = document.createElement("div");
+                msg.style.cssText = "display:flex;align-items:center;justify-content:center;height:100%;color:#c00;font-size:13px;padding:0 24px;text-align:center;";
+                // textContent, not innerHTML - the message may carry command output
+                msg.textContent = "Snapshot check failed: " + ((resp && resp.message) || "no output");
+                this.snapFrameWrap.innerHTML = "";
+                this.snapFrameWrap.appendChild(msg);
+            }
+        }).createDelegate(this));
+    },
+
+    // ---------------------------------------------------------------
+    // Snapshots Settings window: pick which shared folders the check
+    // looks at. Same idea as the WOL "Hidden Devices" window, but the
+    // saved list is the UNticked folders (conf key
+    // snapshot_check_excluded, a pipe-separated list), so a Btrfs
+    // shared folder created later is ticked - checked - by default.
+    //
+    // The checklist comes from the hidden snapshot_shares module
+    // (snapshot_check.sh --list: Btrfs shares only) through the
+    // ordinary `run` action. Save sends ONLY snapshot_check_excluded
+    // - the backend's save writes just the keys it is given, so this
+    // doesn't commit anything else that is waiting on the toolbar's
+    // own Save button - then re-runs the check.
+    // ---------------------------------------------------------------
+    getSnapExcluded: function() {
+        var mod = this.findModule("snapshot_check");
+        var raw = (mod && mod.current_fields && mod.current_fields.excluded) || "";
+        return raw.split("|").filter(function(n) { return n !== ""; });
+    },
+
+    setAllSnapshotChecks: function(checked) {
+        Ext.each(this.snapsetBody.querySelectorAll(".tb-snapset-check"), function(cb) { cb.checked = checked; });
+    },
+
+    openSnapshotSettings: function() {
+        var reqId = (this.snapsetReqId = (this.snapsetReqId || 0) + 1);
+        this.snapsetBody.innerHTML = '<div class="tb-snapset-msg">Loading\u2026</div>';
+        this.snapsetStatusEl.textContent = "";
+        this.snapsetSaveBtn.disabled = true;
+        Ext.fly(this.snapsetBackdrop).addClass("open");
+
+        SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: "snapshot_shares" }, (function(resp) {
+            if (reqId !== this.snapsetReqId) { return; }
+            var names = null;
+            if (resp && resp.success) {
+                try { names = JSON.parse(resp.result); } catch (e) { names = null; }
+            }
+            if (!Array.isArray(names)) {
+                this.snapsetBody.innerHTML = '<div class="tb-snapset-msg">Could not list shared folders: ' +
+                    Ext.util.Format.htmlEncode((resp && resp.message) || "unexpected response") + '</div>';
+                return;
+            }
+            if (!names.length) {
+                this.snapsetBody.innerHTML = '<div class="tb-snapset-msg">No shared folders on a Btrfs volume.</div>';
+                return;
+            }
+            var excluded = this.getSnapExcluded();
+            this.snapsetBody.innerHTML = names.map(function(name) {
+                var checked = excluded.indexOf(name) === -1 ? " checked" : "";
+                return '<label class="tb-snapset-item"><input type="checkbox" class="tb-snapset-check" value="' +
+                    Ext.util.Format.htmlEncode(name) + '"' + checked + '> ' +
+                    Ext.util.Format.htmlEncode(name) + '</label>';
+            }).join("");
+            this.snapsetSaveBtn.disabled = false;
+        }).createDelegate(this));
+    },
+
+    closeSnapshotSettings: function() {
+        this.snapsetReqId = (this.snapsetReqId || 0) + 1;
+        Ext.fly(this.snapsetBackdrop).removeClass("open");
+    },
+
+    saveSnapshotSettings: function() {
+        var excluded = [];
+        Ext.each(this.snapsetBody.querySelectorAll(".tb-snapset-check"), function(cb) {
+            if (!cb.checked) { excluded.push(cb.value); }
+        });
+        var value = excluded.join("|");
+
+        this.snapsetSaveBtn.disabled = true;
+        this.snapsetStatusEl.textContent = "Saving\u2026";
+        SYNO.SDS.Syno_Toolbox.apiCall("save", { form_json: Ext.encode({ snapshot_check_excluded: value }) }, "POST", (function(saveResp) {
+            if (!saveResp || !saveResp.success) {
+                this.snapsetSaveBtn.disabled = false;
+                this.snapsetStatusEl.textContent = (saveResp && saveResp.message) || "Failed to save";
+                return;
+            }
+            // keep the module's cached state in step, so reopening Settings
+            // before the next Refresh shows what was just saved
+            var mod = this.findModule("snapshot_check");
+            if (mod) {
+                mod.current_fields = mod.current_fields || {};
+                mod.current_fields.excluded = value;
+            }
+            this.closeSnapshotSettings();
+            this.loadSnapshots();
+        }).createDelegate(this));
     },
 
     // ---------------------------------------------------------------
@@ -463,6 +711,99 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
     closeRecentModal: function() {
         this.recentReqId = (this.recentReqId || 0) + 1;
         Ext.fly(this.recentBackdrop).removeClass("open");
+    },
+
+    // [View] on the Failed Logins row: fetches failed_logins_list (JSON as a
+    // string in resp.result), then builds the table with textContent only -
+    // usernames are attacker-controlled. flReqId discards a late response
+    // if the modal was closed in the meantime.
+    openFailedLoginsModal: function() {
+        var reqId = (this.flReqId = (this.flReqId || 0) + 1);
+        this.flRows = [];
+        this.flTotal = 0;
+        this.flSortEl.value = "time";
+        this.flNoteEl.textContent = "";
+        this.flBodyEl.textContent = "Loading\u2026";
+        Ext.fly(this.flBackdrop).addClass("open");
+
+        SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: "failed_logins_list" }, (function(resp) {
+            if (reqId !== this.flReqId) { return; }
+            if (!resp || !resp.success) {
+                this.flBodyEl.textContent = "Error: " + ((resp && resp.message) || "unknown");
+                return;
+            }
+            var data = null;
+            try { data = Ext.decode(resp.result); } catch (e) { data = null; }
+            if (!data || !Ext.isArray(data.rows)) {
+                // script printed a plain-text message (e.g. cannot read the log)
+                this.flBodyEl.textContent = resp.result || "(no output)";
+                return;
+            }
+            this.flRows = data.rows;
+            this.flTotal = data.total || data.rows.length;
+            this.renderFailedLogins();
+            // Entries can age out of the 24 hr window after the row was last
+            // run. If the modal now disagrees with the row, refresh the row.
+            if ((this.flTotal !== (this.flCount || 0) || (data.recent || 0) !== (this.flRecent || 0)) && this.listEl) {
+                var flRow = this.listEl.querySelector('.tb-row[data-module-id="failed_logins"]');
+                var flChk = flRow && flRow.querySelector(".tb-enabled");
+                if (flRow && flChk && flChk.checked) { this.runModule("failed_logins", flRow); }
+            }
+        }).createDelegate(this));
+    },
+
+    closeFailedLoginsModal: function() {
+        this.flReqId = (this.flReqId || 0) + 1;
+        Ext.fly(this.flBackdrop).removeClass("open");
+    },
+
+    // Sort key so IPv4 addresses order numerically and group together.
+    ipKey: function(ip) {
+        var m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(ip || "");
+        if (!m) { return "1" + (ip || ""); }
+        return "0" + [m[1], m[2], m[3], m[4]].map(function(n) { return ("000" + n).slice(-3); }).join(".");
+    },
+
+    renderFailedLogins: function() {
+        var self = this;
+        var rows = (this.flRows || []).slice();
+        if (this.flSortEl.value === "ip") {
+            rows.sort(function(a, b) {
+                var ka = self.ipKey(a.ip), kb = self.ipKey(b.ip);
+                if (ka !== kb) { return ka < kb ? -1 : 1; }
+                return a.time < b.time ? 1 : (a.time > b.time ? -1 : 0);   // newest first within an IP
+            });
+        }
+        this.flNoteEl.textContent = this.flTotal > rows.length
+            ? "Showing latest " + rows.length + " of " + this.flTotal : "";
+
+        if (!rows.length) {
+            this.flBodyEl.textContent = "No failed login attempts recorded";
+            return;
+        }
+        var table = document.createElement("table");
+        table.className = "tb-fl-table";
+        var headRow = table.createTHead().insertRow();
+        ["Time", "Service", "Username", "IP address", "Account exists"].forEach(function(h) {
+            var th = document.createElement("th");
+            th.textContent = h;
+            headRow.appendChild(th);
+        });
+        var tbody = document.createElement("tbody");
+        rows.forEach(function(r) {
+            var tr = tbody.insertRow();
+            if (r.recent) { tr.className = "tb-fl-recent"; }
+            var acct = !r.known ? "No" : (r.account === "disabled" ? "Yes (disabled)" : (r.account === "enabled" ? "Yes (enabled)" : "Yes"));
+            [r.time, r.service, r.username, r.ip, acct].forEach(function(v, i) {
+                var td = tr.insertCell();
+                td.textContent = v;
+                if (i === 1) { td.className = v === "SSH" ? "tb-fl-svc-ssh" : (v === "DSM" ? "tb-fl-svc-dsm" : ""); }
+                if (i === 4 && r.known) { td.className = r.account === "disabled" ? "tb-fl-disabled" : "tb-fl-yes"; }
+            });
+        });
+        table.appendChild(tbody);
+        this.flBodyEl.innerHTML = "";
+        this.flBodyEl.appendChild(table);
     },
 
     // Packages shows the live pkg_updates.html written by pkg_updates.sh
@@ -951,6 +1292,15 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         if (!isInitial && this.pkgFrameWrap && this.pkgFrameWrap.firstChild) {
             this.showPackagesLoading();
         }
+        // Snapshots: a manual Refresh makes the last result stale. Re-run
+        // now if the Snapshots tab is showing, otherwise on its next visit.
+        if (!isInitial) {
+            this.snapLoaded = false;
+            if (this.snapPanel && this.snapPanel.className.indexOf("tb-panel-active") !== -1) {
+                this.loadSnapshots();
+            }
+        }
+
         SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: "pkg_updates" }, (function() {
             if (this.pkgFrameWrap && this.pkgFrameWrap.firstChild) { this.reloadPackagesPanel(); }
         }).createDelegate(this));
@@ -1094,6 +1444,10 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                     ' <button type="button" class="tb-enable-ssh-root">Enable</button>' +
                     (mod.companion_id ? ' <button type="button" class="tb-disable-ssh-root" data-companion-id="' + mod.companion_id + '">Disable</button>' : '') +
                     ' <span class="tb-ssh-status" style="color:#888;"></span>';
+
+            case "toggle-failed-logins":
+                return '<button type="button" class="tb-failed-logins-view">View</button> ' +
+                    '<button type="button" class="tb-failed-logins-settings">Settings</button>';
 
             default:
                 return "";
@@ -1267,6 +1621,26 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             if (mod && mod.control === "toggle-password-prompt") {
                 this.wireEnableSshRootRow(rowEl, moduleId);
             }
+
+            if (mod && mod.control === "toggle-failed-logins") {
+                var flViewBtn = rowEl.querySelector(".tb-failed-logins-view");
+                if (flViewBtn) {
+                    Ext.fly(flViewBtn).on("click", (function() { this.openFailedLoginsModal(); }).createDelegate(this));
+                    var flSetBtn = rowEl.querySelector(".tb-failed-logins-settings");
+                    if (flSetBtn) { Ext.fly(flSetBtn).on("click", (function() { this.openFailedLoginsSettings(); }).createDelegate(this)); }
+
+                    // View is only useful when there are failed logins to look at.
+                    // The count comes from the hidden failed_logins_count module
+                    // (prints a bare integer), so this works in any language.
+                    var flToggle = rowEl.querySelector(".tb-enabled");
+                    this.applyFailedLoginsView();
+                    Ext.fly(flToggle).on("change", (function() {
+                        this.flCount = 0;      // stale until the next run says otherwise
+                        this.applyFailedLoginsView(); // turning ON re-runs failed_logins, whose runModule hook refreshes the count
+                    }).createDelegate(this));
+                }
+            }
+
         }, this);
     },
 
@@ -1617,9 +1991,75 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
             .replace(/^(WARNING:.*)$/gm, '<span style="color:#d32f2f;">$1</span>');
     },
 
+    // Failed Logins Settings: how many entries [View] shows (100-500),
+    // stored as conf key failed_logins_list_max_rows, which the hidden
+    // failed_logins_list module passes to the script as {max_rows}.
+    openFailedLoginsSettings: function() {
+        var mod = this.findModule("failed_logins_list");
+        var v = (mod && mod.current_fields && mod.current_fields.max_rows) || "100";
+        this.flsetMaxEl.value = /^[1-5]00$/.test(v) ? v : "100";
+        this.flsetStatusEl.textContent = "";
+        this.flsetSaveBtn.disabled = false;
+        Ext.fly(this.flsetBackdrop).addClass("open");
+    },
+
+    closeFailedLoginsSettings: function() {
+        Ext.fly(this.flsetBackdrop).removeClass("open");
+    },
+
+    saveFailedLoginsSettings: function() {
+        var value = this.flsetMaxEl.value;
+        this.flsetSaveBtn.disabled = true;
+        this.flsetStatusEl.textContent = "Saving\u2026";
+        SYNO.SDS.Syno_Toolbox.apiCall("save", { form_json: Ext.encode({ failed_logins_list_max_rows: value }) }, "POST", (function(saveResp) {
+            if (!saveResp || !saveResp.success) {
+                this.flsetSaveBtn.disabled = false;
+                this.flsetStatusEl.textContent = (saveResp && saveResp.message) || "Failed to save";
+                return;
+            }
+            var mod = this.findModule("failed_logins_list");
+            if (mod) {
+                mod.current_fields = mod.current_fields || {};
+                mod.current_fields.max_rows = value;
+            }
+            this.closeFailedLoginsSettings();
+        }).createDelegate(this));
+    },
+
+    // Failed Logins [View] button: shown only when the toggle is on AND the
+    // last failed_logins_count run returned a number above 0. Anything that
+    // is not a plain integer (errors, unreadable log) counts as 0.
+    updateFailedLoginsView: function() {
+        var reqId = (this.flCountReqId = (this.flCountReqId || 0) + 1);
+        SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: "failed_logins_count" }, (function(resp) {
+            if (reqId !== this.flCountReqId) { return; } // a newer request superseded this one
+            // "<all-time total> <last-24-hr total>"; anything else counts as none
+            var txt = (resp && resp.success) ? String(resp.result || "").replace(/^\s+|\s+$/g, "") : "";
+            var m = /^(\d+)\s+(\d+)$/.exec(txt);
+            this.flCount = m ? parseInt(m[1], 10) : 0;
+            this.flRecent = m ? parseInt(m[2], 10) : 0;
+            this.applyFailedLoginsView();
+        }).createDelegate(this));
+    },
+
+    applyFailedLoginsView: function() {
+        if (!this.listEl) { return; }
+        var rowEl = this.listEl.querySelector('.tb-row[data-module-id="failed_logins"]');
+        if (!rowEl) { return; }
+        var btn = rowEl.querySelector(".tb-failed-logins-view");
+        var toggle = rowEl.querySelector(".tb-enabled");
+        if (!btn || !toggle) { return; }
+        btn.style.display = (toggle.checked && (this.flCount || 0) > 0) ? "" : "none";
+        var setBtn = rowEl.querySelector(".tb-failed-logins-settings");
+        if (setBtn) { setBtn.style.display = toggle.checked ? "" : "none"; }
+    },
+
     runModule: function(moduleId, rowEl) {
         var resultEl = rowEl.querySelector('[data-result-for="' + moduleId + '"]');
         if (resultEl) { resultEl.textContent = "Running\u2026"; }
+        // Ask for the count at the same time as the summary so [View] appears
+        // together with the text instead of a round trip later.
+        if (moduleId === "failed_logins") { this.updateFailedLoginsView(); }
         SYNO.SDS.Syno_Toolbox.apiCall("run", { module_id: moduleId }, (function(resp) {
             if (!resultEl) { return; }
             resultEl.innerHTML = resp && resp.success
@@ -1824,12 +2264,15 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 if (hasSavedOut) {
                     var resultEl = rowEl.querySelector('[data-result-for="' + id + '"]');
                     if (resultEl) { resultEl.innerHTML = this.safeResultHtml(savedOut); }
+                    if (id === "failed_logins") { this.updateFailedLoginsView(); }
                 } else if (hasCheckArgs) {
                     this.checkModule(id, rowEl);
                 } else if (mod.live === true) {
                     var checkbox = rowEl.querySelector(".tb-enabled");
                     if (checkbox && checkbox.checked) {
-                        this.runModule(id, rowEl);
+                        // failed_logins already ran when its toggle was switched on
+                        if (id === "failed_logins") { this.applyFailedLoginsView(); }
+                        else { this.runModule(id, rowEl); }
                     } else {
                         var resultEl2 = rowEl.querySelector('[data-result-for="' + id + '"]');
                         if (resultEl2) { resultEl2.textContent = ""; }

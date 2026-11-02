@@ -1,3 +1,9 @@
+v1.0.33
+- Added Snapshots tab to show the status of your snapshots and which shared folders don't have snapshots enabled.
+  - Only authenticated users can view the snapshots table.
+- Added Failed Logins to the Tools tab to show if bad actors are trying to login to DSM or connect via SSH.
+- Updated the help page.
+
 v1.0.32
 - Added "Packages at Risk" table that shows when the installed version is exploitable by PHP2Shell.
 

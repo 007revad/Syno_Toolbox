@@ -19,12 +19,19 @@
         <p>
             The <strong>Packages</strong> tab shows you which installed Synology packages and 
             installed packages from the 007revad and SynoCommunity repositories have updates 
-            available as well as their release notes. It also lists any broken packages, if there are any.<br>
+            available as well as their release notes. It also lists any broken packages, if there are any.
+            And lists any Synology packages that are at risk of the PHP2Shell exploit.<br>
             <ul>
                 <li>The <strong>Recently Installed</strong> button lists recently installed packages.</li>
                 <li>The <strong>Recently Upgraded</strong> button lists recently upgraded packages.</li>
                 <li>The <strong>Dependent Packages</strong> button lists packages that depend on other packages and shows those packages.</li>
             </ul>
+        </p>
+
+        <h2 style="color:#1B8AED; font-size:18px;">Snapshots</h2>
+        <p>
+            The <strong>Snapshots</strong> tab shows you the current status of your snapshots and 
+            which shared folders do or do not have snapshots or immutable snapshots enabled.<br>
         </p>
 
         <h2 style="color:#1B8AED; font-size:18px;">CPU Usage</h2>
@@ -42,6 +49,23 @@
             status below it.
             Enable and Save to turn that behavior on, and disable and Save to turn it back off.
         </p>
+
+        <div class="section">
+            <h4 style="color:#1B8AED;">Failed Logins (DSM and SSH)</h4>
+            <p>
+                Shows a warning if DSM has logged any failed logins, with the number of failed
+                logins in the last 24 hours plus the date and time of the last failed login.
+            </p>
+            <ol>
+                <li>
+                    Click <strong>Settings</strong> to choose to see the last
+                    100, 200, 300, 400 or 500 failed login attempts. 
+                </li>
+                <li>
+                    Click <strong>View</strong> to open the window to see the failed logins.<br>
+                    Failed logins in the last 24 hours have a yellow background.
+                </li>
+        </div>
 
         <div class="section">
             <h4 style="color:#1B8AED;">Send WOL</h4>
@@ -79,7 +103,7 @@
             <h4 style="color:#1B8AED;">Check Access from Internet</h4>
             <p>
                 Checks if the Synology's DSM webui is accessible from the Internet via your Internet IP and DSM's https login port.<br>
-                The tool's status area shows whether your Internet IP address, DSM's https port and whether it's open to the Internet.<br>
+                The tool's status area shows whether your Internet IP address, DSM's https and http ports and whether they're open to the Internet.<br>
                 <strong>WARNING:</strong> If your Synology is shown to be accessible from the Internet it is susceptible to the C3RB3R ransomware!!!
             </p>
         </div>

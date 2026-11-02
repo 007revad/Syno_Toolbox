@@ -152,6 +152,47 @@
       "result_style": "monospace"
     },
     {
+      "id": "failed_logins",
+      "category": "tools",
+      "name": "Failed Logins (DSM and SSH)",
+      "control": "toggle-failed-logins",
+      "script": "bin/modules/failed_logins.sh",
+      "trigger": "on_save",
+      "live": true,
+      "run_args": ["summary"],
+      "disable_args": null,
+      "check_args": null,
+      "note": "Info row with a real toggle: live:true + check_args:null means main.js runs it on load/Refresh while enabled and on toggle-on. toggle-failed-logins only adds the [View] button. trigger:on_save keeps run_boot_modules.sh from running it at package start."
+    },
+    {
+      "id": "failed_logins_count",
+      "category": "tools",
+      "name": "Failed Logins Count",
+      "control": "toggle-display",
+      "script": "bin/modules/failed_logins.sh",
+      "trigger": "on_save",
+      "live": false,
+      "run_args": ["count"],
+      "disable_args": null,
+      "check_args": null,
+      "hidden_row": true,
+      "note": "Not a rendered row - main.js runs it after failed_logins to decide whether [View] is shown. Prints just an integer."
+    },
+    {
+      "id": "failed_logins_list",
+      "category": "tools",
+      "name": "Failed Logins List",
+      "control": "toggle-display",
+      "script": "bin/modules/failed_logins.sh",
+      "trigger": "on_save",
+      "live": true,
+      "run_args": ["list", "{max_rows}"]
+      "disable_args": null,
+      "check_args": null,
+      "hidden_row": true,
+      "note": "Not a rendered row - main.js's [View] button on the failed_logins row calls run against this id and decodes the JSON into a table. Same pattern as pkg_depends."
+    },
+    {
       "id": "send_wol",
       "category": "tools",
       "name": "Send WOL",
@@ -446,6 +487,36 @@
       "hidden_row": true,
       "schedule": { "default_repeat_minute": 5 },
       "note": "Drives the CPU Usage tab's cpu_usage.html/cpu_chart.html, not a rendered row via the generic renderRow path - hidden_row keeps it out of renderList, but main.js hand-builds its own .tb-row (toggle + Settings button) directly inside the cpu_usage panel, reusing the .tb-enabled/save() conventions. check_args is null (not []) so main.js's generic wireRows/refreshAfterSave live-module logic doesn't auto-invoke a backend run - see main.js's explicit id==='cpu_usage' special-cases, since cpu_usage.sh's own Task Scheduler task (interval configurable via the Settings modal - not yet wired to an actual scheduled-task update, see main.js) is the only thing that should ever trigger a sample."
+    },
+    {
+      "id": "snapshot_check",
+      "category": "snapshots",
+      "name": "Snapshots",
+      "control": "toggle-display",
+      "script": "bin/modules/snapshot_check.sh",
+      "trigger": "on_save",
+      "live": true,
+      "run_args": ["exclude={excluded}"],
+      "disable_args": null,
+      "check_args": null,
+      "hidden_row": true,
+      "requires": { "min_dsm_major": 7 },
+      "note": "Drives the Snapshots tab, not a rendered row - hidden_row keeps it out of renderList. snapshot_check.sh prints a complete HTML document; main.js's loadSnapshots runs it through the ordinary run/module_id API when the tab is opened (and after Refresh) and shows the result in a sandboxed iframe via srcdoc. Not an unauthenticated api.cgi html action like pkgupdateshtml/cpuusagehtml, because the page shows which shares lack immutable snapshots. trigger:on_save + live:true only keep run_boot_modules.sh and Save's enable-diff from ever touching it (same reasoning as pkg_updates). requires.min_dsm_major 7: the synosharesnapshot/synoretentionconf/synoschedtask output it parses has only been checked on DSM 7.3.1. {excluded} is filled from conf key snapshot_check_excluded - a pipe-separated list of the shared folders UNticked in the tab's Settings window (so new Btrfs shares are checked by default). The arg is always 'exclude=<list>' so it can never be mistaken for the --list mode."
+    },
+    {
+      "id": "snapshot_shares",
+      "category": "snapshots",
+      "name": "Snapshot Shares",
+      "control": "toggle-display",
+      "script": "bin/modules/snapshot_check.sh",
+      "trigger": "on_save",
+      "live": true,
+      "run_args": ["--list"],
+      "disable_args": null,
+      "check_args": null,
+      "hidden_row": true,
+      "requires": { "min_dsm_major": 7 },
+      "note": "Companion to snapshot_check, same script. --list prints a JSON array of the shared folders on Btrfs volumes; main.js's Snapshots Settings window runs it through the ordinary run API to build its checklist. Not a rendered row (hidden_row), never run at boot or by Save (trigger on_save + live true)."
     }
   ]
 }
