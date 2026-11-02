@@ -186,7 +186,7 @@
       "script": "bin/modules/failed_logins.sh",
       "trigger": "on_save",
       "live": true,
-      "run_args": ["list", "{max_rows}"]
+      "run_args": ["list", "{max_rows}"],
       "disable_args": null,
       "check_args": null,
       "hidden_row": true,
