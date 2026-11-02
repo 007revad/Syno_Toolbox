@@ -1,5 +1,5 @@
 v1.0.34
-- Bug for missing comma in modules.json.
+- Bug for missing comma in modules.json in v1.0.33.
 - Added Snapshots tab to show the status of your snapshots and which shared folders don't have immutable snapshots, or snapshots, enabled.
   - Only authenticated users can view the snapshots table.
 - Added Failed Logins to the Tools tab to show if bad actors are trying to login to DSM or connect via SSH.
