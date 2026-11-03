@@ -21,6 +21,9 @@
 # synotoolbox_api.sh merges stderr into the result.
 #----------------------------------------------------------
 
+# Get DSM major version
+dsm=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)
+
 DB="/var/log/synolog/.SYNOCONNDB"
 
 SINCE="CAST(strftime('%s','now','-24 hours') AS INTEGER)"
@@ -43,8 +46,12 @@ if ! command -v sqlite3 >/dev/null 2>&1; then
     exit 0
 fi
 
+# DSM 6's sqlite3 has no -readonly or -json; use -readonly only where supported
+ro=()
+sqlite3 -help 2>&1 | grep -q -- '-readonly' && ro=(-readonly)
+
 # "<all-time count>|<last-24-hr count>|<newest time, local>"
-stats=$(sqlite3 -readonly "$DB" \
+stats=$(sqlite3 "${ro[@]}" "$DB" \
     "SELECT count(*),
             coalesce(sum(time >= $SINCE),0),
             coalesce(strftime('%Y-%m-%d %H:%M',max(time),'unixepoch','localtime'),'')
@@ -74,12 +81,13 @@ case "$1" in
         echo "$total $recent"
         ;;
     list)
-        rows=$(sqlite3 -readonly -json "$DB" \
-            "SELECT datetime(time,'unixepoch','localtime') AS time,
-                    protocol AS service,
-                    replace(replace(replace(substr(username,1,64),char(10),' '),char(13),' '),char(9),' ') AS username,
-                    ip, uid, (time >= $SINCE) AS recent
-             FROM logs WHERE $WHERE ORDER BY id DESC LIMIT $limit;" 2>/dev/null)
+        rows=$(sqlite3 "${ro[@]}" -separator $'\x1f' "$DB" \
+            "SELECT datetime(time,'unixepoch','localtime'), protocol,
+                    replace(replace(replace(substr(username,1,64),char(10),' '),char(13),' '),char(9),' '),
+                    ip, coalesce(uid,''), (time >= $SINCE)
+             FROM logs WHERE $WHERE ORDER BY id DESC LIMIT $limit;" 2>/dev/null |
+          jq -R -s -c 'split("\n") | map(select(length>0) | split("\u001f")
+             | {time:.[0], service:.[1], username:.[2], ip:.[3], uid:.[4], recent:(.[5]|tonumber)})' 2>/dev/null)
         rc=$?
         [[ -z "$rows" ]] && rows="[]"
         if (( rc != 0 )) || { (( total > 0 )) && [[ "$rows" == "[]" ]]; }; then
@@ -90,16 +98,28 @@ case "$1" in
         # `synouser --get` prints "Expired : [true]" for a disabled account and
         # "Expired : [false]" for an enabled one. One lookup per distinct
         # username (only for entries whose log uid says the account existed);
-        # a name that is not a plain username, or that gives neither value,
-        # is "unknown" and the UI falls back to a plain "Yes".
+        # a deleted account (synouser exit 255, synoerr 0x1D00) is "deleted";
+        # a name that is not a plain username, or any other result, is
+        # "unknown" and the UI falls back to a plain "Yes".
         acc="{}"
         while IFS= read -r u; do
             [[ "$u" =~ ^[A-Za-z0-9_@.][A-Za-z0-9_@.-]*$ ]] || continue
-            exp=$(synouser --get "$u" 2>/dev/null | sed -n 's/^Expired[[:space:]]*:[[:space:]]*\[\(.*\)\].*/\1/p' | head -n1)
+            out=$(synouser --get "$u" 2>&1)
+            rc=$?
+            exp=$(sed -n 's/^Expired[[:space:]]*:[[:space:]]*\[\(.*\)\].*/\1/p' <<<"$out" | head -n1)
             case "$exp" in
                 true)  st="disabled" ;;
                 false) st="enabled" ;;
-                *)     continue ;;
+                *)
+                    # A deleted account makes synouser exit 255 with
+                    # "SYNOUserGet failed. synoerr=[0x1D00]". Anything else
+                    # that gives no Expired line stays "unknown".
+                    if (( rc == 255 )) && [[ "$out" == *"synoerr=[0x1D00]"* ]]; then
+                        st="deleted"
+                    else
+                        continue
+                    fi
+                    ;;
             esac
             acc=$(jq -c --arg u "$u" --arg s "$st" '. + {($u): $s}' <<<"$acc" 2>/dev/null) || acc="{}"
         done < <(jq -r '.[] | select(((.uid // "") | tostring) as $x | ($x != "" and $x != "-1")) | .username' <<<"$rows" 2>/dev/null | sort -u)

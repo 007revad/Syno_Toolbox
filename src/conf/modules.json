@@ -500,7 +500,7 @@
       "disable_args": null,
       "check_args": null,
       "hidden_row": true,
-      "requires": { "min_dsm_major": 7 },
+      "requires": { "min_dsm_major": 6 },
       "note": "Drives the Snapshots tab, not a rendered row - hidden_row keeps it out of renderList. snapshot_check.sh prints a complete HTML document; main.js's loadSnapshots runs it through the ordinary run/module_id API when the tab is opened (and after Refresh) and shows the result in a sandboxed iframe via srcdoc. Not an unauthenticated api.cgi html action like pkgupdateshtml/cpuusagehtml, because the page shows which shares lack immutable snapshots. trigger:on_save + live:true only keep run_boot_modules.sh and Save's enable-diff from ever touching it (same reasoning as pkg_updates). requires.min_dsm_major 7: the synosharesnapshot/synoretentionconf/synoschedtask output it parses has only been checked on DSM 7.3.1. {excluded} is filled from conf key snapshot_check_excluded - a pipe-separated list of the shared folders UNticked in the tab's Settings window (so new Btrfs shares are checked by default). The arg is always 'exclude=<list>' so it can never be mistaken for the --list mode."
     },
     {
@@ -515,7 +515,7 @@
       "disable_args": null,
       "check_args": null,
       "hidden_row": true,
-      "requires": { "min_dsm_major": 7 },
+      "requires": { "min_dsm_major": 6 },
       "note": "Companion to snapshot_check, same script. --list prints a JSON array of the shared folders on Btrfs volumes; main.js's Snapshots Settings window runs it through the ordinary run API to build its checklist. Not a rendered row (hidden_row), never run at boot or by Save (trigger on_save + live true)."
     }
   ]

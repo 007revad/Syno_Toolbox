@@ -15,6 +15,9 @@ echo_needed=""
 found_pkgs=0
 found_services=0
 for p in /var/packages/*; do
+    [[ ! -d "$p" ]] && continue
+    [[ ! -f "$p/INFO" ]] && continue
+
     file="$p/INFO"
     if grep -qE 'install_dep_packages=".+"' "$file"; then
         found_pkgs=$((found_pkgs +1))

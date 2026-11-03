@@ -10,6 +10,9 @@
 # empty output as a failure.
 #----------------------------------------------------------
 
+# Get DSM major version
+dsm=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION majorversion)
+
 LOG="/var/log/synopkg.log"
 
 if [[ ! -r "$LOG" ]]; then
@@ -19,11 +22,19 @@ fi
 
 case "$1" in
     installed)
-        out=$(grep -E ' install.*successfully' "$LOG" | grep -v 'result')
+        if [[ "$dsm" -ge 7 ]]; then
+            out=$(grep -E ' install.*successfully' "$LOG" | grep -v 'result')
+        else
+            out=$(grep -E '^[0-9/]+ [0-9:]+[[:space:]]+install[[:space:]].* successfully' "$LOG" | grep -v 'result' | tail -n 50)
+        fi
         none="No successful package installs found in synopkg.log"
         ;;
     upgraded)
-        out=$(grep -E ' upgrade.*from.*successfully' "$LOG")
+        if [[ "$dsm" -ge 7 ]]; then
+            out=$(grep -E ' upgrade.*from.*successfully' "$LOG" | grep -v 'result')
+        else
+            out=$(grep -E '^[0-9/]+ [0-9:]+[[:space:]]+upgrade[[:space:]].* successfully' "$LOG" | grep -vE 'result|Uninstall' | tail -n 50)
+        fi
         none="No successful package upgrades found in synopkg.log"
         ;;
     *)

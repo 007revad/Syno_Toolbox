@@ -17,20 +17,38 @@
 #
 # Per share it reports:
 #   - snapshot schedule (state, type, next run)     synosharesnapshot + synoschedtask
-#   - retention (keep days / keep latest)           synoretentionconf --get
-#   - immutable (WORM) setting and lock days        synoretentionconf --get-worm-lock
+#   - retention policy                              synoretentionconf --get
+#   - immutable (WORM) setting and lock days        synoretentionconf --get-worm-lock (only on models with support_worm=yes)
 #   - snapshot count, oldest, newest                /volumeN/@sharesnap/<share>/GMT*
 #   - is the newest snapshot immutable / locked     /volumeN/@sharesnap/@<share>.meta
 #
 # Shares on a volume that is not Btrfs are listed as "not supported". Shares the user
 # unticked in Settings are left out of the table and counted in the summary.
 # Share names can't contain "|", so it is safe as the separator in the exclude list.
+#
+# DSM 6 differences (confirmed on DS1812+, DSM 6):
+#   - no immutable (WORM) snapshots, so --get-worm-lock is never called there
+#   - synoretentionconf --get has no RetainDay: line; "Policy type:" is a bare number
+#     (0 = retain all, 1 = advanced/time-based, 20 = keep latest N) and "Recently:" is
+#     only meaningful when the policy type is 20
+#
+# DSM 7.2 was the first DSM version to have immutable snapshots.
+# Value and J series models do not have immutable snapshots.
+# Officially only 20 series and newer models have immutable snapshots.
+# https://kb.synology.com/en-global/DSM/tutorial/which_synology_nas_models_support_WriteOnce_and_secure_snapshots
 #--------------------------------------------------------------------------------
 
 # Same PATH synotoolbox-helper sets, so it behaves the same however it is called.
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/syno/bin:/usr/syno/sbin"
 # No "set -u": older bash (DSM 6) treats expanding an empty array as an unbound variable.
 shopt -s nullglob
+
+# Check if immutable (WORM) snapshots are enabled (DSM 7.2 and later 20 series + or higher models).
+worm_enabled="$(/usr/syno/bin/synogetkeyvalue /etc.defaults/synoinfo.conf support_worm 2>/dev/null)"
+has_worm=no
+if [[ $worm_enabled == yes ]]; then
+    has_worm=yes
+fi
 
 if [[ $(id -u) -ne 0 ]]; then
     echo "snapshot_check.sh must be run as root" >&2
@@ -147,8 +165,15 @@ for share in "${shares[@]}"; do
         continue
     fi
 
+    # Every per-share variable is reset here, so a value from the previous
+    # share can never leak into this share's row.
     problems=()
     warnings=()
+    c_sched=""
+    c_ret=""
+    c_imm=""
+    c_qty=""
+    c_new=""
 
     #---------------------------------------------------------------- schedule
     sched_state=""
@@ -176,6 +201,13 @@ for share in "${shares[@]}"; do
     #---------------------------------------------------------------- snapshots
     snaps=()
     snapdir="/$volume/@sharesnap/$share"
+    # Snapshots of an encrypted shared folder live in @<share>@ with an @<share>@.meta file
+    # (confirmed on DSM 7: /volume1/@sharesnap/@Encrypted@ and @Encrypted@.meta).
+    snapmeta="/$volume/@sharesnap/@${share}.meta"
+    if [[ ! -d "$snapdir" && -d "/$volume/@sharesnap/@${share}@" ]]; then
+        snapdir="/$volume/@sharesnap/@${share}@"
+        snapmeta="/$volume/@sharesnap/@${share}@.meta"
+    fi
     if [[ -d "$snapdir" ]]; then
         for d in "$snapdir"/GMT*; do
             name="${d##*/}"
@@ -193,8 +225,11 @@ for share in "${shares[@]}"; do
     # something once the share has a schedule or snapshots.
     keep_days=""
     keep_latest=""
+    ptype=""            # e.g. "64 (Retain by day)" on DSM 7, just "1" on DSM 6
+    ptype_num=""        # first word of ptype
+    ret_parts=""        # e.g. "7 daily, 4 weekly, 3 monthly"
     retention_ok=no
-    worm_enabled=""     # yes | no | notset | unknown
+    worm_enabled=""     # yes | no | notset | unknown (empty on DSM 6: no immutable snapshots)
     worm_days=""
 
     if [[ $has_sched == yes ]]; then
@@ -202,12 +237,26 @@ for share in "${shares[@]}"; do
             retention_ok=yes
             keep_days="$(echo "$ret" | grep -E '^RetainDay:' | head -n1 | cut -d":" -f2 | xargs)"
             keep_latest="$(echo "$ret" | grep -E '^Recently:' | head -n1 | cut -d":" -f2 | xargs)"
+            ptype="$(echo "$ret" | grep -E '^Policy type:' | head -n1 | cut -d":" -f2- | xargs)"
+            ptype_num="${ptype%% *}"
+            # Time-based policy (type 1): describe the counts that are actually set.
+            # "Recently:" is NOT part of this policy - it keeps its old value when
+            # another policy is selected, so it must not be shown here.
+            if [[ "$ptype_num" == "1" ]]; then
+                for pair in Hourly:hourly Daily:daily Weekly:weekly Monthly:monthly Yearly:yearly; do
+                    n="$(echo "$ret" | grep -E "^${pair%%:*}:" | head -n1 | cut -d":" -f2 | xargs)"
+                    if [[ "$n" =~ ^[0-9]+$ ]] && (( n > 0 )); then
+                        ret_parts+="${ret_parts:+, }${n} ${pair##*:}"
+                    fi
+                done
+            fi
         else
             warnings+=("Retention not configured")
         fi
     fi
 
-    if [[ $has_sched == yes || $qty -gt 0 ]]; then
+    # Immutable (WORM) snapshots only exist on DSM 7.2+, so DSM 6 never asks.
+    if [[ $has_worm == yes && ( $has_sched == yes || $qty -gt 0 ) ]]; then
         # "Enable: 1" / "Lock Day: 7". For a share whose immutable setting was never
         # touched it prints "Can't get worm lock policy with prefix='Share#', name='...'"
         # (confirmed on Oscar's "downloads"), which means off. "Enable: 0" (Oscar's
@@ -239,7 +288,7 @@ for share in "${shares[@]}"; do
         newest="${sorted[${#sorted[@]}-1]%%|*}"
         newest_name="${sorted[${#sorted[@]}-1]#*|}"
 
-        meta="/$volume/@sharesnap/@${share}.meta"
+        meta="$snapmeta"
         newest_worm="$(get_section_key_value "$meta" "$newest_name" worm_lock 2>/dev/null)"
         newest_lock="$(get_section_key_value "$meta" "$newest_name" lock 2>/dev/null)"
     fi
@@ -255,6 +304,7 @@ for share in "${shares[@]}"; do
             problems+=("Snapshot schedule is $sched_state")
         fi
 
+        # worm_enabled stays empty on DSM 6, so nothing is said about immutable there.
         case "$worm_enabled" in
             no)      warnings+=("Immutable snapshots are off") ;;
             notset)  warnings+=("Immutable snapshots not set up") ;;
@@ -332,9 +382,22 @@ for share in "${shares[@]}"; do
         c_sched+="<div class=\"sub\">$sub</div>"
     fi
 
-    # Retention
-    if [[ $retention_ok == yes ]]; then
-        c_ret="$(esc "${keep_days:-?}") days<div class=\"sub\">keep latest $(esc "${keep_latest:-?}")</div>"
+    # Retention - show what the policy in force actually is
+    if [[ $retention_ok == yes && "$keep_days" =~ ^[0-9]+$ && "$keep_days" -gt 0 && "$ptype" == *"Retain by day"* ]]; then
+        # DSM 7 "Keep all snapshots for N days"
+        c_ret="$(esc "$keep_days") days"
+    elif [[ $retention_ok == yes && -n "$ret_parts" ]]; then
+        # Time-based policy (DSM 6 "Advanced retention policy")
+        c_ret="$(esc "$ret_parts")"
+    elif [[ $retention_ok == yes && "$ptype_num" == "1" ]]; then
+        c_ret="Advanced policy"
+    elif [[ $retention_ok == yes && "$ptype_num" == "20" ]]; then
+        c_ret="keep latest $(esc "${keep_latest:-?}")"
+    elif [[ $retention_ok == yes && "$ptype_num" == "0" ]]; then
+        c_ret="Keep all"
+    elif [[ $retention_ok == yes && -n "$ptype" ]]; then
+        # A policy type not handled above: show it as reported rather than guess
+        c_ret="$(esc "$ptype")"
     elif [[ $has_sched == yes ]]; then
         c_ret="$(badge warn "Not configured")"
     else
@@ -342,13 +405,17 @@ for share in "${shares[@]}"; do
     fi
 
     # Immutable
-    case "$worm_enabled" in
-        yes)     c_imm="$(badge ok "On")<div class=\"sub\">$(esc "${worm_days:-?}") days</div>" ;;
-        no)      c_imm="$(badge warn "Off")" ;;
-        notset)  c_imm="$(badge warn "Off")<div class=\"sub\">not set up</div>" ;;
-        unknown) c_imm="$(badge off "Unknown")" ;;
-        *)       c_imm="$dash" ;;
-    esac
+    if [[ $has_worm == no ]]; then
+        c_imm='<span class="dash">not supported</span>'
+    else
+        case "$worm_enabled" in
+            yes)     c_imm="$(badge ok "On")<div class=\"sub\">$(esc "${worm_days:-?}") days</div>" ;;
+            no)      c_imm="$(badge warn "Off")" ;;
+            notset)  c_imm="$(badge warn "Off")<div class=\"sub\">not set up</div>" ;;
+            unknown) c_imm="$(badge off "Unknown")" ;;
+            *)       c_imm="$dash" ;;
+        esac
+    fi
 
     # Snapshots
     if (( qty > 0 )); then
@@ -369,7 +436,8 @@ for share in "${shares[@]}"; do
                    else
                        c_new+="<div>$(badge warn "Not immutable")</div>"
                    fi ;;
-            *)     c_new+="<div>$(badge off "Immutable ?")</div>" ;;
+            *)     # DSM 6 has no immutable flag, so there is nothing to show there
+                   [[ $has_worm == yes ]] && c_new+="<div>$(badge off "Immutable ?")</div>" ;;
         esac
         [[ "$newest_lock" == "true" ]] && c_new+="<div class=\"sub\">locked</div>"
     else

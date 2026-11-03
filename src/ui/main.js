@@ -793,12 +793,12 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
         rows.forEach(function(r) {
             var tr = tbody.insertRow();
             if (r.recent) { tr.className = "tb-fl-recent"; }
-            var acct = !r.known ? "No" : (r.account === "disabled" ? "Yes (disabled)" : (r.account === "enabled" ? "Yes (enabled)" : "Yes"));
+            var acct = !r.known ? "No" : (r.account === "deleted" ? "No (deleted)" : (r.account === "disabled" ? "Yes (disabled)" : (r.account === "enabled" ? "Yes (enabled)" : "Yes")));
             [r.time, r.service, r.username, r.ip, acct].forEach(function(v, i) {
                 var td = tr.insertCell();
                 td.textContent = v;
                 if (i === 1) { td.className = v === "SSH" ? "tb-fl-svc-ssh" : (v === "DSM" ? "tb-fl-svc-dsm" : ""); }
-                if (i === 4 && r.known) { td.className = r.account === "disabled" ? "tb-fl-disabled" : "tb-fl-yes"; }
+                if (i === 4 && r.known) { td.className = (r.account === "disabled" || r.account === "deleted") ? "tb-fl-disabled" : "tb-fl-yes"; }
             });
         });
         table.appendChild(tbody);

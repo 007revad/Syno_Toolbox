@@ -1,3 +1,12 @@
+v1.0.35
+- Bug fix Failed Logins showing a deleted user account as existing.
+- Bug fix for Snapshots page showing encrypted shared folders as "Snapshots: None" and "Status: Problem: No snapshots".
+- Bug fixes and improvements to the Snapshots page.
+- DSM 6 bug fix for Snapshots page showing "Snapshot check failed: Syno_Toolbox: module snapshot_check is not supported on this NAS/DSM version".
+- DSM 6 bug fix for Failed Logins showing "Could not read the connection log".
+- DSM 6 bug fix for Recently Installed showing "No successful package installs found in synopkg.log".
+- DSM 6 bug fix for Recently Upgraded showing "No successful package upgraded found in synopkg.log".
+
 v1.0.34
 - Bug for missing comma in modules.json in v1.0.33.
 - Added Snapshots tab to show the status of your snapshots and which shared folders don't have immutable snapshots, or snapshots, enabled.
