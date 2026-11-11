@@ -67,6 +67,26 @@ There are 2 ways to install the package:
 
 <br>
 
+<p align="center">Check Access from Internet</p>
+<p align="center"><kbd><img src="/images/www_accessible_new.png"></kbd></p>
+
+<br>
+
+<p align="center">Check QuickConnect and Failed Logins</p>
+<p align="center"><kbd><img src="/images/quickconnect_dsm_enabled.png"></kbd></p>
+
+<br>
+
+<p align="center">Check Synology Security Advisory</p>
+<p align="center"><kbd><img src="/images/security_advisory.png"></kbd></p>
+
+<br>
+
+<p align="center">Packages at Risk</p>
+<p align="center"><kbd><img src="/images/packages_at_risk_new.png"></kbd></p>
+
+<br>
+
 <p align="center">Packages</p>
 <p align="center"><kbd><img src="/images/packages2.png"></kbd></p>
 
