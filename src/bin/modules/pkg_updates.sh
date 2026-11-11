@@ -72,72 +72,54 @@ done
 
 # html header
 MESSAGE='<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Package versions</title>
-<style>body {font-family: Verdana, Arial, sans-serif; font-size: 13px; color: #333} table {text-align: left; border-collapse: collapse; table-layout: auto; width: 100%;} thead {color: white;background-color: navy;} th,td {padding: 0.3em 0.8em;} th {border: 2px solid black;} tbody td {border: 1px solid gray;} tbody tr:nth-child(even) td {background-color: #f3f3f3;} tfoot td {border: 1px solid black;} .upd {font-weight: bold;}</style></head>
+<style>body {font-family: Verdana, Arial, sans-serif; font-size: 13px; color: #333} table {text-align: left; border-collapse: collapse; table-layout: auto; width: 100%;} thead {color: white;background-color: navy;} th,td {padding: 0.3em 0.8em;} th {border: 2px solid black; white-space: nowrap;} tbody td {border: 1px solid gray;} tbody tr:nth-child(even) td {background-color: #f3f3f3;} tfoot td {border: 1px solid black;} .upd {font-weight: bold;}</style></head>
 <body><style>.no-wrap {white-space: nowrap;} .notes {overflow-wrap: break-word; word-break: break-word;}</style>'
 
 
 #------------------------------------------------------------------------------
-# Check for packages at risk of PHP2Shell (Synology-SA-26:14)
-# https://www.synology.com/en-global/security/advisory/Synology_SA_26_14
+# Check for packages at risk from security advisories (PHP2Shell, Plex2Shell etc.)
+# The advisory data lives in pkg_advisories.sh - add new advisories there.
+# https://www.synology.com/en-global/security/advisory
 
-# Prints the fixed version, "none" if no fix will be provided,
-# or nothing if the package isn't affected on this DSM version
-php2shell_fixed() {
-    case "$1" in
-        Calendar)
-            if   [[ "$BUILD" -ge 64570 ]]; then echo "3.0.4-21435"  # DSM 7.2 and later
-            elif [[ "$BUILD" -ge 41890 ]]; then echo "2.4.8-10948"  # DSM 7.0 to 7.1
-            elif [[ "$BUILD" -ge 24922 ]]; then echo "2.4.8-0948"   # DSM 6.2.2 to 6.2.4
-            fi ;;
-        MailStation)
-            if   [[ "$BUILD" -ge 60000 ]]; then echo "30000002.3.19-20333"  # DSM 7.2 and later
-            elif [[ "$BUILD" -ge 41805 ]]; then echo "30000002.3.19-10333"  # DSM 7.0 to 7.1
-            elif [[ "$BUILD" -ge 24922 ]]; then echo "30000002.3.19-0333"   # DSM 6.2.2 to 6.2.4
-            fi ;;
-        PHP7.3)      echo "none" ;;  # End of life
-        PHP7.4)
-            if   [[ "$BUILD" -ge 60096 ]]; then echo "7.4.33-0131"  # DSM 7.2 and later
-            elif [[ "$BUILD" -ge 41300 ]]; then echo "7.4.33-0122"  # DSM 7.0 to 7.1
-            elif [[ "$BUILD" -ge 22232 ]]; then echo "7.4.33-0010"  # DSM 6.2 to 6.2.4
-            fi ;;
-        PHP8.0)
-            if   [[ "$BUILD" -ge 60096 ]]; then echo "8.0.30-0122"  # DSM 7.2 and later
-            elif [[ "$BUILD" -ge 41300 ]]; then echo "8.0.30-0104"  # DSM 7.0 to 7.1
-            fi ;;
-        PHP8.1) echo "8.1.34-0120" ;;  # DSM 7.2-60096 and later
-        PHP8.2)
-            if [[ "$ENTERPRISE" == "yes" ]]; then echo "8.2.35-0134"  # DSM Enterprise
-            elif   [[ "$BUILD" -ge 60096 ]]; then echo "8.2.35-0171"  # DSM 7.2 and later
-            fi ;;
-        PHP8.3) echo "8.3.36-0051" ;;  # DSM 7.2-60096 and later
-        PHP8.4) echo "8.4.27-0051" ;;  # DSM 7.2-60096 and later
-    esac
-}
+ADVISORIES_LIB="${PKG_ROOT}/target/bin/pkg_advisories.sh"
+ADVISORIES=()
+if [[ -f "$ADVISORIES_LIB" ]]; then
+    # shellcheck source=/dev/null
+    source "$ADVISORIES_LIB"
+else
+    echo "pkg_updates: ${ADVISORIES_LIB} not found - skipping advisory checks" >> "$TOOLBOX_LOG"
+fi
 
 MESSAGE_C+='<table>
-<thead style="background-color: #c00000;"><tr><th>Packages at Risk (PHP2Shell)</th><th>Installed</th><th>Fixed in</th></tr></thead>
+<thead style="background-color: #c00000;"><tr><th>Packages at Risk</th><th>Installed</th><th>Fixed in</th><th>Vulnerability</th></tr></thead>
 <tbody>'
 
 risk_count=0
-for PACKAGE in Calendar MailStation PHP7.3 PHP7.4 PHP8.0 PHP8.1 PHP8.2 PHP8.3 PHP8.4; do
-    [[ -f "/var/packages/${PACKAGE}/INFO" ]] || continue
-    INSTALLED=$(synogetkeyvalue "/var/packages/${PACKAGE}/INFO" version)
-    PACKAGE_NAME="$(synogetkeyvalue "/var/packages/${PACKAGE}/INFO" displayname)"
-    [[ -z "$PACKAGE_NAME" ]] && PACKAGE_NAME="$PACKAGE"
+for ADVISORY in "${ADVISORIES[@]}"; do
+    ADV_FUNC="${ADVISORY%%:*}"   # function prefix, e.g. php2shell
+    ADV_NAME="${ADVISORY#*:}"    # display name, e.g. PHP2Shell
 
-    FIXED="$(php2shell_fixed "$PACKAGE")"
-    if [[ -z "$FIXED" ]]; then
-        continue
-    elif [[ "$FIXED" == "none" ]]; then
-        FIXED_SHOW="No fix (end of life)"
-    elif [[ "$(printf '%s\n' "$FIXED" "$INSTALLED" | sort -V | head -n1)" != "$FIXED" ]]; then
-        FIXED_SHOW="$FIXED"  # Installed is older than fixed
-    else
-        continue
-    fi
+    mapfile -t ADV_PACKAGES < <( "${ADV_FUNC}_packages" )
+    for PACKAGE in "${ADV_PACKAGES[@]}"; do
+        [[ -f "/var/packages/${PACKAGE}/INFO" ]] || continue
+        INSTALLED=$(synogetkeyvalue "/var/packages/${PACKAGE}/INFO" version)
+        PACKAGE_NAME="$(synogetkeyvalue "/var/packages/${PACKAGE}/INFO" displayname)"
+        [[ -z "$PACKAGE_NAME" ]] && PACKAGE_NAME="$PACKAGE"
 
-    MESSAGE_C+='<tr><td class="no-wrap" style="width:1%">'"$PACKAGE_NAME"'</td><td class="no-wrap" style="width:1%">'"$INSTALLED"'</td><td class="no-wrap" style="width:1%">'"$FIXED_SHOW"'</td></tr>'
-    risk_count=$((risk_count +1))
+        FIXED="$("${ADV_FUNC}_fixed" "$PACKAGE")"
+        if [[ -z "$FIXED" ]]; then
+            continue
+        elif [[ "$FIXED" == "none" ]]; then
+            FIXED_SHOW="No fix (end of life)"
+        elif [[ "$(printf '%s\n' "$FIXED" "$INSTALLED" | sort -V | head -n1)" != "$FIXED" ]]; then
+            FIXED_SHOW="$FIXED"  # Installed is older than fixed
+        else
+            continue
+        fi
+
+        MESSAGE_C+='<tr><td class="no-wrap" style="width:1%">'"$PACKAGE_NAME"'</td><td class="no-wrap" style="width:1%">'"$INSTALLED"'</td><td class="no-wrap" style="width:1%">'"$FIXED_SHOW"'</td><td class="no-wrap">'"$ADV_NAME"'</td></tr>'
+        risk_count=$((risk_count +1))
+    done
 done
 MESSAGE_C+='</tbody></table><p>'
 

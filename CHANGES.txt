@@ -1,11 +1,20 @@
+v1.0.36
+- Added Check Synology Security Advisory module to show when Synology publishes new, or updates existing, Security Advisories.
+  - Includes clickable links to the new or updated security advisory pages.
+- Added QuickConnect module to show if QuickConnect is enabled and warn if DSM is access via QuickConnect is enabled.
+- Updated Packages tab's Packages at Risk table to show the type of exploit (PHP2Shell, Plex2Shell etc).
+- Check Access from Internet now also checks the https and http ports configured in DSM (443 and 80).
+- Made Check Access from Internet 50% faster.
+- Updated the Help and About tabs.
+
 v1.0.35
-- Bug fix Failed Logins showing a deleted user account as existing.
+- Bug fix for Failed Logins showing a deleted user account as existing.
 - Bug fix for Snapshots page showing encrypted shared folders as "Snapshots: None" and "Status: Problem: No snapshots".
 - Bug fixes and improvements to the Snapshots page.
 - DSM 6 bug fix for Snapshots page showing "Snapshot check failed: Syno_Toolbox: module snapshot_check is not supported on this NAS/DSM version".
 - DSM 6 bug fix for Failed Logins showing "Could not read the connection log".
 - DSM 6 bug fix for Recently Installed showing "No successful package installs found in synopkg.log".
-- DSM 6 bug fix for Recently Upgraded showing "No successful package upgraded found in synopkg.log".
+- DSM 6 bug fix for Recently Upgraded showing "No successful package upgrades found in synopkg.log".
 
 v1.0.34
 - Bug for missing comma in modules.json in v1.0.33.

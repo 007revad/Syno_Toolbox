@@ -20,7 +20,7 @@
             The <strong>Packages</strong> tab shows you which installed Synology packages and 
             installed packages from the 007revad and SynoCommunity repositories have updates 
             available as well as their release notes. It also lists any broken packages, if there are any.
-            And lists any Synology packages that are at risk of the PHP2Shell exploit.<br>
+            And lists any Synology packages that are at risk of attack from the recent exploits.<br>
             <ul>
                 <li>The <strong>Recently Installed</strong> button lists recently installed packages.</li>
                 <li>The <strong>Recently Upgraded</strong> button lists recently upgraded packages.</li>
@@ -51,23 +51,6 @@
         </p>
 
         <div class="section">
-            <h4 style="color:#1B8AED;">Failed Logins (DSM and SSH)</h4>
-            <p>
-                Shows a warning if DSM has logged any failed logins, with the number of failed
-                logins in the last 24 hours plus the date and time of the last failed login.
-            </p>
-            <ol>
-                <li>
-                    Click <strong>Settings</strong> to choose to see the last
-                    100, 200, 300, 400 or 500 failed login attempts. 
-                </li>
-                <li>
-                    Click <strong>View</strong> to open the window to see the failed logins.<br>
-                    Failed logins in the last 24 hours have a yellow background.
-                </li>
-        </div>
-
-        <div class="section">
             <h4 style="color:#1B8AED;">Send WOL</h4>
             <p>
                 Sends a Wake-on-LAN packet to wake a sleeping device on your local network.
@@ -87,6 +70,59 @@
                     <ul><li>e.g. Devices that are always on or don't support WOL.</li></ul>
                 </li>
             </ol>
+        </div>
+
+        <div class="section">
+            <h4 style="color:#1B8AED;">Check Access from the Internet</h4>
+            <p>
+                Shows if your Synology is exploitable from the Internet via ransomware.</li>
+            </p>
+        </div>
+
+        <div class="section">
+            <h4 style="color:#1B8AED;">Check QuickConnect</h4>
+            <p>
+                Shows if QuickConnect is enabled and warns if DSM access via QuickConnect is also enabled.</li>
+            </p>
+        </div>
+
+        <div class="section">
+            <h4 style="color:#1B8AED;">Failed Logins (DSM and SSH)</h4>
+            <p>
+                Shows a warning if DSM has logged any failed login attempts, with the number of failed 
+                login attempts in the last 24 hours plus the date and time of the last failed login attempt.
+            </p>
+            <ol>
+                <li>
+                    Click <strong>Settings</strong> to choose to see the last
+                    100, 200, 300, 400 or 500 failed login attempts. 
+                </li>
+                <li>
+                    Click <strong>View</strong> to open the window to see the failed login attempts.<br>
+                    Failed logins in the last 24 hours have a yellow background.
+                </li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h4 style="color:#1B8AED;">Check Synology Security Advisory</h4>
+            <p>
+                Shows any new or updated security advisories with information about those advisories including:
+            <ol>
+                <li>
+                    Severity: Critical, Important, Moderate, Low, Not affected
+                </li>
+                <li>
+                    Status: Open, Ongoing, Resolved, Accepted
+                </li>
+                <li>
+                    Last Updated: Date and time
+                </li>
+                <li>
+                    Link to the advisory's web page.
+                </li>
+            </ol>
+            </p>
         </div>
 
         <div class="section">

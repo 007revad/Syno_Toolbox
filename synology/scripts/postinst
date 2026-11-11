@@ -132,7 +132,7 @@ if [[ $dsm -ge 7 ]]; then
         result="$("$HELPER" selfheal 2>&1)"
         rc=$?
         log_message "Triggered self-heal via helper"
-        log_message "CPUTemp postinst: selfheal exit=${rc} output: ${result}"
+        log_message "Syno Toolbox postinst: selfheal exit=${rc} output: ${result}"
     else
         log_message "Helper not yet setuid-root - self-heal deferred to first UI open"
     fi

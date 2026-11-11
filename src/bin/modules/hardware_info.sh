@@ -28,6 +28,11 @@ if [[ -n $nas_revision ]]; then
     show_revision="  revision $nas_revision"
 fi
 
+
+# Don't confuse people by showing the hardware revision
+show_revision=""
+
+
 nas_cpu="$(cat /proc/cpuinfo | grep 'model name' | tail -1)"
 nas_cpu="${nas_cpu##*: }"
 

@@ -1988,7 +1988,15 @@ Ext.define("SYNO.SDS.Syno_Toolbox.MainWindow", {
                 /&lt;a href=&quot;(https:\/\/[^&"]+)&quot;&gt;([^&<]*)&lt;\/a&gt;/g,
                 '<a href="$1" target="_blank" rel="noopener noreferrer">$2</a>'
             )
-            .replace(/^(WARNING:.*)$/gm, '<span style="color:#d32f2f;">$1</span>');
+            .replace(/^(WARNING:.*)$/gm, '<span style="color:#d32f2f;">$1</span>')  // Red
+            .replace(/^(NOTICE:.*)$/gm, '<span style="color:#FF7F27;">$1</span>')   // Orange
+            .replace(/^([ \t]*Status: Ongoing)$/gm, '<span style="color:#FF7F27;">$1</span>')  // Orange
+            .replace(/^([ \t]*Severity: Critical)$/gm, '<span style="color:#d32f2f;">$1</span>')   // Red
+            .replace(/^([ \t]*Severity: Important)$/gm, '<span style="color:#FF7F27;">$1</span>')  // Orange
+            .replace(/^([ \t]*Severity: Moderate)$/gm, '<span style="color:#E0A800;">$1</span>')   // Yellow
+            .replace(/^([ \t]*Severity: Low)$/gm, '<span style="color:#00B0F0;">$1</span>')        // Cyan
+            .replace(/^([ \t]*Severity: Not Affected)$/gm, '<span style="color:#777;">$1</span>')  // Grey (same as .tb-row-result)
+            .replace(/^([ \t]*Severity: Not affected)$/gm, '<span style="color:#777;">$1</span>'); // Grey (same as .tb-row-result)
     },
 
     // Failed Logins Settings: how many entries [View] shows (100-500),

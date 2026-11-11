@@ -152,6 +152,45 @@
       "result_style": "monospace"
     },
     {
+      "id": "send_wol",
+      "category": "tools",
+      "name": "Send WOL",
+      "control": "toggle-wol-selector",
+      "script": "bin/modules/send_wol.sh",
+      "trigger": "on_save",
+      "live": false,
+      "run_args": ["{mac}"],
+      "disable_args": null,
+      "check_args": null,
+      "note": "No real 'enabled' state - this is a one-shot action fired by its own Send button, not by Save's enable-diff or boot. trigger stays on_save purely so run_boot_modules.sh never auto-fires it; the toggle checkbox is hidden in the UI and never flips, so that diff path never actually runs. run_args' {mac} placeholder is filled from current_fields.mac, which the Send button persists via save() immediately before calling run - same placeholder-from-saved-conf-field mechanism as seq_io's {volumes}/{kb}."
+    },
+    {
+      "id": "check_internet_access",
+      "category": "tools",
+      "name": "Check Access from Internet",
+      "control": "toggle-display",
+      "script": "bin/modules/check_internet_access.sh",
+      "trigger": "on_save",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": null,
+      "note": "'trigger: on_save' prevents check_internet_access.sh running twice when the package is opened."
+    },
+    {
+      "id": "check_quickconnect",
+      "category": "tools",
+      "name": "Check QuickConnect",
+      "control": "toggle-display",
+      "script": "bin/modules/check_quickconnect.sh",
+      "trigger": "on_save",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": null,
+      "note": "'trigger: on_save' prevents check_quickconnect.sh running twice when the package is opened."
+    },
+    {
       "id": "failed_logins",
       "category": "tools",
       "name": "Failed Logins (DSM and SSH)",
@@ -193,17 +232,17 @@
       "note": "Not a rendered row - main.js's [View] button on the failed_logins row calls run against this id and decodes the JSON into a table. Same pattern as pkg_depends."
     },
     {
-      "id": "send_wol",
+      "id": "security_advisory",
       "category": "tools",
-      "name": "Send WOL",
-      "control": "toggle-wol-selector",
-      "script": "bin/modules/send_wol.sh",
+      "name": "Check Synology Security Advisory",
+      "control": "toggle-security-advisory",
+      "script": "bin/modules/syno_advisory_check.sh",
       "trigger": "on_save",
-      "live": false,
-      "run_args": ["{mac}"],
+      "live": true,
+      "run_args": [],
       "disable_args": null,
       "check_args": null,
-      "note": "No real 'enabled' state - this is a one-shot action fired by its own Send button, not by Save's enable-diff or boot. trigger stays on_save purely so run_boot_modules.sh never auto-fires it; the toggle checkbox is hidden in the UI and never flips, so that diff path never actually runs. run_args' {mac} placeholder is filled from current_fields.mac, which the Send button persists via save() immediately before calling run - same placeholder-from-saved-conf-field mechanism as seq_io's {volumes}/{kb}."
+      "note": "Info row with a real toggle: live:true + check_args:null means main.js runs it on load/Refresh while enabled and on toggle-on. toggle-failed-logins only adds the [View] button. trigger:on_save keeps run_boot_modules.sh from running it at package start."
     },
     {
       "id": "fix_size_units",
@@ -216,19 +255,6 @@
       "run_args": [],
       "disable_args": ["--disable"],
       "check_args": ["--check"]
-    },
-    {
-      "id": "check_internet_access",
-      "category": "tools",
-      "name": "Check Access from Internet",
-      "control": "toggle-display",
-      "script": "bin/modules/check_internet_access.sh",
-      "trigger": "on_save",
-      "live": false,
-      "run_args": [],
-      "disable_args": null,
-      "check_args": ["check"],
-      "note": "'trigger: on_save' prevents check_internet_access.sh running twice when the package is opened."
     },
     {
       "id": "cleanup_coredumps",
