@@ -85,44 +85,61 @@ echo "$os_name $productversion$base$smallfixnumber_show"
 #
 # DSM 7.3	Important	Upgrade to 7.3.1-86003-1 or above.
 # DSM 7.2.2	Important	Upgrade to 7.2.2-72806-5 or above.
+#--------------------------------------------------------------------
+# https://www.synology.com/en-global/security/advisory/Synology_SA_26_18
+# https://www.synology.com/en-global/security/advisory/Synology_SA_26_19
+#
+# Affected Products
+#
+# Product	Severity	Fixed Release Availability
+# DSM 7.4	Critical	Upgrade to 7.4.1-90080-1 or above.
+# DSM 7.3	Critical	Upgrade to 7.3.2-86009-5 or above.
+# DSM 7.2.2	Critical	Upgrade to 7.2.2-72806-10 or above.
+# DSM 7.2.1	Critical	Upgrade to 7.2.1-69057-13 or above.
+#--------------------------------------------------------------------
 
 case "$buildnumber" in
     90080)  # DSM 7.4.1
+        if [[ "$smallfixnumber" -lt 1 ]]; then
+            echo "WARNING: At risk of critical vulnerabilities. Update to 7.4.1-90080 Update 1 or above."
+        fi
         ;;
     90075)  # DSM 7.4
+        echo "WARNING: At risk of critical vulnerabilities. Update to 7.4.1-90080 Update 1 or above."
         ;;
     86009)  # DSM 7.3.2
-        if [[ "$smallfixnumber" -lt 4 ]]; then
-            echo "WARNING: At risk of critical vulnerabilities (Synology-SA-26:13). Update to 7.3.2-86009 Update 4 or above."
+        if [[ "$smallfixnumber" -lt 5 ]]; then
+            #echo "WARNING: At risk of critical vulnerabilities (Synology-SA-26:13). Update to 7.3.2-86009 Update 4 or above."
+            echo "WARNING: At risk of critical vulnerabilities. Update to 7.3.2-86009 Update 5 or above."
         fi
         ;;
     86003)  # DSM 7.3.1
         if [[ "$smallfixnumber" -lt 1 ]]; then
-            echo "WARNING: At risk of PWN2OWN 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.3.2-86009 Update 4 or above."
+            echo "WARNING: At risk of PWN2OWN 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.3.2-86009 Update 5 or above."
         else
-            echo "WARNING: At risk of critical vulnerabilities (Synology-SA-26:13). Update to 7.3.2-86009 Update 4 or above."
+            echo "WARNING: At risk of critical vulnerabilities (Synology-SA-26:13). Update to 7.3.2-86009 Update 5 or above."
         fi
         ;;
     81180)  # DSM 7.3
-        echo "WARNING: At risk of PWN2OWN 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.3.2-86009 Update 4 or above."
+        echo "WARNING: At risk of PWN2OWN 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.3.2-86009 Update 5 or above."
         ;;
     72806)  # DSM 7.2.2
         if [[ "$smallfixnumber" -lt 1 ]]; then
-            echo "WARNING: At risk of PWN2OWN 2024 and 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.2.2-72806 Update 9 or above."
+            echo "WARNING: At risk of PWN2OWN 2024 and 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.2.2-72806 Update 10 or above."
         elif [[ "$smallfixnumber" -lt 5 ]]; then
-            echo "WARNING: At risk of PWN2OWN 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.2.2-72806 Update 9 or above."
-        elif [[ "$smallfixnumber" -lt 9 ]]; then
-            echo "WARNING: At risk of critical vulnerabilities (Synology-SA-26:13). Update to 7.2.2-72806 Update 9 or above."
+            echo "WARNING: At risk of PWN2OWN 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.2.2-72806 Update 10 or above."
+        elif [[ "$smallfixnumber" -lt 10 ]]; then
+            echo "WARNING: At risk of critical vulnerabilities (Synology-SA-26:13). Update to 7.2.2-72806 Update 10 or above."
         fi
         ;;
     72803)  # DSM 7.2.2 (original build)
-        echo "WARNING: At risk of PWN2OWN 2024 and 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.2.2-72806 Update 9 or above."
+        echo "WARNING: At risk of PWN2OWN 2024 and 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.2.2-72806 Update 10 or above."
         ;;
     69057)  # DSM 7.2.1
         if [[ "$smallfixnumber" -lt 6 ]]; then
-            echo "WARNING: At risk of PWN2OWN 2024 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.2.1-69057 Update 12 or above."
-        elif [[ "$smallfixnumber" -lt 12 ]]; then
-            echo "WARNING: At risk of critical vulnerabilities (Synology-SA-26:13). Update to 7.2.1-69057 Update 12 or above."
+            echo "WARNING: At risk of PWN2OWN 2024 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.2.1-69057 Update 13 or above."
+        elif [[ "$smallfixnumber" -lt 13 ]]; then
+            echo "WARNING: At risk of critical vulnerabilities (Synology-SA-26:13). Update to 7.2.1-69057 Update 13 or above."
         fi
         ;;
     64570)  # DSM 7.2

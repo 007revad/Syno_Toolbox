@@ -1,3 +1,6 @@
+v1.037
+- Updated DSM Version module for new Synology Security Advisories.
+
 v1.0.36
 - Added Check Synology Security Advisory module to show when Synology publishes new, or updates existing, Security Advisories.
   - Includes clickable links to the new or updated security advisory pages.
