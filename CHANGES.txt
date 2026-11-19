@@ -1,6 +1,6 @@
 v1.0.38
 - Updated DSM Version module for new Synology Security Advisories, SA-26:20 NGINX2Root and SA-26:21 DSM.
-- Updated Synology Security Advisories module to check 3 Synology sites to avoid Synology failing to update the en-global site.
+- Updated Synology Security Advisories module to check 3 Synology sites to avoid issues when Synology failing to update the en-global site.
 
 v1.0.37
 - Updated DSM Version module for new Synology Security Advisories.
