@@ -29,15 +29,24 @@
 # and merged, keeping the newest "Last Updated" per advisory. Synology's CDN can
 # serve a stale copy of the list page on one site while another is up to date, so
 # a single source can miss new or updated advisories for hours.
+#
+# Links in the reports point at the regional site that had the newest "Last
+# Updated" for that advisory (e.g. .../en-au/security/advisory/Synology_SA_26_21),
+# because the generic https://www.synology.com/security/advisory/... link
+# redirects to en-global, which may still be serving the stale page.
 #------------------------------------------------------------------------------
 
 URL="https://www.synology.com/en-global/security/advisory"   # shown in reports
 # Every one of these is fetched and merged. At least one must work.
+# Order matters on a tie (same "Last Updated" on several sites): the first wins.
 URLS=(
-    "https://www.synology.com/en-global/security/advisory"
     "https://www.synology.com/en-au/security/advisory"
+    "https://www.synology.com/en-uk/security/advisory"
+    "https://www.synology.com/en-global/security/advisory"
     "https://www.synology.com/en-us/security/advisory"
 )
+SITE_BASE="https://www.synology.com"
+# Fallback only, for advisories whose source site is unknown (redirects to en-global)
 LINK_BASE="https://www.synology.com/security/advisory"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MIN_ROWS=5        # fewer parsed rows than this = page layout probably changed
@@ -136,9 +145,13 @@ set_perms(){
 # $1 = history file, $2 = current advisory list (to know which are still Ongoing),
 # $3 = "html" to make the links clickable in Syno_Toolbox.
 show_history(){
-    awk -F'\t' -v base="$LINK_BASE" -v days="$HISTORY_DAYS" -v html="$3" '
-    function link(adv,   s, u) {
-        s = adv; gsub(/[-:]/, "_", s); u = base "/" s
+    awk -F'\t' -v base="$LINK_BASE" -v sbase="$SITE_BASE" -v days="$HISTORY_DAYS" -v html="$3" '
+    # Link to the site that has the newest copy: the current list says which,
+    # else the site saved with the history entry, else the generic link
+    function link(adv, hsite,   s, u, st) {
+        s = adv; gsub(/[-:]/, "_", s)
+        st = ((adv in site) && site[adv] != "") ? site[adv] : hsite
+        if (st != "" && st != "-") { u = sbase "/" st "/security/advisory/" s } else { u = base "/" s }
         return (html == "html") ? "<a href=\"" u "\">" u "</a>" : u
     }
     # Current severity (Critical / Important ...) and status (Resolved / Accepted /
@@ -156,16 +169,17 @@ show_history(){
             printf "UPDATED: %s\n", ti[k]; stline(ad[k])
             printf "         Last Updated: %s (was %s)\n", lu[k], pv[k]
         }
-        printf "         Detected: %s\n         %s\n \n", dd[k], link(ad[k])
+        printf "         Detected: %s\n         %s\n \n", dd[k], link(ad[k], hs[k])
     }
-    # first file = current advisory list: id, last updated, title, icon status, status text, severity
+    # first file = current advisory list: id, last updated, title, icon status, status text, severity, site
     NR == FNR {
         lab[$1] = $5
         sev[$1] = $6
+        site[$1] = $7
         if ($4 == "ongoing") { mo++; oid[mo] = $1; oti[mo] = $3; olu[mo] = $2 }
         next
     }
-    { n++; ep[n] = $1; dd[n] = $2; ty[n] = $3; ad[n] = $4; lu[n] = $5; pv[n] = $6; ti[n] = $7 }
+    { n++; ep[n] = $1; dd[n] = $2; ty[n] = $3; ad[n] = $4; lu[n] = $5; pv[n] = $6; ti[n] = $7; hs[n] = $8 }
     END {
         if (n == 0 && mo == 0) { exit }
         printf "Synology security advisory changes in the last %s days, and any still Ongoing:\n \n", days
@@ -185,7 +199,7 @@ show_history(){
         for (q = 1; q <= mo; q++) {
             if (oid[q] in shown) { continue }
             printf "ONGOING: %s\n", oti[q]; stline(oid[q])
-            printf "         Last Updated: %s\n         %s\n \n", olu[q], link(oid[q])
+            printf "         Last Updated: %s\n         %s\n \n", olu[q], link(oid[q], "")
         }
     }' "$2" "$1"
 }
@@ -198,6 +212,7 @@ show_history(){
 # Output (tab separated): id <TAB> last updated <TAB> title <TAB> icon status (ongoing/resolved/-)
 #                         <TAB> status text (Resolved, Accepted, Ongoing...; "Resolved" if missing)
 #                         <TAB> severity (Critical, Important, Moderate, Low, Not Affected; "-" if not found)
+# The caller appends a 7th column: the site the row came from (en-au, en-uk ...).
 parse_page(){
     awk '
     BEGIN { RS = "<" }
@@ -330,6 +345,12 @@ for src in "${sources[@]}"; do
     fi
 
     parse_page "$page" "$part"
+    # Remember which site each row came from, so reports can link to the newest copy
+    # (not for local --file tests, where the label is a file name)
+    if [[ ${#html_files[@]} -eq 0 ]]; then
+        awk -F'\t' -v OFS='\t' -v s="$label" '{ print $0, s }' "$part" > "$part.site" \
+            && mv -- "$part.site" "$part"
+    fi
     prows=$(wc -l < "$part")
     [[ $debug == "yes" ]] && echo "Source $label: parsed $prows advisories"
     if [[ $prows -lt $MIN_ROWS ]]; then
@@ -375,14 +396,19 @@ fi
 # ---- Compare ----------------------------------------------------------------
 # Besides the printable report, the awk also writes one line per change to
 # events.tsv for the history file (tab separated):
-#   detected epoch, detected date, NEW|UPDATED, id, last updated, previous last updated (or -), title
+#   detected epoch, detected date, NEW|UPDATED, id, last updated, previous last updated (or -), title, site
 now="$(date +%s)"
 today="$(date '+%Y-%m-%d')"
 events="$tmp_dir/events.tsv"
 : > "$events"
 
-changes="$(awk -F'\t' -v base="$LINK_BASE" -v now="$now" -v today="$today" -v ev="$events" '
-function link(id,   s) { s = id; gsub(/[-:]/, "_", s); return base "/" s }
+changes="$(awk -F'\t' -v base="$LINK_BASE" -v sbase="$SITE_BASE" -v now="$now" -v today="$today" -v ev="$events" '
+# Link to the site that had the newest copy of the advisory; generic link if unknown
+function link(id, st,   s) {
+    s = id; gsub(/[-:]/, "_", s)
+    if (st != "" && st != "-") { return sbase "/" st "/security/advisory/" s }
+    return base "/" s
+}
 function stl(l, s,   o) {
     o = ""
     if (s != "" && s != "-") { o = "         Severity: " s "\n" }
@@ -394,11 +420,11 @@ NR == FNR { old[$1] = $2; if (minid == "" || $1 < minid) { minid = $1 }; next }
     if (!($1 in old)) {
         # older than anything already tracked = the list window moved, not a new advisory
         if (minid != "" && $1 < minid) { next }
-        printf "NEW:     %s\n%s         Last Updated: %s\n         %s\n \n", $3, stl($5, $6), $2, link($1)
-        printf "%s\t%s\tNEW\t%s\t%s\t-\t%s\n", now, today, $1, $2, $3 >> ev
+        printf "NEW:     %s\n%s         Last Updated: %s\n         %s\n \n", $3, stl($5, $6), $2, link($1, $7)
+        printf "%s\t%s\tNEW\t%s\t%s\t-\t%s\t%s\n", now, today, $1, $2, $3, $7 >> ev
     } else if (substr($2, 1, 19) > substr(old[$1], 1, 19)) {   # only a newer date counts as updated
-        printf "UPDATED: %s\n%s         Last Updated: %s (was %s)\n         %s\n \n", $3, stl($5, $6), $2, old[$1], link($1)
-        printf "%s\t%s\tUPDATED\t%s\t%s\t%s\t%s\n", now, today, $1, $2, old[$1], $3 >> ev
+        printf "UPDATED: %s\n%s         Last Updated: %s (was %s)\n         %s\n \n", $3, stl($5, $6), $2, old[$1], link($1, $7)
+        printf "%s\t%s\tUPDATED\t%s\t%s\t%s\t%s\t%s\n", now, today, $1, $2, old[$1], $3, $7 >> ev
     }
 }' "$STATE_FILE" "$new_list")"
 

@@ -1,3 +1,9 @@
+v1.0.39
+- Added nginx HTTP/2 check module to warn if HTTP/2 is enabled.
+- Updated Synology Security Advisories module to show the URL of a Synology site that has the latest update.
+- Updated DSM Version module so I don't need to release a new package version every time there's a new Synology Security Advisory recommending updating to a new DSM version.
+- Bug fix for DSM 6 to 7.2 showing "Error: shared folder <share> not found." for "DSM Configuration backup", "Backup Synoboot image" and "Backup MTD image".
+
 v1.0.38
 - Updated DSM Version module for new Synology Security Advisories, SA-26:20 NGINX2Root and SA-26:21 DSM.
 - Updated Synology Security Advisories module to check 3 Synology sites to avoid issues when Synology failing to update the en-global site.

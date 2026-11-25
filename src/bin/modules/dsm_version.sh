@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 
-scriptver="v1.0.0-toolbox"
+scriptver="v1.1.0-toolbox"
 #script=DSM_Version
 #repo="007revad/DSM_Version"
 scriptname=dsm_version
@@ -71,116 +71,113 @@ buildnumber=$(/usr/syno/bin/synogetkeyvalue /etc.defaults/VERSION buildnumber)
 echo "$os_name $productversion$base$smallfixnumber_show"
 
 #--------------------------------------------------------------------
-# Synology-SA-24:20 DSM (PWN2OWN 2024) check
-# https://www.synology.com/en-global/security/advisory/Synology_SA_24_20
+# Check for known critical vulnerabilities
 #
-# DSM 7.2.2	Critical	Upgrade to 7.2.2-72806-1 or above.
-# DSM 7.2.1	Critical	Upgrade to 7.2.1-69057-6 or above.
-# DSM 7.2	Critical	Upgrade to 7.2-64570-4 or above.
-# DSM 7.1	Critical	Upgrade to 7.1.1-42962-7 or above.
-# DSM 6.2	Moderate	Upgrade to 6.2.4-25556-8 or above.
-#--------------------------------------------------------------------
-# Synology-SA-25:14 DSM (PWN2OWN 2025) check
-# https://www.synology.com/en-au/security/advisory/Synology_SA_25_14
+# The at-risk builds, the fixed update numbers and the advisories they come
+# from are in dsm_version.map (see that file for the format). The map is
+# fetched from GitHub at most once every MAP_TTL seconds, so it can be updated
+# without releasing a new package. If the download fails the last good download
+# is used, and if there isn't one the copy bundled in the package is used.
 #
-# DSM 7.3	Important	Upgrade to 7.3.1-86003-1 or above.
-# DSM 7.2.2	Important	Upgrade to 7.2.2-72806-5 or above.
-#--------------------------------------------------------------------
-# Synology-SA-26:18 DSM
-# https://www.synology.com/en-global/security/advisory/Synology_SA_26_18
-# Synology-SA-26:19 DSM
-# https://www.synology.com/en-global/security/advisory/Synology_SA_26_19
-#
-# Affected Products
-#
-# Product	Severity	Fixed Release Availability
-# DSM 7.4	Critical	Upgrade to 7.4.1-90080-1 or above.
-# DSM 7.3	Critical	Upgrade to 7.3.2-86009-5 or above.
-# DSM 7.2.2	Critical	Upgrade to 7.2.2-72806-10 or above.
-# DSM 7.2.1	Critical	Upgrade to 7.2.1-69057-13 or above.
-#--------------------------------------------------------------------
-# Synology-SA-26:20 NGINX2Root
-# https://www.synology.com/en-global/security/advisory/Synology_SA_26_20
-# Synology-SA-26:21 DSM, BeeStation OS
-# https://www.synology.com/en-global/security/advisory/Synology_SA_26_21
-#
-# Affected Products
-#
-# Product	Severity	Fixed Release Availability
-# DSM 7.4	Critical	Upgrade to 7.4.1-90080-2 or above.
-# DSM 7.3	Critical	Upgrade to 7.3.2-86009-6 or above.
-# DSM 7.2.2	Critical	Upgrade to 7.3.2-86009-6 or above.
-# DSM 7.2.1	Critical	Upgrade to 7.3.2-86009-6 or above.
-#--------------------------------------------------------------------
+# The map is only ever read as data, never sourced or executed. Every field is
+# validated and the text is stripped to safe characters before it is shown,
+# because the output of this script is displayed as HTML in DSM.
 
-case "$buildnumber" in
-    90080)  # DSM 7.4.1
-        if [[ "$smallfixnumber" -lt 2 ]]; then
-            echo "WARNING: At risk of critical vulnerabilities. Update to 7.4.1-90080 Update 2 or above."
+MAP_URL="https://raw.githubusercontent.com/007revad/DSM_Version/main/dsm_version.map"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MAP_BUNDLED="${SCRIPT_DIR}/dsm_version.map"
+MAP_CACHE="${PKG_VAR_DIR}/synotoolbox_dsm_version_map"
+MAP_TS_FILE="${PKG_VAR_DIR}/synotoolbox_dsm_version_map_ts"
+MAP_TTL=86400        # 24h between downloads
+MAP_RETRY=3600       # after a failed download, try again after 1h
+MAP_MAX_BYTES=65536  # reject anything bigger
+
+# Is this a usable map? Right format marker, not huge, and at least one valid line.
+map_is_valid() {
+    local f="$1"
+    [[ -f "$f" ]] || return 1
+    (( $(wc -c < "$f") <= MAP_MAX_BYTES )) || return 1
+    [[ "$(head -n 1 "$f" | tr -d '\r')" == "#format=1" ]] || return 1
+    tr -d '\r' < "$f" | grep -qE '^[0-9]+\|([0-9]+|-)\|[A-Za-z0-9 .-]+$'
+}
+
+# Print the path of the map to use: refresh the cached download when it is due
+# (or when the bundled copy is newer, e.g. after a package update), then prefer
+# the download over the bundled copy.
+get_map_file() {
+    local now last=0 tmp
+    now=$(date +%s)
+    if [[ -f "$MAP_TS_FILE" ]]; then
+        last=$(cat "$MAP_TS_FILE" 2>/dev/null)
+        [[ "$last" =~ ^[0-9]+$ ]] || last=0
+    fi
+
+    if ! map_is_valid "$MAP_CACHE" || (( now - last >= MAP_TTL )) \
+        || [[ "$MAP_BUNDLED" -nt "$MAP_CACHE" ]]; then
+        tmp=$(mktemp 2>/dev/null)
+        if [[ -n "$tmp" ]] \
+            && curl -fsSL --connect-timeout 10 --max-time 20 "$MAP_URL" -o "$tmp" 2>/dev/null \
+            && map_is_valid "$tmp" \
+            && cat "$tmp" 2>/dev/null > "$MAP_CACHE"; then
+            echo "$now" 2>/dev/null > "$MAP_TS_FILE"
+        else
+            # Failed: retry in MAP_RETRY seconds, not on every click
+            echo $(( now - MAP_TTL + MAP_RETRY )) 2>/dev/null > "$MAP_TS_FILE"
         fi
-        ;;
-    90075)  # DSM 7.4
-        echo "WARNING: At risk of critical vulnerabilities. Update to 7.4.1-90080 Update 2 or above."
-        ;;
-    86009)  # DSM 7.3.2
-        if [[ "$smallfixnumber" -lt 6 ]]; then
-            #echo "WARNING: At risk of critical vulnerabilities (Synology-SA-26:13). Update to 7.3.2-86009 Update 4 or above."
-            echo "WARNING: At risk of critical vulnerabilities. Update to 7.3.2-86009 Update 6 or above."
+        [[ -n "$tmp" ]] && rm -f "$tmp"
+    fi
+
+    if map_is_valid "$MAP_CACHE" && ! [[ "$MAP_BUNDLED" -nt "$MAP_CACHE" ]]; then
+        echo "$MAP_CACHE"
+    elif map_is_valid "$MAP_BUNDLED"; then
+        echo "$MAP_BUNDLED"
+    elif map_is_valid "$MAP_CACHE"; then
+        echo "$MAP_CACHE"
+    else
+        return 1
+    fi
+}
+
+check_vulnerabilities() {
+    local map_file lookup sf b f t
+    [[ "$buildnumber" =~ ^[0-9]+$ ]] || return 0
+    lookup=$(( 10#$buildnumber ))
+    sf=${smallfixnumber:-0}
+    [[ "$sf" =~ ^[0-9]+$ ]] || sf=0
+    sf=$(( 10#$sf ))
+
+    # DSM 6.2.3 and earlier: treat as DSM 6.2.4 with no updates installed
+    if (( lookup < 25556 )); then
+        lookup=25556
+        sf=0
+    fi
+
+    if ! map_file=$(get_map_file); then
+        echo "WARNING: Unable to check for known vulnerabilities (dsm_version.map missing or invalid)"
+        return 0
+    fi
+
+    while IFS='|' read -r b f t _; do
+        b=${b//[[:space:]]/}
+        f=${f//[[:space:]]/}
+        [[ "$b" =~ ^[0-9]+$ ]] || continue        # also skips # comment lines
+        [[ "$f" =~ ^([0-9]+|-)$ ]] || continue
+        (( 10#$b == lookup )) || continue
+
+        t="${t#"${t%%[![:space:]]*}"}"            # trim
+        t="${t%"${t##*[![:space:]]}"}"
+        t=${t//[^0-9A-Za-z .-]/}                  # safe characters only
+        t=${t:0:60}
+        [[ -n "$t" ]] || continue
+
+        if [[ "$f" == "-" ]] || (( sf < 10#$f )); then
+            echo "WARNING: At risk of critical vulnerabilities. Update to $t or above."
+            return 0
         fi
-        ;;
-    86003)  # DSM 7.3.1
-        if [[ "$smallfixnumber" -lt 1 ]]; then
-            echo "WARNING: At risk of PWN2OWN 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.3.2-86009 Update 6 or above."
-        elif [[ "$smallfixnumber" -lt 6 ]]; then
-            echo "WARNING: At risk of critical vulnerabilities (Synology-SA-26:13). Update to 7.3.2-86009 Update 6 or above."
-        fi
-        ;;
-    81180)  # DSM 7.3
-        echo "WARNING: At risk of PWN2OWN 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.3.2-86009 Update 6 or above."
-        ;;
-    72806)  # DSM 7.2.2
-        if [[ "$smallfixnumber" -lt 1 ]]; then
-            echo "WARNING: At risk of PWN2OWN 2024 and 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.2.2-72806 Update 10 or above."
-        elif [[ "$smallfixnumber" -lt 5 ]]; then
-            echo "WARNING: At risk of PWN2OWN 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.2.2-72806 Update 10 or above."
-        elif [[ "$smallfixnumber" -lt 10 ]]; then
-            echo "WARNING: At risk of critical vulnerabilities (Synology-SA-26:13). Update to 7.2.2-72806 Update 10 or above."
-        fi
-        ;;
-    72803)  # DSM 7.2.2 (original build)
-        echo "WARNING: At risk of PWN2OWN 2024 and 2025 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.2.2-72806 Update 10 or above."
-        ;;
-    69057)  # DSM 7.2.1
-        if [[ "$smallfixnumber" -lt 6 ]]; then
-            echo "WARNING: At risk of PWN2OWN 2024 exploits and critical vulnerabilities (Synology-SA-26:13). Update to 7.2.1-69057 Update 13 or above."
-        elif [[ "$smallfixnumber" -lt 13 ]]; then
-            echo "WARNING: At risk of critical vulnerabilities (Synology-SA-26:13). Update to 7.2.1-69057 Update 13 or above."
-        fi
-        ;;
-    64570)  # DSM 7.2
-        if [[ "$smallfixnumber" -lt 4 ]]; then
-            echo "WARNING: At risk of PWN2OWN 2024 exploits. Update to 7.2-64570 Update 4 or above."
-        fi
-        ;;
-    42962)  # DSM 7.1.1
-        if [[ "$smallfixnumber" -lt 7 ]]; then
-            echo "WARNING: At risk of PWN2OWN 2024 exploits. Update to 7.1.1-42962 Update 7 or above."
-        fi
-        ;;
-    42661|42218|41890)  # DSM 7.0 to 7.1
-        echo "WARNING: At risk of PWN2OWN 2024 exploits. Update to 7.1.1-42962 Update 7 or above."
-        ;;
-    25556)  # DSM 6.2.4
-        if [[ "$smallfixnumber" -lt 8 ]]; then
-            echo "WARNING: At risk of PWN2OWN 2024 exploits. Update to 6.2.4-25556 Update 8 or above."
-        fi
-        ;;
-    *)  # DSM 6.0 to 6.2.3
-        if [[ "$buildnumber" =~ ^[0-9]+$ && "$buildnumber" -lt 25556 ]]; then
-            echo "WARNING: At risk of PWN2OWN 2024 exploits. Update to 6.2.4-25556 Update 8 or above."
-        fi
-        ;;
-esac
+    done < <(tr -d '\r' < "$map_file")
+}
+
+check_vulnerabilities
 
 
 #--------------------------------------------------------------------

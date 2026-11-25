@@ -73,16 +73,25 @@
         </div>
 
         <div class="section">
-            <h4 style="color:#1B8AED;">Check Access from the Internet</h4>
+            <h4 style="color:#1B8AED;">Check Access from Internet</h4>
             <p>
-                Shows if your Synology is exploitable from the Internet via ransomware.</li>
+                Checks if the Synology's DSM webui is accessible from the Internet via your Internet IP and DSM's https login port.<br>
+                The tool's status area shows whether your Internet IP address, DSM's https and http ports and whether they're open to the Internet.<br>
+                <strong>WARNING:</strong> If your Synology is shown to be accessible from the Internet it is susceptible to the C3RB3R ransomware!!!
+            </p>
+        </div>
+
+        <div class="section">
+            <h4 style="color:#1B8AED;">Check HTTP/2 in nginx</h4>
+            <p>
+                Shows if your Synology's currently loaded nginx config is exploitable via NGINX2Root.
             </p>
         </div>
 
         <div class="section">
             <h4 style="color:#1B8AED;">Check QuickConnect</h4>
             <p>
-                Shows if QuickConnect is enabled and warns if DSM access via QuickConnect is also enabled.</li>
+                Shows if QuickConnect is enabled and warns if DSM access via QuickConnect is also enabled.
             </p>
         </div>
 
@@ -136,15 +145,6 @@
         </div>
 
         <div class="section">
-            <h4 style="color:#1B8AED;">Check Access from Internet</h4>
-            <p>
-                Checks if the Synology's DSM webui is accessible from the Internet via your Internet IP and DSM's https login port.<br>
-                The tool's status area shows whether your Internet IP address, DSM's https and http ports and whether they're open to the Internet.<br>
-                <strong>WARNING:</strong> If your Synology is shown to be accessible from the Internet it is susceptible to the C3RB3R ransomware!!!
-            </p>
-        </div>
-
-        <div class="section">
             <h4 style="color:#1B8AED;">Cleanup Coredumps</h4>
             <p>
                 Removes core dump files left behind by crashed processes and packages,
@@ -162,6 +162,19 @@
                 expansion unit's power supply can provide.<br>
                 The tool's status area shows the status of compatible drives or 
                 if no compatible drives were found.
+            </p>
+        </div>
+
+        <div class="section">
+            <h4 style="color:#1B8AED;">Enable Secure Erase for Expansion Unit Drives</h4>
+            <p>
+                Enables using Secure Erase in Storage Manager for drives in an eSATA, Infiniband
+                or USB C expansion unit.<br>
+                <strong>DSM 6 NOTE:</strong> Storage Manager ui in DSM 6 will stop responding while 
+                a drive in an expansion unit is being securely erased - it will become responsive
+                again after the secure erase finishes. So in the DSM 6 you can only secure erase
+                one expansion unit drive at a time.<br> 
+                Do <strong>NOT</strong> reboot until the secure erase is finished.
             </p>
         </div>
 

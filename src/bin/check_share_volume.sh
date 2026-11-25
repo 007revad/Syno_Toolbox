@@ -74,15 +74,17 @@ else
     # synoshare --getmap is case insensitive
     # The line to read is the "Path .......[/volume1/Backups]" one. (Grepping for
     # "volume" also matches a comment, a share name or a user name that has it.)
-    volshare=$(/usr/syno/sbin/synoshare --getmap "$backupshare" | sed -n 's/^ *Path \.*\[\(.*\)\]$/\1/p' | head -n 1)
+    #volshare=$(/usr/syno/sbin/synoshare --getmap "$backupshare" | sed -n 's/^[[:space:]]*Path[[:space:]]*\.*\[\(.*\)\][[:space:]]*$/\1/p' | head -n 1)
+    #echo "DEBUG volshare --getmap: $volshare"  # debug ################################################
     # I could also have used:
-    # vol=$(/usr/syno/sbin/synoshare --get "$backupshare" | tr '[]' '\n' | sed -n "9p")
+    volshare=$(/usr/syno/sbin/synoshare --get "$backupshare" | tr '[]' '\n' | sed -n "9p")
+    #echo "DEBUG volshare --get: $volshare"  # debug ################################################
 fi
 
 # The share is gone (renamed or deleted) or synoshare gave nothing usable:
 # leave the setting alone instead of writing a made up path
 if [[ ! "$volshare" =~ ^/volume[0-9]+(/.*)?$ ]]; then
-    echo "Error: shared folder $backupshare not found. $key left as $bakpath" |& tee -a "$TOOLBOX_LOG"
+    echo "Error: Shared folder $backupshare not found. $key left as $bakpath" |& tee -a "$TOOLBOX_LOG"
     exit 1
 fi
 

@@ -178,6 +178,20 @@
       "note": "'trigger: on_save' prevents check_internet_access.sh running twice when the package is opened."
     },
     {
+      "id": "check_http2",
+      "category": "tools",
+      "name": "Check HTTP/2 in nginx",
+      "control": "toggle-display",
+      "script": "bin/modules/check_http2.sh",
+      "trigger": "boot",
+      "live": true,
+      "run_args": [],
+      "disable_args": null,
+      "check_args": null,
+      "requires": { "min_dsm_major": 6 },
+      "note": "Read-only. Warns if the loaded nginx config enables HTTP/2 (ssl_http2). http2_max_client_body_buffer_size is only a buffer size and does not count."
+    },
+    {
       "id": "check_quickconnect",
       "category": "tools",
       "name": "Check QuickConnect",
