@@ -578,7 +578,7 @@ regen_gz(){
 }
 
 reloadmsg(){
-    echo -e "\nYou need to sign out of DSM and sign back in."
+    echo -e "\nWARNING: You need to sign out of DSM and sign back in."
     #echo "so the browser loads the edited $(basename -- "$strgmgr")."
     #echo "You do not need to restart the Synology."
 }
