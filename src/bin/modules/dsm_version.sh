@@ -83,7 +83,9 @@ echo "$os_name $productversion$base$smallfixnumber_show"
 # validated and the text is stripped to safe characters before it is shown,
 # because the output of this script is displayed as HTML in DSM.
 
-MAP_URL="https://raw.githubusercontent.com/007revad/DSM_Version/main/dsm_version.map"
+#MAP_URL="https://raw.githubusercontent.com/007revad/DSM_Version/main/dsm_version.map"
+#MAP_URL="https://raw.githubusercontent.com/007revad/Syno_Toolbox/refs/heads/main/dsm_version.map"
+MAP_URL="https://raw.githubusercontent.com/007revad/Syno_Toolbox/main/dsm_version.map"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MAP_BUNDLED="${SCRIPT_DIR}/dsm_version.map"
 MAP_CACHE="${PKG_VAR_DIR}/synotoolbox_dsm_version_map"

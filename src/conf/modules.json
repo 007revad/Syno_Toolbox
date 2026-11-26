@@ -295,6 +295,19 @@
       "check_args": ["check"]
     },
     {
+      "id": "enable_secure_erase",
+      "category": "tools",
+      "name": "Enable Secure Erase for Expansion Unit Drives",
+      "control": "toggle-display",
+      "script": "bin/modules/syno_eunit_secure_erase.sh",
+      "trigger": "boot",
+      "live": false,
+      "run_args": [],
+      "disable_args": ["--restore"],
+      "check_args": ["--check"],
+      "requires": { "min_dsm_major": 6 }
+    },
+    {
       "id": "uninstall_active_insight",
       "category": "tools",
       "name": "Uninstall Active Insight",

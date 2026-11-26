@@ -1,3 +1,7 @@
+v1.0.40
+- Added Enable Expansion Unit Secure Erase module for DSM 7.
+- Bug fix for "WARNING: Unable to check for known vulnerabilities (dsm_version.map missing or invalid)".
+
 v1.0.39
 - Added nginx HTTP/2 check module to warn if HTTP/2 is enabled.
 - Updated Synology Security Advisories module to show the URL of a Synology site that has the latest update.

@@ -38,6 +38,7 @@ Available for DSM 7 and DSM 6. Supports x86_64, aarch64, armv7l and i686.
 - Change Size Units displayed in DSM to Binary.
 - Cleanup Coredumps that crashed packages and services leave behind.
 - Enable Seagate Low Current Spinup on large Seagate Exos and IronWolf Pro HDDs.
+- Enable using Secure Erase in DSM 7's Storage Manager for drives in an eSATA, Infiniband or USB C expansion unit.
 - Uninstall Active Insight automatically after a DSM update.
 - Backup DSM's System Configuration weekly and optionally export it to other devices.
 - Backup the Synoboot USB DOM Image and optionally export it to other devices.
