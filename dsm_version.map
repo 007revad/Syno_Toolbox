@@ -60,10 +60,6 @@
 # DSM 7.2.1	Critical	Upgrade to 7.2.1-69057-14 or above.
 # DSM 7.1	Critical	Upgrade to 7.1.1-42962-10 or above.
 #
-# SA-26:21 Details text (6.2.4 is not in its table): DSM is affected
-# before 6.2.4-25556-9, 7.1.1-42962-10, 7.2.1-69057-14, 7.2.2-72806-11,
-# 7.3.2-86009-6, and 7.4.1-90080-2.
-#
 #--------------------------------------------------------------------
 
 #version=1.0.1
