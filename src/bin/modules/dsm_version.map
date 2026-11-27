@@ -1,0 +1,104 @@
+#format=1
+#--------------------------------------------------------------------
+# DSM builds at risk of known critical vulnerabilities.
+# Read by dsm_version.sh (fetched from GitHub, cached for 24 hours, with a
+# copy bundled in the package as a fallback).
+#
+# Line format (pipe separated):
+#   build|fixed_in_update|target
+#
+#   build            DSM build number from /etc.defaults/VERSION (digits only)
+#   fixed_in_update  warn when the installed update (smallfixnumber) is lower
+#                    than this number, or "-" to warn for every update of
+#                    this build because the fix is in a newer build
+#   target           what to tell the user to install. Letters, digits,
+#                    spaces, dots and hyphens only.
+#
+# Warning shown: WARNING: At risk of critical vulnerabilities. Update to <target> or above.
+#
+# DSM updates are cumulative, so only the newest fix for each build is needed.
+# Builds older than 25556 (DSM 6.2.3 and earlier) use the 25556 line.
+# Lines starting with # and blank lines are ignored.
+#
+#--------------------------------------------------------------------
+# Synology-SA-24:20 DSM (PWN2OWN 2024)
+# https://www.synology.com/en-global/security/advisory/Synology_SA_24_20
+#
+# DSM 7.2.2	Critical	Upgrade to 7.2.2-72806-1 or above.
+# DSM 7.2.1	Critical	Upgrade to 7.2.1-69057-6 or above.
+# DSM 7.2	Critical	Upgrade to 7.2-64570-4 or above.
+# DSM 7.1	Critical	Upgrade to 7.1.1-42962-7 or above.
+# DSM 6.2	Moderate	Upgrade to 6.2.4-25556-8 or above.
+#
+#--------------------------------------------------------------------
+# Synology-SA-25:14 DSM (PWN2OWN 2025)
+# https://www.synology.com/en-au/security/advisory/Synology_SA_25_14
+#
+# DSM 7.3	Important	Upgrade to 7.3.1-86003-1 or above.
+# DSM 7.2.2	Important	Upgrade to 7.2.2-72806-5 or above.
+#
+#--------------------------------------------------------------------
+# Synology-SA-26:18 DSM
+# https://www.synology.com/en-global/security/advisory/Synology_SA_26_18
+# Synology-SA-26:19 DSM
+# https://www.synology.com/en-global/security/advisory/Synology_SA_26_19
+#
+# DSM 7.4	Critical	Upgrade to 7.4.1-90080-1 or above.
+# DSM 7.3	Critical	Upgrade to 7.3.2-86009-5 or above.
+# DSM 7.2.2	Critical	Upgrade to 7.2.2-72806-10 or above.
+# DSM 7.2.1	Critical	Upgrade to 7.2.1-69057-13 or above.
+#
+#--------------------------------------------------------------------
+# Synology-SA-26:20 NGINX2Root
+# https://www.synology.com/en-global/security/advisory/Synology_SA_26_20
+# Synology-SA-26:21 DSM, BeeStation OS
+# https://www.synology.com/en-global/security/advisory/Synology_SA_26_21
+#
+# DSM 7.4	Critical	Upgrade to 7.4.1-90080-2 or above.
+# DSM 7.3	Critical	Upgrade to 7.3.2-86009-6 or above.
+# DSM 7.2.2	Critical	Upgrade to 7.2.2-72806-11 or above.
+# DSM 7.2.1	Critical	Upgrade to 7.2.1-69057-14 or above.
+# DSM 7.1	Critical	Upgrade to 7.1.1-42962-10 or above.
+#
+#--------------------------------------------------------------------
+
+#version=1.0.2
+
+# DSM Enterprise
+101795|-|1.0.1-101795 Update 1
+101205|-|1.0.1-101795 Update 1
+101188|-|1.0.1-101795 Update 1
+
+# DSM 7.4.1
+90080|2|7.4.1-90080 Update 2
+# DSM 7.4
+90075|-|7.4.1-90080 Update 2
+
+# DSM 7.3.2
+86009|6|7.3.2-86009 Update 6
+# DSM 7.3.1
+86003|-|7.3.2-86009 Update 6
+# DSM 7.3
+81180|-|7.3.2-86009 Update 6
+
+# DSM 7.2.2
+72806|11|7.2.2-72806 Update 11
+# DSM 7.2.2 (original build)
+72803|-|7.2.2-72806 Update 11
+
+# DSM 7.2.1
+69057|14|7.2.1-69057 Update 14
+
+# DSM 7.2
+64570|4|7.2-64570 Update 4
+
+# DSM 7.1.1
+42962|10|7.1.1-42962 Update 10
+
+# DSM 7.0 to 7.1
+42661|-|7.1.1-42962 Update 10
+42218|-|7.1.1-42962 Update 10
+41890|-|7.1.1-42962 Update 10
+
+# DSM 6.2.4 (also used for DSM 6.2.3 and earlier)
+25556|9|6.2.4-25556 Update 8
